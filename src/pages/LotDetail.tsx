@@ -34,6 +34,11 @@ const LotDetail: React.FC = () => {
     toast.success(`Lot ${lot.lot_no} approved.`);
   };
 
+  const handleUnapprove = () => {
+    unapproveLot(lot.lot_no);
+    toast.info(`Lot ${lot.lot_no} un-approved.`);
+  };
+
   const handleCreateVersion = () => {
     if (!reason.trim()) { toast.error('Reason for change is required.'); return; }
     const v = addVersion(lot.lot_no, reason.trim());
