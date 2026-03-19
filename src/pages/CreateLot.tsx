@@ -7,6 +7,8 @@ import LotFieldAutocomplete from '@/components/LotFieldAutocomplete';
 
 const CreateLot: React.FC = () => {
   const { addLot, lots } = useApp();
+  const companyNames = useMemo(() => lots.map(l => l.yarn_company_name), [lots]);
+  const colorNames = useMemo(() => lots.map(l => l.color_name).filter(Boolean) as string[], [lots]);
   const navigate = useNavigate();
   const [sourceLotSearch, setSourceLotSearch] = useState('');
   const [sourceDropdownOpen, setSourceDropdownOpen] = useState(false);
