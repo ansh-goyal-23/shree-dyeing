@@ -98,22 +98,19 @@ const CreateLot: React.FC = () => {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Yarn Company *</label>
-            <input
-              type="text"
+            <LotFieldAutocomplete
               value={form.yarn_company_name}
-              onChange={e => update('yarn_company_name', e.target.value)}
-              className="input-industrial w-full"
+              onChange={v => update('yarn_company_name', v)}
+              suggestions={companyNames}
               placeholder="Company name"
-              required
             />
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Color Name</label>
-            <input
-              type="text"
+            <LotFieldAutocomplete
               value={form.color_name}
-              onChange={e => update('color_name', e.target.value)}
-              className="input-industrial w-full"
+              onChange={v => update('color_name', v)}
+              suggestions={colorNames}
               placeholder="e.g. Navy Blue"
             />
           </div>
