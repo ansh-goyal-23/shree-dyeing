@@ -161,7 +161,7 @@ const CreateLot: React.FC = () => {
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Net Weight (kg)</label>
             <div className="input-industrial w-full flex items-center bg-secondary/50 font-data font-semibold cursor-not-allowed">
-              {netWeight}
+              {netWeight.toFixed(3)}
             </div>
           </div>
         </div>

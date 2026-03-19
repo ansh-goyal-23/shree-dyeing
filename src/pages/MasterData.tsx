@@ -82,7 +82,7 @@ const MasterData: React.FC = () => {
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Company</label>
-              <input type="text" value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} className="input-industrial w-full" />
+              <CompanyAutocomplete value={form.company} onChange={v => setForm(f => ({ ...f, company: v }))} />
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Unit</label>
