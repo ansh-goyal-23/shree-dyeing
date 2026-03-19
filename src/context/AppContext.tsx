@@ -13,6 +13,7 @@ interface AppState {
 interface AppContextType extends AppState {
   addLot: (lot: Omit<Lot, 'net_weight' | 'is_approved'>, sourceLotNo?: string) => boolean;
   approveLot: (lotNo: string) => void;
+  unapproveLot: (lotNo: string) => void;
   addVersion: (lotNo: string, reason: string) => LotVersion | null;
   updateRecipeDyes: (versionId: string, dyes: RecipeDye[]) => void;
   updateRecipeChemicals: (versionId: string, chemicals: RecipeChemical[]) => void;
