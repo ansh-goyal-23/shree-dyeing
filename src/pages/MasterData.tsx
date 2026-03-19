@@ -3,6 +3,7 @@ import { useApp } from '@/context/AppContext';
 import { Plus, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import type { MasterItem } from '@/types';
+import CompanyAutocomplete from '@/components/CompanyAutocomplete';
 
 const MasterData: React.FC = () => {
   const { masterItems, addMasterItem, updateMasterItem } = useApp();
