@@ -73,7 +73,14 @@ const LotDetail: React.FC = () => {
             )}
           </div>
           <div className="flex items-center gap-2">
-            {!lot.is_approved && (
+            {lot.is_approved ? (
+              <button
+                onClick={handleUnapprove}
+                className="px-4 h-11 border border-correction text-correction rounded-md text-sm font-medium btn-transition hover:bg-correction/10 focus-ring"
+              >
+                Un-approve
+              </button>
+            ) : (
               <button
                 onClick={handleApprove}
                 className="px-4 h-11 bg-approved text-approved-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 focus-ring"
