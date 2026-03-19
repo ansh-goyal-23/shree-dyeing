@@ -129,6 +129,7 @@ const MasterData: React.FC = () => {
             <tr className="bg-secondary/50">
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Name</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Type</th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Unit</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Shade Family</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Company</th>
               <th className="text-center px-4 py-3 font-medium text-muted-foreground">Active</th>
