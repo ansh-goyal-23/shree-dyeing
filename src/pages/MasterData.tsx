@@ -144,6 +144,7 @@ const MasterData: React.FC = () => {
                 <tr key={item.id} className="row-separator hover:bg-secondary/30 btn-transition">
                   <td className="px-4 py-3 font-medium">{item.name}</td>
                   <td className="px-4 py-3 capitalize">{item.type}</td>
+                  <td className="px-4 py-3">{item.unit}</td>
                   <td className="px-4 py-3">{item.shade_family || '—'}</td>
                   <td className="px-4 py-3">{item.company || '—'}</td>
                   <td className="px-4 py-3 text-center">{item.is_active ? '✓' : '—'}</td>
