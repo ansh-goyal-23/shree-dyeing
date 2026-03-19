@@ -36,12 +36,12 @@ const CreateLot: React.FC = () => {
     [form.gross_weight, form.number_of_chesses]
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.lot_no.trim()) { toast.error('Lot No is required.'); return; }
     if (!form.yarn_company_name.trim()) { toast.error('Yarn Company Name is required.'); return; }
 
-    const success = addLot(
+    const success = await addLot(
       {
         lot_no: form.lot_no.trim(),
         date: form.date,
