@@ -1,9 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
+import { AppProvider } from "@/context/AppContext";
+import Layout from "@/components/Layout";
+import Dashboard from "@/pages/Dashboard";
+import LotList from "@/pages/LotList";
+import CreateLot from "@/pages/CreateLot";
+import LotDetail from "@/pages/LotDetail";
+import MasterData from "@/pages/MasterData";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -11,15 +16,21 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AppProvider>
+        <BrowserRouter>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/lots" element={<LotList />} />
+              <Route path="/lots/create" element={<CreateLot />} />
+              <Route path="/lots/:lotNo" element={<LotDetail />} />
+              <Route path="/master" element={<MasterData />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Layout>
+        </BrowserRouter>
+      </AppProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
