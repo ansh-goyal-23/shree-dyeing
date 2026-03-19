@@ -7,7 +7,16 @@ import { toast } from 'sonner';
 const CreateLot: React.FC = () => {
   const { addLot, lots } = useApp();
   const navigate = useNavigate();
+  const [sourceLotSearch, setSourceLotSearch] = useState('');
+  const [sourceDropdownOpen, setSourceDropdownOpen] = useState(false);
 
+  const filteredSourceLots = useMemo(() => {
+    const search = sourceLotSearch.toLowerCase();
+    return lots.filter(l => {
+      if (!search) return true;
+      return l.lot_no.toLowerCase().includes(search) || l.color_name?.toLowerCase().includes(search) || l.yarn_company_name.toLowerCase().includes(search);
+    });
+  }, [lots, sourceLotSearch]);
   const [form, setForm] = useState({
     lot_no: '',
     date: new Date().toISOString().split('T')[0],
