@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 const LotDetail: React.FC = () => {
   const { lotNo } = useParams<{ lotNo: string }>();
   const navigate = useNavigate();
-  const { getLot, getVersionsForLot, approveLot, addVersion, masterItems, getLotsReferencingSource } = useApp();
+  const { getLot, getVersionsForLot, approveLot, unapproveLot, addVersion, masterItems, getLotsReferencingSource } = useApp();
 
   const lot = getLot(lotNo || '');
   const versions = getVersionsForLot(lotNo || '');
