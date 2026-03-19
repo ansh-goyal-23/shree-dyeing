@@ -114,6 +114,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   }, []);
 
+  const unapproveLot = useCallback((lotNo: string) => {
+    setState(prev => ({
+      ...prev,
+      lots: prev.lots.map(l => l.lot_no === lotNo ? { ...l, is_approved: false } : l),
+    }));
+  }, []);
+
   const addVersion = useCallback((lotNo: string, reason: string): LotVersion | null => {
     const existingVersions = state.versions
       .filter(v => v.lot_no === lotNo)
