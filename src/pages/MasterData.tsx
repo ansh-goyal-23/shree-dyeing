@@ -86,7 +86,12 @@ const MasterData: React.FC = () => {
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Unit</label>
-              <input type="text" value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} className="input-industrial w-full" />
+              <select value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} className="input-industrial w-full">
+                <option value="gm">gm</option>
+                <option value="kg">kg</option>
+                <option value="ml">ml</option>
+                <option value="litre">litre</option>
+              </select>
             </div>
             <div className="flex items-end gap-2 pb-1">
               <label className="flex items-center gap-2 text-sm">
@@ -124,6 +129,7 @@ const MasterData: React.FC = () => {
             <tr className="bg-secondary/50">
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Name</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Type</th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Unit</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Shade Family</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Company</th>
               <th className="text-center px-4 py-3 font-medium text-muted-foreground">Active</th>
@@ -132,12 +138,13 @@ const MasterData: React.FC = () => {
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No items found.</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">No items found.</td></tr>
             ) : (
               filtered.map(item => (
                 <tr key={item.id} className="row-separator hover:bg-secondary/30 btn-transition">
                   <td className="px-4 py-3 font-medium">{item.name}</td>
                   <td className="px-4 py-3 capitalize">{item.type}</td>
+                  <td className="px-4 py-3">{item.unit}</td>
                   <td className="px-4 py-3">{item.shade_family || '—'}</td>
                   <td className="px-4 py-3">{item.company || '—'}</td>
                   <td className="px-4 py-3 text-center">{item.is_active ? '✓' : '—'}</td>

@@ -164,13 +164,14 @@ const RecipeEditor: React.FC<Props> = ({ versionId, lotNo, netWeight, readOnly =
           <p className="text-sm text-muted-foreground py-4">No chemicals added.</p>
         ) : (
           <div className="space-y-2">
-            <div className="grid grid-cols-[1fr_120px_40px] gap-2 text-xs font-medium text-muted-foreground px-1">
+            <div className="grid grid-cols-[1fr_120px_60px_40px] gap-2 text-xs font-medium text-muted-foreground px-1">
               <span>Chemical</span>
-              <span>Qty (gm)</span>
+              <span>Qty</span>
+              <span>Unit</span>
               <span></span>
             </div>
             {localChemicals.map((chem, idx) => (
-              <div key={chem.id} className="grid grid-cols-[1fr_120px_40px] gap-2 items-center">
+              <div key={chem.id} className="grid grid-cols-[1fr_120px_60px_40px] gap-2 items-center">
                 {readOnly ? (
                   <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed text-sm">
                     {masterItems.find(m => m.id === chem.chemical_id)?.name || ''}
@@ -199,6 +200,9 @@ const RecipeEditor: React.FC<Props> = ({ versionId, lotNo, netWeight, readOnly =
                     className="input-industrial font-data text-sm"
                   />
                 )}
+                <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed text-sm text-muted-foreground">
+                  {masterItems.find(m => m.id === chem.chemical_id)?.unit || '—'}
+                </span>
                 {!readOnly && (
                   <button onClick={() => removeChemical(idx)} className="p-2 text-destructive hover:bg-destructive/10 rounded btn-transition">
                     <Trash2 className="w-4 h-4" />
