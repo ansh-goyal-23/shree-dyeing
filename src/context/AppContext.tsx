@@ -51,7 +51,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (state.lots.some(l => l.lot_no === lotData.lot_no)) return false;
     if (sourceLotNo) {
       const src = state.lots.find(l => l.lot_no === sourceLotNo);
-      if (!src || !src.is_approved) return false;
+      if (!src) return false;
       if (sourceLotNo === lotData.lot_no) return false;
     }
 

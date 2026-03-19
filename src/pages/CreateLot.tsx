@@ -5,10 +5,18 @@ import { calculateNetWeight } from '@/lib/calculations';
 import { toast } from 'sonner';
 
 const CreateLot: React.FC = () => {
-  const { addLot, getApprovedLots } = useApp();
+  const { addLot, lots } = useApp();
   const navigate = useNavigate();
-  const approvedLots = getApprovedLots();
+  const [sourceLotSearch, setSourceLotSearch] = useState('');
+  const [sourceDropdownOpen, setSourceDropdownOpen] = useState(false);
 
+  const filteredSourceLots = useMemo(() => {
+    const search = sourceLotSearch.toLowerCase();
+    return lots.filter(l => {
+      if (!search) return true;
+      return l.lot_no.toLowerCase().includes(search) || l.color_name?.toLowerCase().includes(search) || l.yarn_company_name.toLowerCase().includes(search);
+    });
+  }, [lots, sourceLotSearch]);
   const [form, setForm] = useState({
     lot_no: '',
     date: new Date().toISOString().split('T')[0],
@@ -120,19 +128,29 @@ const CreateLot: React.FC = () => {
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Source Lot (Approved)</label>
-            <select
-              value={form.source_lot_no}
-              onChange={e => update('source_lot_no', e.target.value)}
-              className="input-industrial w-full"
-            >
-              <option value="">— None —</option>
-              {approvedLots.map(l => (
-                <option key={l.lot_no} value={l.lot_no}>
-                  {l.lot_no} — {l.color_name || l.yarn_company_name}
-                </option>
-              ))}
-            </select>
+            <label className="text-sm font-medium">Source Lot</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={sourceLotSearch}
+                onChange={e => { setSourceLotSearch(e.target.value); setSourceDropdownOpen(true); }}
+                onFocus={() => setSourceDropdownOpen(true)}
+                className="input-industrial w-full"
+                placeholder="Search lot number..."
+              />
+              {form.source_lot_no && (
+                <button type="button" onClick={() => { update('source_lot_no', ''); setSourceLotSearch(''); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs">✕</button>
+              )}
+              {sourceDropdownOpen && filteredSourceLots.length > 0 && (
+                <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-40 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+                  {filteredSourceLots.map(l => (
+                    <button key={l.lot_no} type="button" onMouseDown={e => e.preventDefault()} onClick={() => { update('source_lot_no', l.lot_no); setSourceLotSearch(l.lot_no); setSourceDropdownOpen(false); }} className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground">
+                      {l.lot_no} — {l.color_name || l.yarn_company_name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
