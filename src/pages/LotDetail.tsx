@@ -199,7 +199,7 @@ const LotDetail: React.FC = () => {
       )}
 
       {/* Referencing Lots */}
-      {lot.is_approved && referencingLots.length > 0 && (
+      {referencingLots.length > 0 && (
         <div className="card-industrial p-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
             Lots Using This Shade ({referencingLots.length})

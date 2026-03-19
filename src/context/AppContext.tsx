@@ -150,6 +150,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setState(prev => ({
       ...prev,
+      lots: prev.lots.map(l => l.lot_no === lotNo ? { ...l, is_approved: false } : l),
       versions: [...prev.versions, newVersion],
       recipeDyes: [...prev.recipeDyes, ...copiedDyes],
       recipeChemicals: [...prev.recipeChemicals, ...copiedChemicals],
