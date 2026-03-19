@@ -29,24 +29,23 @@ const LotDetail: React.FC = () => {
   const activeVersion = versions[activeVersionIdx];
   const referencingLots = getLotsReferencingSource(lot.lot_no);
 
-  const handleApprove = () => {
-    approveLot(lot.lot_no);
+  const handleApprove = async () => {
+    await approveLot(lot.lot_no);
     toast.success(`Lot ${lot.lot_no} approved.`);
   };
 
-  const handleUnapprove = () => {
-    unapproveLot(lot.lot_no);
+  const handleUnapprove = async () => {
+    await unapproveLot(lot.lot_no);
     toast.info(`Lot ${lot.lot_no} un-approved.`);
   };
 
-  const handleCreateVersion = () => {
+  const handleCreateVersion = async () => {
     if (!reason.trim()) { toast.error('Reason for change is required.'); return; }
-    const v = addVersion(lot.lot_no, reason.trim());
+    const v = await addVersion(lot.lot_no, reason.trim());
     if (v) {
       toast.success(`Version ${v.version_code} created.`);
       setShowNewVersion(false);
       setReason('');
-      // Will re-render with new version
     }
   };
 

@@ -78,9 +78,9 @@ const RecipeEditor: React.FC<Props> = ({ versionId, lotNo, netWeight, readOnly =
     setDirty(true);
   };
 
-  const commitVersion = () => {
-    updateRecipeDyes(versionId, localDyes);
-    updateRecipeChemicals(versionId, localChemicals);
+  const commitVersion = async () => {
+    await updateRecipeDyes(versionId, localDyes);
+    await updateRecipeChemicals(versionId, localChemicals);
     setDirty(false);
   };
 

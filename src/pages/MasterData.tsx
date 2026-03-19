@@ -28,15 +28,15 @@ const MasterData: React.FC = () => {
     setShowForm(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) { toast.error('Name is required.'); return; }
 
     if (editItem) {
-      updateMasterItem({ ...editItem, ...form, name: form.name.trim() });
+      await updateMasterItem({ ...editItem, ...form, name: form.name.trim() });
       toast.success(`${form.name} updated.`);
     } else {
-      addMasterItem({ ...form, name: form.name.trim() });
+      await addMasterItem({ ...form, name: form.name.trim() });
       toast.success(`${form.name} added.`);
     }
     resetForm();
