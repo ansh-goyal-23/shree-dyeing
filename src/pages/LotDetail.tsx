@@ -29,13 +29,13 @@ const LotDetail: React.FC = () => {
   const activeVersion = versions[activeVersionIdx];
   const referencingLots = getLotsReferencingSource(lot.lot_no);
 
-  const handleApprove = () => {
-    approveLot(lot.lot_no);
+  const handleApprove = async () => {
+    await approveLot(lot.lot_no);
     toast.success(`Lot ${lot.lot_no} approved.`);
   };
 
-  const handleUnapprove = () => {
-    unapproveLot(lot.lot_no);
+  const handleUnapprove = async () => {
+    await unapproveLot(lot.lot_no);
     toast.info(`Lot ${lot.lot_no} un-approved.`);
   };
 
