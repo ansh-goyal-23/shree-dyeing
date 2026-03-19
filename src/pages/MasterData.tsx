@@ -86,7 +86,12 @@ const MasterData: React.FC = () => {
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Unit</label>
-              <input type="text" value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} className="input-industrial w-full" />
+              <select value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} className="input-industrial w-full">
+                <option value="gm">gm</option>
+                <option value="kg">kg</option>
+                <option value="ml">ml</option>
+                <option value="litre">litre</option>
+              </select>
             </div>
             <div className="flex items-end gap-2 pb-1">
               <label className="flex items-center gap-2 text-sm">
