@@ -5,9 +5,8 @@ import { calculateNetWeight } from '@/lib/calculations';
 import { toast } from 'sonner';
 
 const CreateLot: React.FC = () => {
-  const { addLot, getApprovedLots } = useApp();
+  const { addLot, lots } = useApp();
   const navigate = useNavigate();
-  const approvedLots = getApprovedLots();
 
   const [form, setForm] = useState({
     lot_no: '',
