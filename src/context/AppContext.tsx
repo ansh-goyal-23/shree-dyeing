@@ -13,6 +13,7 @@ interface AppState {
 interface AppContextType extends AppState {
   addLot: (lot: Omit<Lot, 'net_weight' | 'is_approved'>, sourceLotNo?: string) => boolean;
   approveLot: (lotNo: string) => void;
+  unapproveLot: (lotNo: string) => void;
   addVersion: (lotNo: string, reason: string) => LotVersion | null;
   updateRecipeDyes: (versionId: string, dyes: RecipeDye[]) => void;
   updateRecipeChemicals: (versionId: string, chemicals: RecipeChemical[]) => void;
@@ -114,6 +115,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   }, []);
 
+  const unapproveLot = useCallback((lotNo: string) => {
+    setState(prev => ({
+      ...prev,
+      lots: prev.lots.map(l => l.lot_no === lotNo ? { ...l, is_approved: false } : l),
+    }));
+  }, []);
+
   const addVersion = useCallback((lotNo: string, reason: string): LotVersion | null => {
     const existingVersions = state.versions
       .filter(v => v.lot_no === lotNo)
@@ -143,6 +151,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setState(prev => ({
       ...prev,
+      lots: prev.lots.map(l => l.lot_no === lotNo ? { ...l, is_approved: false } : l),
       versions: [...prev.versions, newVersion],
       recipeDyes: [...prev.recipeDyes, ...copiedDyes],
       recipeChemicals: [...prev.recipeChemicals, ...copiedChemicals],
@@ -187,7 +196,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      ...state, addLot, approveLot, addVersion, updateRecipeDyes, updateRecipeChemicals,
+      ...state, addLot, approveLot, unapproveLot, addVersion, updateRecipeDyes, updateRecipeChemicals,
       addMasterItem, updateMasterItem, getLot, getVersionsForLot, getDyesForVersion,
       getChemicalsForVersion, getApprovedLots, getLotsReferencingSource,
     }}>

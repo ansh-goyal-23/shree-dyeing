@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 const LotDetail: React.FC = () => {
   const { lotNo } = useParams<{ lotNo: string }>();
   const navigate = useNavigate();
-  const { getLot, getVersionsForLot, approveLot, addVersion, masterItems, getLotsReferencingSource } = useApp();
+  const { getLot, getVersionsForLot, approveLot, unapproveLot, addVersion, masterItems, getLotsReferencingSource } = useApp();
 
   const lot = getLot(lotNo || '');
   const versions = getVersionsForLot(lotNo || '');
@@ -32,6 +32,11 @@ const LotDetail: React.FC = () => {
   const handleApprove = () => {
     approveLot(lot.lot_no);
     toast.success(`Lot ${lot.lot_no} approved.`);
+  };
+
+  const handleUnapprove = () => {
+    unapproveLot(lot.lot_no);
+    toast.info(`Lot ${lot.lot_no} un-approved.`);
   };
 
   const handleCreateVersion = () => {
@@ -68,7 +73,14 @@ const LotDetail: React.FC = () => {
             )}
           </div>
           <div className="flex items-center gap-2">
-            {!lot.is_approved && (
+            {lot.is_approved ? (
+              <button
+                onClick={handleUnapprove}
+                className="px-4 h-11 border border-correction text-correction rounded-md text-sm font-medium btn-transition hover:bg-correction/10 focus-ring"
+              >
+                Un-approve
+              </button>
+            ) : (
               <button
                 onClick={handleApprove}
                 className="px-4 h-11 bg-approved text-approved-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 focus-ring"
@@ -187,7 +199,7 @@ const LotDetail: React.FC = () => {
       )}
 
       {/* Referencing Lots */}
-      {lot.is_approved && referencingLots.length > 0 && (
+      {referencingLots.length > 0 && (
         <div className="card-industrial p-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
             Lots Using This Shade ({referencingLots.length})
