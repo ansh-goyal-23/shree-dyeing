@@ -3,6 +3,7 @@ import { useApp } from '@/context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { calculateNetWeight } from '@/lib/calculations';
 import { toast } from 'sonner';
+import LotFieldAutocomplete from '@/components/LotFieldAutocomplete';
 
 const CreateLot: React.FC = () => {
   const { addLot, lots } = useApp();
