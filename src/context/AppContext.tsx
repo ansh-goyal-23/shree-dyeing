@@ -84,7 +84,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             id: crypto.randomUUID(),
             lot_no: lotData.lot_no,
             version_id: versionId,
-            qty_grams: parseFloat(((d.percentage / 100) * net_weight * 1000).toFixed(2)),
+            qty_grams: parseFloat(((d.percentage / 100) * net_weight * 1000).toFixed(3)),
           }));
         newChemicals = state.recipeChemicals
           .filter(c => c.version_id === latestVersion.id)

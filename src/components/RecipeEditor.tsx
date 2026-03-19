@@ -137,7 +137,7 @@ const RecipeEditor: React.FC<Props> = ({ versionId, lotNo, netWeight, readOnly =
                   />
                 )}
                 <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed font-data font-semibold text-sm">
-                  {calculateDyeGrams(dye.percentage, netWeight)}
+                  {calculateDyeGrams(dye.percentage, netWeight).toFixed(3)}
                 </span>
                 {!readOnly && (
                   <button onClick={() => removeDye(idx)} className="p-2 text-destructive hover:bg-destructive/10 rounded btn-transition">
