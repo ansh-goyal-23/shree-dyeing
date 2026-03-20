@@ -46,3 +46,28 @@ export interface RecipeChemical {
   chemical_id: string;
   qty: number;
 }
+
+export type PostDyeActionType = 'Color Addition' | 'RC' | 'Leveling';
+
+export interface PostDyeAction {
+  id: string;
+  lot_no: string;
+  action_type: PostDyeActionType;
+  description: string;
+  created_at: string;
+}
+
+export interface PostDyeActionDye {
+  id: string;
+  action_id: string;
+  dye_id: string;
+  percentage: number;
+  qty_grams: number;
+}
+
+export interface PostDyeActionChemical {
+  id: string;
+  action_id: string;
+  chemical_id: string;
+  qty: number;
+}
