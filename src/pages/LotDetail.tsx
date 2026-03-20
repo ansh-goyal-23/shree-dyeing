@@ -3,18 +3,25 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import RecipeEditor from '@/components/RecipeEditor';
 import ComparisonTable from '@/components/ComparisonTable';
+import PostDyeActionForm from '@/components/PostDyeActionForm';
+import PostDyeActionList from '@/components/PostDyeActionList';
 import { CheckCircle2, Clock, Plus, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 const LotDetail: React.FC = () => {
   const { lotNo } = useParams<{ lotNo: string }>();
   const navigate = useNavigate();
-  const { getLot, getVersionsForLot, approveLot, unapproveLot, addVersion, masterItems, getLotsReferencingSource } = useApp();
+  const {
+    getLot, getVersionsForLot, approveLot, unapproveLot, addVersion, masterItems,
+    getLotsReferencingSource, addPostDyeAction, getPostDyeActionsForLot,
+    postDyeActionDyes, postDyeActionChemicals,
+  } = useApp();
 
   const lot = getLot(lotNo || '');
   const versions = getVersionsForLot(lotNo || '');
   const [activeVersionIdx, setActiveVersionIdx] = useState(versions.length - 1);
   const [showNewVersion, setShowNewVersion] = useState(false);
+  const [showPostDyeForm, setShowPostDyeForm] = useState(false);
   const [reason, setReason] = useState('');
 
   if (!lot) {
@@ -28,6 +35,7 @@ const LotDetail: React.FC = () => {
 
   const activeVersion = versions[activeVersionIdx];
   const referencingLots = getLotsReferencingSource(lot.lot_no);
+  const postDyeActions = getPostDyeActionsForLot(lot.lot_no);
 
   const handleApprove = async () => {
     await approveLot(lot.lot_no);
@@ -47,6 +55,12 @@ const LotDetail: React.FC = () => {
       setShowNewVersion(false);
       setReason('');
     }
+  };
+
+  const handlePostDyeSubmit = async (data: Parameters<typeof addPostDyeAction>[1]) => {
+    await addPostDyeAction(lot.lot_no, data);
+    toast.success(`${data.action_type} action recorded.`);
+    setShowPostDyeForm(false);
   };
 
   return (
@@ -71,27 +85,21 @@ const LotDetail: React.FC = () => {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {lot.is_approved ? (
-              <button
-                onClick={handleUnapprove}
-                className="px-4 h-11 border border-correction text-correction rounded-md text-sm font-medium btn-transition hover:bg-correction/10 focus-ring"
-              >
+              <button onClick={handleUnapprove} className="px-4 h-11 border border-correction text-correction rounded-md text-sm font-medium btn-transition hover:bg-correction/10 focus-ring">
                 Un-approve
               </button>
             ) : (
-              <button
-                onClick={handleApprove}
-                className="px-4 h-11 bg-approved text-approved-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 focus-ring"
-              >
+              <button onClick={handleApprove} className="px-4 h-11 bg-approved text-approved-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 focus-ring">
                 Mark as Approved
               </button>
             )}
-            <button
-              onClick={() => setShowNewVersion(true)}
-              className="px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring inline-flex items-center gap-2"
-            >
+            <button onClick={() => setShowNewVersion(true)} className="px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring inline-flex items-center gap-2">
               <Plus className="w-4 h-4" /> New Version
+            </button>
+            <button onClick={() => setShowPostDyeForm(true)} className="px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring inline-flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Post-Dye Action
             </button>
           </div>
         </div>
@@ -125,22 +133,22 @@ const LotDetail: React.FC = () => {
           <div className="flex items-end gap-3">
             <div className="flex-1 space-y-1.5">
               <label className="text-sm text-muted-foreground">Reason for change</label>
-              <input
-                type="text"
-                value={reason}
-                onChange={e => setReason(e.target.value)}
-                className="input-industrial w-full"
-                placeholder="e.g. Color correction — added Blue 2G"
-              />
+              <input type="text" value={reason} onChange={e => setReason(e.target.value)} className="input-industrial w-full" placeholder="e.g. Color correction — added Blue 2G" />
             </div>
-            <button onClick={handleCreateVersion} className="px-4 h-11 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90">
-              Create
-            </button>
-            <button onClick={() => { setShowNewVersion(false); setReason(''); }} className="px-4 h-11 border border-input rounded-md text-sm btn-transition hover:bg-secondary">
-              Cancel
-            </button>
+            <button onClick={handleCreateVersion} className="px-4 h-11 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90">Create</button>
+            <button onClick={() => { setShowNewVersion(false); setReason(''); }} className="px-4 h-11 border border-input rounded-md text-sm btn-transition hover:bg-secondary">Cancel</button>
           </div>
         </div>
+      )}
+
+      {/* Post-Dye Action Form */}
+      {showPostDyeForm && (
+        <PostDyeActionForm
+          netWeight={lot.net_weight}
+          masterItems={masterItems}
+          onSubmit={handlePostDyeSubmit}
+          onCancel={() => setShowPostDyeForm(false)}
+        />
       )}
 
       {/* Version Timeline */}
@@ -154,13 +162,10 @@ const LotDetail: React.FC = () => {
                 <button
                   onClick={() => setActiveVersionIdx(idx)}
                   className={`px-3 py-1.5 rounded text-sm font-medium btn-transition ${
-                    idx === activeVersionIdx
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-secondary hover:bg-secondary/80'
+                    idx === activeVersionIdx ? 'bg-primary text-primary-foreground' : 'bg-secondary hover:bg-secondary/80'
                   }`}
                 >
-                  Version {v.version_code}
-                  {v.version_code === 'A' ? ' (Original)' : ''}
+                  Version {v.version_code}{v.version_code === 'A' ? ' (Original)' : ''}
                 </button>
               </React.Fragment>
             ))}
@@ -179,13 +184,7 @@ const LotDetail: React.FC = () => {
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">
             Recipe — Version {activeVersion.version_code}
           </h2>
-          <RecipeEditor
-            key={activeVersion.id}
-            versionId={activeVersion.id}
-            lotNo={lot.lot_no}
-            netWeight={lot.net_weight}
-            readOnly={activeVersionIdx < versions.length - 1}
-          />
+          <RecipeEditor key={activeVersion.id} versionId={activeVersion.id} lotNo={lot.lot_no} netWeight={lot.net_weight} readOnly={activeVersionIdx < versions.length - 1} />
         </div>
       )}
 
@@ -197,6 +196,20 @@ const LotDetail: React.FC = () => {
         </div>
       )}
 
+      {/* Post-Dye Actions */}
+      <div className="card-industrial p-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+          Post-Dye Actions {postDyeActions.length > 0 && `(${postDyeActions.length})`}
+        </h2>
+        <PostDyeActionList
+          actions={postDyeActions}
+          actionDyes={postDyeActionDyes}
+          actionChemicals={postDyeActionChemicals}
+          masterItems={masterItems}
+          netWeight={lot.net_weight}
+        />
+      </div>
+
       {/* Referencing Lots */}
       {referencingLots.length > 0 && (
         <div className="card-industrial p-4">
@@ -205,11 +218,7 @@ const LotDetail: React.FC = () => {
           </h2>
           <div className="divide-y divide-border">
             {referencingLots.map(rl => (
-              <Link
-                key={rl.lot_no}
-                to={`/lots/${rl.lot_no}`}
-                className="flex items-center justify-between py-2 hover:bg-secondary/30 px-2 rounded btn-transition"
-              >
+              <Link key={rl.lot_no} to={`/lots/${rl.lot_no}`} className="flex items-center justify-between py-2 hover:bg-secondary/30 px-2 rounded btn-transition">
                 <span className="font-data font-semibold text-sm">{rl.lot_no}</span>
                 <span className="text-sm text-muted-foreground">{rl.yarn_company_name} • {rl.color_name}</span>
               </Link>
