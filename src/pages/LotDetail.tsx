@@ -5,6 +5,7 @@ import RecipeEditor from '@/components/RecipeEditor';
 import ComparisonTable from '@/components/ComparisonTable';
 import PostDyeActionForm from '@/components/PostDyeActionForm';
 import PostDyeActionList from '@/components/PostDyeActionList';
+import LotPhotos from '@/components/LotPhotos';
 import { CheckCircle2, Clock, Plus, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
