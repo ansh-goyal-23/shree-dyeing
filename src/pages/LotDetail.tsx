@@ -98,12 +98,8 @@ const LotDetail: React.FC = () => {
           <div><span className="text-muted-foreground">Gross Weight</span><p className="font-data font-medium mt-0.5">{lot.gross_weight.toFixed(3)} kg</p></div>
           <div><span className="text-muted-foreground">Net Weight</span><p className="font-data font-semibold mt-0.5">{lot.net_weight.toFixed(3)} kg</p></div>
           <div>
-            <span className="text-muted-foreground">Source Lot</span>
-            <p className="font-medium mt-0.5">
-              {lot.source_lot_no ? (
-                <Link to={`/lots/${lot.source_lot_no}`} className="font-data text-primary hover:underline">{lot.source_lot_no}</Link>
-              ) : '—'}
-            </p>
+            <span className="text-muted-foreground">Shade Number</span>
+            <p className="font-data font-medium mt-0.5">{lot.shade_number}</p>
           </div>
         </div>
       </div>

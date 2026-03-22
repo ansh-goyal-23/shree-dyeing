@@ -191,7 +191,8 @@ const mapLot = (row: any): Lot => ({
   lot_no: row.lot_no, date: row.date, yarn_company_name: row.yarn_company_name,
   color_name: row.color_name || '', denier: row.denier || '',
   number_of_chesses: Number(row.number_of_chesses) || 0, gross_weight: Number(row.gross_weight) || 0,
-  net_weight: Number(row.net_weight) || 0, is_approved: row.is_approved || false, source_lot_no: row.source_lot_no || null,
+  net_weight: Number(row.net_weight) || 0, is_approved: row.is_approved || false,
+  shade_number: row.shade_number || row.lot_no, source_lot_no: row.source_lot_no || null,
 });
 
 const mapDye = (row: any): RecipeDye => ({

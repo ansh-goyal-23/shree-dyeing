@@ -10,25 +10,16 @@ const CreateLot: React.FC = () => {
   const companyNames = useMemo(() => lots.map(l => l.yarn_company_name), [lots]);
   const colorNames = useMemo(() => lots.map(l => l.color_name).filter(Boolean) as string[], [lots]);
   const navigate = useNavigate();
-  const [sourceLotSearch, setSourceLotSearch] = useState('');
-  const [sourceDropdownOpen, setSourceDropdownOpen] = useState(false);
 
-  const filteredSourceLots = useMemo(() => {
-    const search = sourceLotSearch.toLowerCase();
-    return lots.filter(l => {
-      if (!search) return true;
-      return l.lot_no.toLowerCase().includes(search) || l.color_name?.toLowerCase().includes(search) || l.yarn_company_name.toLowerCase().includes(search);
-    });
-  }, [lots, sourceLotSearch]);
   const [form, setForm] = useState({
     lot_no: '',
     date: new Date().toISOString().split('T')[0],
     yarn_company_name: '',
     color_name: '',
     denier: '',
+    shade_number: '',
     number_of_chesses: 0,
     gross_weight: 0,
-    source_lot_no: '',
   });
 
   const netWeight = useMemo(
@@ -40,26 +31,28 @@ const CreateLot: React.FC = () => {
     e.preventDefault();
     if (!form.lot_no.trim()) { toast.error('Lot No is required.'); return; }
     if (!form.yarn_company_name.trim()) { toast.error('Yarn Company Name is required.'); return; }
+    if (!form.color_name.trim()) { toast.error('Color Name is required.'); return; }
+    if (!form.denier.trim()) { toast.error('Denier is required.'); return; }
+    if (!form.number_of_chesses) { toast.error('Number of Chesses is required.'); return; }
+    if (!form.gross_weight) { toast.error('Gross Weight is required.'); return; }
 
-    const success = await addLot(
-      {
-        lot_no: form.lot_no.trim(),
-        date: form.date,
-        yarn_company_name: form.yarn_company_name.trim(),
-        color_name: form.color_name.trim(),
-        denier: form.denier.trim(),
-        number_of_chesses: form.number_of_chesses,
-        gross_weight: form.gross_weight,
-        source_lot_no: form.source_lot_no || null,
-      },
-      form.source_lot_no || undefined
-    );
+    const success = await addLot({
+      lot_no: form.lot_no.trim(),
+      date: form.date,
+      yarn_company_name: form.yarn_company_name.trim(),
+      color_name: form.color_name.trim(),
+      denier: form.denier.trim(),
+      shade_number: form.shade_number.trim() || form.lot_no.trim(),
+      number_of_chesses: form.number_of_chesses,
+      gross_weight: form.gross_weight,
+      source_lot_no: null,
+    });
 
     if (success) {
       toast.success(`Lot ${form.lot_no} created successfully.`);
       navigate(`/lots/${form.lot_no}`);
     } else {
-      toast.error(`Invalid Lot No: Already exists or invalid source.`);
+      toast.error(`Failed to create lot. Lot No may already exist.`);
     }
   };
 
@@ -85,12 +78,13 @@ const CreateLot: React.FC = () => {
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Date</label>
+            <label className="text-sm font-medium">Date *</label>
             <input
               type="date"
               value={form.date}
               onChange={e => update('date', e.target.value)}
               className="input-industrial w-full font-data"
+              required
             />
           </div>
         </div>
@@ -106,7 +100,7 @@ const CreateLot: React.FC = () => {
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Color Name</label>
+            <label className="text-sm font-medium">Color Name *</label>
             <LotFieldAutocomplete
               value={form.color_name}
               onChange={v => update('color_name', v)}
@@ -118,55 +112,43 @@ const CreateLot: React.FC = () => {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Denier</label>
+            <label className="text-sm font-medium">Denier *</label>
             <input
               type="text"
               value={form.denier}
               onChange={e => update('denier', e.target.value)}
               className="input-industrial w-full"
               placeholder="e.g. 150D"
+              required
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Source Lot</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={sourceLotSearch}
-                onChange={e => { setSourceLotSearch(e.target.value); setSourceDropdownOpen(true); }}
-                onFocus={() => setSourceDropdownOpen(true)}
-                className="input-industrial w-full"
-                placeholder="Search lot number..."
-              />
-              {form.source_lot_no && (
-                <button type="button" onClick={() => { update('source_lot_no', ''); setSourceLotSearch(''); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs">✕</button>
-              )}
-              {sourceDropdownOpen && filteredSourceLots.length > 0 && (
-                <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-40 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md">
-                  {filteredSourceLots.map(l => (
-                    <button key={l.lot_no} type="button" onMouseDown={e => e.preventDefault()} onClick={() => { update('source_lot_no', l.lot_no); setSourceLotSearch(l.lot_no); setSourceDropdownOpen(false); }} className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground">
-                      {l.lot_no} — {l.color_name || l.yarn_company_name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <label className="text-sm font-medium">Shade Number</label>
+            <input
+              type="text"
+              value={form.shade_number}
+              onChange={e => update('shade_number', e.target.value)}
+              className="input-industrial w-full"
+              placeholder={form.lot_no || 'Defaults to Lot No'}
+            />
+            <p className="text-xs text-muted-foreground">Leave empty to use Lot No</p>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">No. of Chesses</label>
+            <label className="text-sm font-medium">No. of Chesses *</label>
             <input
               type="number"
-              min={0}
+              min={1}
               value={form.number_of_chesses || ''}
               onChange={e => update('number_of_chesses', parseInt(e.target.value) || 0)}
               className="input-industrial w-full font-data"
+              required
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Gross Weight (kg)</label>
+            <label className="text-sm font-medium">Gross Weight (kg) *</label>
             <input
               type="number"
               min={0}
@@ -174,6 +156,7 @@ const CreateLot: React.FC = () => {
               value={form.gross_weight || ''}
               onChange={e => update('gross_weight', parseFloat(e.target.value) || 0)}
               className="input-industrial w-full font-data"
+              required
             />
           </div>
           <div className="space-y-1.5">

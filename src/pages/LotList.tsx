@@ -69,13 +69,7 @@ const LotList: React.FC = () => {
                   <td className="px-4 py-3">{lot.yarn_company_name}</td>
                   <td className="px-4 py-3">{lot.color_name || '—'}</td>
                   <td className="px-4 py-3 text-right font-data">{lot.net_weight}</td>
-                  <td className="px-4 py-3">
-                    {lot.source_lot_no ? (
-                      <Link to={`/lots/${lot.source_lot_no}`} className="font-data text-primary hover:underline">
-                        {lot.source_lot_no}
-                      </Link>
-                    ) : '—'}
-                  </td>
+                  <td className="px-4 py-3 font-data">{lot.shade_number}</td>
                   <td className="px-4 py-3 text-center">
                     {lot.is_approved ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-approved/10 text-approved rounded">
