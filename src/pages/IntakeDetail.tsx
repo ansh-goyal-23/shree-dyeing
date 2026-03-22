@@ -10,15 +10,18 @@ import type { IntakeItemStatus } from '@/types/sampling';
 const statusColors: Record<IntakeItemStatus, string> = {
   Pending: 'bg-correction/10 text-correction',
   'In Development': 'bg-primary/10 text-primary',
+  'In Production': 'bg-accent text-accent-foreground',
   Completed: 'bg-approved/10 text-approved',
+  Cancelled: 'bg-destructive/10 text-destructive',
 };
+
+const allStatuses: IntakeItemStatus[] = ['Pending', 'In Development', 'In Production', 'Completed', 'Cancelled'];
 
 const IntakeDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: entry, isLoading: entryLoading } = useIntakeEntry(id!);
   const { data: items = [], isLoading: itemsLoading } = useIntakeItems(id!);
-  const createItem = useCreateIntakeItem();
   const updateItem = useUpdateIntakeItem();
   const deleteItem = useDeleteIntakeItem();
 
@@ -27,6 +30,9 @@ const IntakeDetail: React.FC = () => {
 
   if (entryLoading) return <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   if (!entry) return <div className="text-center py-12 text-muted-foreground">Entry not found.</div>;
+
+  const activeItems = items.filter(i => i.status !== 'Cancelled');
+  const totalQty = activeItems.reduce((sum, i) => sum + (parseFloat(i.order_quantity) || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -38,14 +44,14 @@ const IntakeDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* Entry Details */}
       <div className="card-industrial p-4 space-y-3">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
           <div><span className="text-muted-foreground">Type</span><p className="font-medium">{entry.intake_type}</p></div>
           <div><span className="text-muted-foreground">Received</span><p className="font-medium font-data">{entry.received_date}</p></div>
           {entry.sheet_date && <div><span className="text-muted-foreground">Sheet Date</span><p className="font-medium font-data">{entry.sheet_date}</p></div>}
-          {entry.notes && <div className="col-span-2"><span className="text-muted-foreground">Notes</span><p className="font-medium">{entry.notes}</p></div>}
+          {totalQty > 0 && <div><span className="text-muted-foreground">Total Qty</span><p className="font-medium font-data">{totalQty}</p></div>}
         </div>
+        {entry.notes && <p className="text-sm text-muted-foreground">{entry.notes}</p>}
         {entry.reference_photo_path && (
           <button onClick={() => setViewPhoto(getPhotoUrl('lot-photos', entry.reference_photo_path!))}
             className="w-24 h-24 rounded-lg overflow-hidden border border-border hover:border-primary btn-transition">
@@ -54,7 +60,6 @@ const IntakeDetail: React.FC = () => {
         )}
       </div>
 
-      {/* Items Section */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Items ({items.length})</h2>
         <button onClick={() => setShowAddForm(true)}
@@ -72,7 +77,7 @@ const IntakeDetail: React.FC = () => {
       ) : (
         <div className="space-y-3">
           {items.map(item => (
-            <div key={item.id} className="card-industrial p-4">
+            <div key={item.id} className={`card-industrial p-4 ${item.status === 'Cancelled' ? 'opacity-50' : ''}`}>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3 flex-1 min-w-0">
                   {item.sample_photo_path && (
@@ -101,17 +106,15 @@ const IntakeDetail: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  {!item.linked_lot_no && (
-                    <Link to={`/shade-management/lots/create?yarn=${encodeURIComponent(item.yarn_type)}&color=${encodeURIComponent(item.shade_reference)}&intake_item=${item.id}&intake_id=${item.intake_id}`}
+                  {!item.linked_lot_no && item.status !== 'Cancelled' && (
+                    <Link to={`/shade-management/lots/create?yarn=${encodeURIComponent(item.yarn_type)}&color=${encodeURIComponent(item.shade_reference)}&intake_item=${item.id}&intake_id=${item.intake_id || ''}`}
                       className="px-2 h-7 bg-approved/10 text-approved rounded text-[10px] font-medium btn-transition hover:bg-approved/20 inline-flex items-center gap-1">
                       Create Lot
                     </Link>
                   )}
-                  <select value={item.status} onChange={e => updateItem.mutate({ id: item.id, intake_id: item.intake_id, status: e.target.value as IntakeItemStatus })}
+                  <select value={item.status} onChange={e => updateItem.mutate({ id: item.id, status: e.target.value as IntakeItemStatus })}
                     className="h-7 text-[10px] border border-input rounded px-1 bg-background">
-                    <option value="Pending">Pending</option>
-                    <option value="In Development">In Dev</option>
-                    <option value="Completed">Completed</option>
+                    {allStatuses.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                   <button onClick={() => { if (confirm('Delete this item?')) deleteItem.mutate(item.id); }}
                     className="p-1.5 text-muted-foreground hover:text-destructive btn-transition rounded hover:bg-destructive/10">
@@ -124,7 +127,6 @@ const IntakeDetail: React.FC = () => {
         </div>
       )}
 
-      {/* Photo Viewer */}
       {viewPhoto && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setViewPhoto(null)}>
           <div className="relative max-w-3xl max-h-[90vh] w-full" onClick={e => e.stopPropagation()}>
@@ -137,7 +139,6 @@ const IntakeDetail: React.FC = () => {
   );
 };
 
-// Sub-component: Add Item Form
 const AddItemForm: React.FC<{ intakeId: string; onClose: () => void }> = ({ intakeId, onClose }) => {
   const createItem = useCreateIntakeItem();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -175,6 +176,8 @@ const AddItemForm: React.FC<{ intakeId: string; onClose: () => void }> = ({ inta
         sample_photo_path: form.sample_photo_path,
         linked_lot_no: null,
         status: 'Pending',
+        is_direct_order: false,
+        client_id: null,
       });
       toast.success('Item added.');
       onClose();

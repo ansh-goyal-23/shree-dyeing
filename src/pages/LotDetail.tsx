@@ -5,8 +5,10 @@ import RecipeEditor from '@/components/RecipeEditor';
 import ProcessStepForm from '@/components/ProcessStepForm';
 import ProcessStepList from '@/components/ProcessStepList';
 import LotPhotos from '@/components/LotPhotos';
-import { CheckCircle2, Clock, Plus, ArrowLeft } from 'lucide-react';
+import { useOrdersForLot } from '@/hooks/useSampling';
+import { CheckCircle2, Clock, Plus, ArrowLeft, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 const LotDetail: React.FC = () => {
   const { lotNo } = useParams<{ lotNo: string }>();
@@ -145,6 +147,9 @@ const LotDetail: React.FC = () => {
         />
       </div>
 
+      {/* Order History */}
+      <OrderHistory lotNo={lot.lot_no} />
+
       {/* Referencing Lots */}
       {referencingLots.length > 0 && (
         <div className="card-industrial p-4">
@@ -153,7 +158,7 @@ const LotDetail: React.FC = () => {
           </h2>
           <div className="divide-y divide-border">
             {referencingLots.map(rl => (
-              <Link key={rl.lot_no} to={`/lots/${rl.lot_no}`} className="flex items-center justify-between py-2 hover:bg-secondary/30 px-2 rounded btn-transition">
+              <Link key={rl.lot_no} to={`/shade-management/lots/${rl.lot_no}`} className="flex items-center justify-between py-2 hover:bg-secondary/30 px-2 rounded btn-transition">
                 <span className="font-data font-semibold text-sm">{rl.lot_no}</span>
                 <span className="text-sm text-muted-foreground">{rl.yarn_company_name} • {rl.color_name}</span>
               </Link>
@@ -161,6 +166,47 @@ const LotDetail: React.FC = () => {
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+const statusColors: Record<string, string> = {
+  Pending: 'bg-correction/10 text-correction',
+  'In Development': 'bg-primary/10 text-primary',
+  'In Production': 'bg-accent text-accent-foreground',
+  Completed: 'bg-approved/10 text-approved',
+  Cancelled: 'bg-destructive/10 text-destructive',
+};
+
+const OrderHistory: React.FC<{ lotNo: string }> = ({ lotNo }) => {
+  const { data: orders = [] } = useOrdersForLot(lotNo);
+  const activeOrders = orders.filter(o => o.status !== 'Cancelled');
+  const totalQty = activeOrders.reduce((sum, o) => sum + (parseFloat(o.order_quantity) || 0), 0);
+
+  if (orders.length === 0) return null;
+
+  return (
+    <div className="card-industrial p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+          <ShoppingCart className="w-4 h-4" /> Orders ({activeOrders.length})
+        </h2>
+        {totalQty > 0 && <span className="text-sm font-data font-semibold">Total: {totalQty}</span>}
+      </div>
+      <div className="divide-y divide-border">
+        {orders.map(order => (
+          <div key={order.id} className={`flex items-center justify-between py-2 px-2 ${order.status === 'Cancelled' ? 'opacity-50' : ''}`}>
+            <div>
+              <span className="text-sm font-medium">{order.client_name || 'Unknown'}</span>
+              <div className="flex items-center gap-2 mt-0.5">
+                {order.order_quantity && <span className="text-xs text-muted-foreground">Qty: {order.order_quantity}</span>}
+                <span className="text-xs text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</span>
+              </div>
+            </div>
+            <Badge className={`text-[10px] ${statusColors[order.status] || ''}`}>{order.status}</Badge>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

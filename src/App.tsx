@@ -14,6 +14,7 @@ import PlaceholderModule from "@/pages/PlaceholderModule";
 import IntakeList from "@/pages/IntakeList";
 import CreateIntake from "@/pages/CreateIntake";
 import IntakeDetail from "@/pages/IntakeDetail";
+import CreateDirectOrder from "@/pages/CreateDirectOrder";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -54,6 +55,7 @@ const App = () => (
                       <Route path="/shade-management/master" element={<MasterData />} />
                       <Route path="/sampling" element={<IntakeList />} />
                       <Route path="/sampling/create" element={<CreateIntake />} />
+                      <Route path="/sampling/order/create" element={<CreateDirectOrder />} />
                       <Route path="/sampling/:id" element={<IntakeDetail />} />
                       <Route path="/production" element={<PlaceholderModule />} />
                       <Route path="/expenses" element={<PlaceholderModule />} />

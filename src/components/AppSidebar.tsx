@@ -9,6 +9,7 @@ import {
   PlusCircle,
   Database,
   ClipboardList,
+  ShoppingCart,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
@@ -34,6 +35,7 @@ const shadeItems = [
 const samplingItems = [
   { title: 'All Intakes', url: '/sampling', icon: ClipboardList },
   { title: 'New Intake', url: '/sampling/create', icon: PlusCircle },
+  { title: 'Direct Order', url: '/sampling/order/create', icon: ShoppingCart },
 ];
 
 const modules = [
