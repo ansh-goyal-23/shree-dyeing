@@ -1,21 +1,20 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { calculateDyeGrams } from '@/lib/calculations';
 import { Plus, Trash2 } from 'lucide-react';
 import type { RecipeDye, RecipeChemical } from '@/types';
 
 interface Props {
-  versionId: string;
   lotNo: string;
   netWeight: number;
   readOnly?: boolean;
 }
 
-const RecipeEditor: React.FC<Props> = ({ versionId, lotNo, netWeight, readOnly = false }) => {
-  const { masterItems, getDyesForVersion, getChemicalsForVersion, updateRecipeDyes, updateRecipeChemicals } = useApp();
+const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) => {
+  const { masterItems, getDyesForLot, getChemicalsForLot, updateRecipeDyes, updateRecipeChemicals } = useApp();
 
-  const dyes = getDyesForVersion(versionId);
-  const chemicals = getChemicalsForVersion(versionId);
+  const dyes = getDyesForLot(lotNo);
+  const chemicals = getChemicalsForLot(lotNo);
   const dyeItems = masterItems.filter(m => m.type === 'dye' && m.is_active);
   const chemicalItems = masterItems.filter(m => m.type === 'chemical' && m.is_active);
 
@@ -27,7 +26,6 @@ const RecipeEditor: React.FC<Props> = ({ versionId, lotNo, netWeight, readOnly =
     setLocalDyes(prev => [...prev, {
       id: crypto.randomUUID(),
       lot_no: lotNo,
-      version_id: versionId,
       dye_id: '',
       percentage: 0,
       qty_grams: 0,
@@ -57,7 +55,6 @@ const RecipeEditor: React.FC<Props> = ({ versionId, lotNo, netWeight, readOnly =
     setLocalChemicals(prev => [...prev, {
       id: crypto.randomUUID(),
       lot_no: lotNo,
-      version_id: versionId,
       chemical_id: '',
       qty: 0,
     }]);
@@ -78,9 +75,9 @@ const RecipeEditor: React.FC<Props> = ({ versionId, lotNo, netWeight, readOnly =
     setDirty(true);
   };
 
-  const commitVersion = async () => {
-    await updateRecipeDyes(versionId, localDyes);
-    await updateRecipeChemicals(versionId, localChemicals);
+  const commitRecipe = async () => {
+    await updateRecipeDyes(lotNo, localDyes);
+    await updateRecipeChemicals(lotNo, localChemicals);
     setDirty(false);
   };
 
@@ -103,38 +100,22 @@ const RecipeEditor: React.FC<Props> = ({ versionId, lotNo, netWeight, readOnly =
         ) : (
           <div className="space-y-2">
             <div className="grid grid-cols-[1fr_100px_120px_40px] gap-2 text-xs font-medium text-muted-foreground px-1">
-              <span>Dye</span>
-              <span>%</span>
-              <span>Grams</span>
-              <span></span>
+              <span>Dye</span><span>%</span><span>Grams</span><span></span>
             </div>
             {localDyes.map((dye, idx) => (
               <div key={dye.id} className="grid grid-cols-[1fr_100px_120px_40px] gap-2 items-center">
                 {readOnly ? (
                   <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed text-sm">{getDyeName(dye.dye_id)}</span>
                 ) : (
-                  <select
-                    value={dye.dye_id}
-                    onChange={e => updateDye(idx, 'dye_id', e.target.value)}
-                    className="input-industrial text-sm"
-                  >
+                  <select value={dye.dye_id} onChange={e => updateDye(idx, 'dye_id', e.target.value)} className="input-industrial text-sm">
                     <option value="">Select dye...</option>
-                    {dyeItems.map(d => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
+                    {dyeItems.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                   </select>
                 )}
                 {readOnly ? (
                   <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed font-data text-sm">{dye.percentage}</span>
                 ) : (
-                  <input
-                    type="number"
-                    step="0.001"
-                    min={0}
-                    value={dye.percentage || ''}
-                    onChange={e => updateDye(idx, 'percentage', parseFloat(e.target.value) || 0)}
-                    className="input-industrial font-data text-sm"
-                  />
+                  <input type="number" step="0.001" min={0} value={dye.percentage || ''} onChange={e => updateDye(idx, 'percentage', parseFloat(e.target.value) || 0)} className="input-industrial font-data text-sm" />
                 )}
                 <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed font-data font-semibold text-sm">
                   {calculateDyeGrams(dye.percentage, netWeight).toFixed(3)}
@@ -165,10 +146,7 @@ const RecipeEditor: React.FC<Props> = ({ versionId, lotNo, netWeight, readOnly =
         ) : (
           <div className="space-y-2">
             <div className="grid grid-cols-[1fr_120px_60px_40px] gap-2 text-xs font-medium text-muted-foreground px-1">
-              <span>Chemical</span>
-              <span>Qty</span>
-              <span>Unit</span>
-              <span></span>
+              <span>Chemical</span><span>Qty</span><span>Unit</span><span></span>
             </div>
             {localChemicals.map((chem, idx) => (
               <div key={chem.id} className="grid grid-cols-[1fr_120px_60px_40px] gap-2 items-center">
@@ -177,28 +155,15 @@ const RecipeEditor: React.FC<Props> = ({ versionId, lotNo, netWeight, readOnly =
                     {masterItems.find(m => m.id === chem.chemical_id)?.name || ''}
                   </span>
                 ) : (
-                  <select
-                    value={chem.chemical_id}
-                    onChange={e => updateChemical(idx, 'chemical_id', e.target.value)}
-                    className="input-industrial text-sm"
-                  >
+                  <select value={chem.chemical_id} onChange={e => updateChemical(idx, 'chemical_id', e.target.value)} className="input-industrial text-sm">
                     <option value="">Select chemical...</option>
-                    {chemicalItems.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
+                    {chemicalItems.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 )}
                 {readOnly ? (
                   <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed font-data text-sm">{chem.qty}</span>
                 ) : (
-                  <input
-                    type="number"
-                    step="0.01"
-                    min={0}
-                    value={chem.qty || ''}
-                    onChange={e => updateChemical(idx, 'qty', parseFloat(e.target.value) || 0)}
-                    className="input-industrial font-data text-sm"
-                  />
+                  <input type="number" step="0.01" min={0} value={chem.qty || ''} onChange={e => updateChemical(idx, 'qty', parseFloat(e.target.value) || 0)} className="input-industrial font-data text-sm" />
                 )}
                 <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed text-sm text-muted-foreground">
                   {masterItems.find(m => m.id === chem.chemical_id)?.unit || '—'}
@@ -214,14 +179,11 @@ const RecipeEditor: React.FC<Props> = ({ versionId, lotNo, netWeight, readOnly =
         )}
       </div>
 
-      {/* Commit */}
+      {/* Save */}
       {!readOnly && dirty && (
         <div className="flex justify-end pt-2">
-          <button
-            onClick={commitVersion}
-            className="px-6 h-11 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 focus-ring"
-          >
-            Commit Version
+          <button onClick={commitRecipe} className="px-6 h-11 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 focus-ring">
+            Save Recipe
           </button>
         </div>
       )}

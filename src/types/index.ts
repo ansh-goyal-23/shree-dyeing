@@ -21,19 +21,9 @@ export interface Lot {
   source_lot_no: string | null;
 }
 
-export interface LotVersion {
-  id: string;
-  lot_no: string;
-  version_code: string;
-  parent_version_id: string | null;
-  reason_for_change: string;
-  created_at: string;
-}
-
 export interface RecipeDye {
   id: string;
   lot_no: string;
-  version_id: string;
   dye_id: string;
   percentage: number;
   qty_grams: number;
@@ -42,32 +32,42 @@ export interface RecipeDye {
 export interface RecipeChemical {
   id: string;
   lot_no: string;
-  version_id: string;
   chemical_id: string;
   qty: number;
 }
 
-export type PostDyeActionType = 'Color Addition' | 'RC' | 'Leveling';
+export type ProcessStepType = 'Color Addition' | 'RC' | 'Leveling';
 
-export interface PostDyeAction {
+export interface ProcessStep {
   id: string;
   lot_no: string;
-  action_type: PostDyeActionType;
+  step_number: number;
+  step_type: ProcessStepType;
   description: string;
   created_at: string;
 }
 
-export interface PostDyeActionDye {
+export interface StepDye {
   id: string;
-  action_id: string;
+  step_id: string;
   dye_id: string;
   percentage: number;
   qty_grams: number;
 }
 
-export interface PostDyeActionChemical {
+export interface StepChemical {
   id: string;
-  action_id: string;
+  step_id: string;
   chemical_id: string;
   qty: number;
+}
+
+export interface LotPhoto {
+  id: string;
+  lot_no: string;
+  step_id: string | null;
+  file_path: string;
+  label: string;
+  category: 'base' | 'step' | 'general';
+  created_at: string;
 }
