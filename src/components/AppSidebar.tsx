@@ -35,6 +35,7 @@ const shadeItems = [
 const samplingItems = [
   { title: 'All Intakes', url: '/sampling', icon: ClipboardList },
   { title: 'New Intake', url: '/sampling/create', icon: PlusCircle },
+  { title: 'Direct Order', url: '/sampling/order/create', icon: ShoppingCart },
 ];
 
 const modules = [
