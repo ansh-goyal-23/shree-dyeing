@@ -4,6 +4,7 @@ import { useCreateIntakeEntry } from '@/hooks/useSampling';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Camera } from 'lucide-react';
+import ClientSelect from '@/components/ClientSelect';
 import type { IntakeType } from '@/types/sampling';
 
 const CreateIntake: React.FC = () => {
@@ -16,7 +17,7 @@ const CreateIntake: React.FC = () => {
     intake_type: 'Sheet' as IntakeType,
     received_date: new Date().toISOString().split('T')[0],
     sheet_date: '',
-    client_name: '',
+    client_id: '',
     notes: '',
     reference_photo_path: null as string | null,
   });
@@ -38,14 +39,14 @@ const CreateIntake: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.client_name.trim()) { toast.error('Client name is required.'); return; }
+    if (!form.client_id) { toast.error('Please select a client.'); return; }
 
     try {
       const entry = await createEntry.mutateAsync({
         intake_type: form.intake_type,
         received_date: form.received_date,
         sheet_date: form.sheet_date || null,
-        client_name: form.client_name.trim(),
+        client_id: form.client_id,
         notes: form.notes.trim(),
         reference_photo_path: form.reference_photo_path,
       });
@@ -76,8 +77,8 @@ const CreateIntake: React.FC = () => {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Client Name *</label>
-            <input type="text" value={form.client_name} onChange={e => update('client_name', e.target.value)} className="input-industrial w-full" placeholder="Client name" required />
+            <label className="text-sm font-medium">Client *</label>
+            <ClientSelect value={form.client_id} onChange={v => update('client_id', v)} />
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Sheet Date</label>
