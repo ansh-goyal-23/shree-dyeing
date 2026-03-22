@@ -21,7 +21,7 @@ const Dashboard: React.FC = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
         <Link
-          to="/lots/create"
+          to="/shade-management/lots/create"
           className="inline-flex items-center gap-2 px-4 h-11 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 focus-ring"
         >
           <PlusCircle className="w-4 h-4" />
