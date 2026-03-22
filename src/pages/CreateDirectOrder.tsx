@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCreateIntakeItem, useClients } from '@/hooks/useSampling';
+import { useCreateIntakeItem } from '@/hooks/useSampling';
 import { useApp } from '@/context/AppContext';
 import { toast } from 'sonner';
 import ClientSelect from '@/components/ClientSelect';
@@ -10,14 +10,12 @@ const CreateDirectOrder: React.FC = () => {
   const navigate = useNavigate();
   const createItem = useCreateIntakeItem();
   const { lots } = useApp();
-  const approvedLots = lots.filter(l => l.is_approved);
 
   const [form, setForm] = useState({
     client_id: '',
     linked_lot_no: '',
     yarn_type: '',
     order_quantity: '',
-    product_type: '',
     notes: '',
   });
 
@@ -37,7 +35,7 @@ const CreateDirectOrder: React.FC = () => {
         sample_identifier: `ORD-${Date.now().toString(36).toUpperCase()}`,
         shade_reference: selectedLot?.shade_number || form.linked_lot_no,
         yarn_type: form.yarn_type.trim() || selectedLot?.denier || '',
-        product_type: form.product_type.trim(),
+        product_type: '',
         order_quantity: form.order_quantity.trim(),
         notes: form.notes.trim(),
         sample_photo_path: null,
@@ -71,26 +69,20 @@ const CreateDirectOrder: React.FC = () => {
               <option value="">Select shade...</option>
               {lots.map(l => (
                 <option key={l.lot_no} value={l.lot_no}>
-                  {l.lot_no} — {l.shade_number} ({l.color_name})
+                  {l.lot_no} ({l.color_name})
                 </option>
               ))}
             </select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Order Quantity *</label>
-            <input type="text" value={form.order_quantity} onChange={e => update('order_quantity', e.target.value)} className="input-industrial w-full" placeholder="e.g. 50 kg" required />
+            <label className="text-sm font-medium">Order Quantity (kg) *</label>
+            <input type="text" value={form.order_quantity} onChange={e => update('order_quantity', e.target.value)} className="input-industrial w-full" placeholder="e.g. 50" required />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">Yarn Type</label>
-            <input type="text" value={form.yarn_type} onChange={e => update('yarn_type', e.target.value)} className="input-industrial w-full" placeholder={selectedLot?.denier || 'Yarn type'} />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">Product Type</label>
-            <input type="text" value={form.product_type} onChange={e => update('product_type', e.target.value)} className="input-industrial w-full" placeholder="lace / webbing / elastic" />
-          </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Yarn Type</label>
+          <input type="text" value={form.yarn_type} onChange={e => update('yarn_type', e.target.value)} className="input-industrial w-full" placeholder={selectedLot?.denier || 'Yarn type'} />
         </div>
 
         <div className="space-y-1.5">
