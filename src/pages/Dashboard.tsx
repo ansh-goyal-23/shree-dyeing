@@ -53,7 +53,7 @@ const Dashboard: React.FC = () => {
         {recentLots.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
             <p>No lots created yet.</p>
-            <Link to="/lots/create" className="text-primary underline text-sm mt-2 inline-block">Create your first lot</Link>
+            <Link to="/shade-management/lots/create" className="text-primary underline text-sm mt-2 inline-block">Create your first lot</Link>
           </div>
         ) : (
           <div className="divide-y divide-border">
