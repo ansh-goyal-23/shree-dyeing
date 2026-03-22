@@ -1,64 +1,69 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, Beaker, Droplets, Layers } from 'lucide-react';
 import { calculateDyeGrams } from '@/lib/calculations';
-import type { PostDyeAction, PostDyeActionDye, PostDyeActionChemical, MasterItem } from '@/types';
+import LotPhotos from '@/components/LotPhotos';
+import type { ProcessStep, StepDye, StepChemical, MasterItem } from '@/types';
 
 interface Props {
-  actions: PostDyeAction[];
-  actionDyes: PostDyeActionDye[];
-  actionChemicals: PostDyeActionChemical[];
+  steps: ProcessStep[];
+  stepDyes: StepDye[];
+  stepChemicals: StepChemical[];
   masterItems: MasterItem[];
   netWeight: number;
+  lotNo: string;
 }
 
-const ACTION_ICONS: Record<string, React.ReactNode> = {
+const STEP_ICONS: Record<string, React.ReactNode> = {
   'Color Addition': <Droplets className="w-4 h-4 text-blue-500" />,
   'RC': <Beaker className="w-4 h-4 text-orange-500" />,
   'Leveling': <Layers className="w-4 h-4 text-emerald-500" />,
 };
 
-const PostDyeActionList: React.FC<Props> = ({ actions, actionDyes, actionChemicals, masterItems, netWeight }) => {
+const ProcessStepList: React.FC<Props> = ({ steps, stepDyes, stepChemicals, masterItems, netWeight, lotNo }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  if (actions.length === 0) {
-    return <p className="text-sm text-muted-foreground py-4">No post-dye actions recorded.</p>;
+  if (steps.length === 0) {
+    return <p className="text-sm text-muted-foreground py-4">No process steps recorded yet.</p>;
   }
 
-  const getDyesForAction = (actionId: string) => actionDyes.filter(d => d.action_id === actionId);
-  const getChemsForAction = (actionId: string) => actionChemicals.filter(c => c.action_id === actionId);
+  const getDyesForStep = (stepId: string) => stepDyes.filter(d => d.step_id === stepId);
+  const getChemsForStep = (stepId: string) => stepChemicals.filter(c => c.step_id === stepId);
   const getName = (id: string) => masterItems.find(m => m.id === id)?.name || '—';
   const getUnit = (id: string) => masterItems.find(m => m.id === id)?.unit || '—';
 
   return (
-    <div className="divide-y divide-border">
-      {actions.map(action => {
-        const isOpen = expandedId === action.id;
-        const dyes = getDyesForAction(action.id);
-        const chems = getChemsForAction(action.id);
+    <div className="space-y-1">
+      {steps.map((step, idx) => {
+        const isOpen = expandedId === step.id;
+        const dyes = getDyesForStep(step.id);
+        const chems = getChemsForStep(step.id);
         const summary = [
           dyes.length > 0 ? `${dyes.length} dye${dyes.length > 1 ? 's' : ''}` : null,
           chems.length > 0 ? `${chems.length} chemical${chems.length > 1 ? 's' : ''}` : null,
         ].filter(Boolean).join(', ') || 'Empty';
 
         return (
-          <div key={action.id}>
+          <div key={step.id} className="border border-border rounded-lg overflow-hidden">
             <button
-              onClick={() => setExpandedId(isOpen ? null : action.id)}
-              className="w-full flex items-center gap-3 py-3 px-2 hover:bg-secondary/30 rounded btn-transition text-left"
+              onClick={() => setExpandedId(isOpen ? null : step.id)}
+              className="w-full flex items-center gap-3 py-3 px-4 hover:bg-secondary/30 btn-transition text-left"
             >
               {isOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
-              {ACTION_ICONS[action.action_type]}
-              <span className="font-medium text-sm flex-1">{action.action_type}</span>
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">
+                {step.step_number}
+              </span>
+              {STEP_ICONS[step.step_type]}
+              <span className="font-medium text-sm flex-1">{step.step_type}</span>
               <span className="text-xs text-muted-foreground">{summary}</span>
               <span className="text-xs text-muted-foreground font-data">
-                {new Date(action.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })}
+                {new Date(step.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })}
               </span>
             </button>
 
             {isOpen && (
-              <div className="pl-10 pr-2 pb-4 space-y-4">
-                {action.description && (
-                  <p className="text-sm text-muted-foreground italic">"{action.description}"</p>
+              <div className="px-4 pb-4 pt-1 space-y-4 border-t border-border">
+                {step.description && (
+                  <p className="text-sm text-muted-foreground italic">"{step.description}"</p>
                 )}
 
                 {dyes.length > 0 && (
@@ -96,6 +101,12 @@ const PostDyeActionList: React.FC<Props> = ({ actions, actionDyes, actionChemica
                     </div>
                   </div>
                 )}
+
+                {/* Step Photos */}
+                <div>
+                  <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Step Photos</h5>
+                  <LotPhotos lotNo={lotNo} stepId={step.id} />
+                </div>
               </div>
             )}
           </div>
@@ -105,4 +116,4 @@ const PostDyeActionList: React.FC<Props> = ({ actions, actionDyes, actionChemica
   );
 };
 
-export default PostDyeActionList;
+export default ProcessStepList;

@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import RecipeEditor from '@/components/RecipeEditor';
-import ComparisonTable from '@/components/ComparisonTable';
-import PostDyeActionForm from '@/components/PostDyeActionForm';
-import PostDyeActionList from '@/components/PostDyeActionList';
+import ProcessStepForm from '@/components/ProcessStepForm';
+import ProcessStepList from '@/components/ProcessStepList';
 import LotPhotos from '@/components/LotPhotos';
 import { CheckCircle2, Clock, Plus, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
@@ -13,17 +12,13 @@ const LotDetail: React.FC = () => {
   const { lotNo } = useParams<{ lotNo: string }>();
   const navigate = useNavigate();
   const {
-    getLot, getVersionsForLot, approveLot, unapproveLot, addVersion, masterItems,
-    getLotsReferencingSource, addPostDyeAction, getPostDyeActionsForLot,
-    postDyeActionDyes, postDyeActionChemicals,
+    getLot, approveLot, unapproveLot, masterItems,
+    getLotsReferencingSource, addProcessStep, getProcessStepsForLot,
+    stepDyes, stepChemicals,
   } = useApp();
 
   const lot = getLot(lotNo || '');
-  const versions = getVersionsForLot(lotNo || '');
-  const [activeVersionIdx, setActiveVersionIdx] = useState(versions.length - 1);
-  const [showNewVersion, setShowNewVersion] = useState(false);
-  const [showPostDyeForm, setShowPostDyeForm] = useState(false);
-  const [reason, setReason] = useState('');
+  const [showStepForm, setShowStepForm] = useState(false);
 
   if (!lot) {
     return (
@@ -34,9 +29,8 @@ const LotDetail: React.FC = () => {
     );
   }
 
-  const activeVersion = versions[activeVersionIdx];
   const referencingLots = getLotsReferencingSource(lot.lot_no);
-  const postDyeActions = getPostDyeActionsForLot(lot.lot_no);
+  const processSteps = getProcessStepsForLot(lot.lot_no);
 
   const handleApprove = async () => {
     await approveLot(lot.lot_no);
@@ -48,20 +42,10 @@ const LotDetail: React.FC = () => {
     toast.info(`Lot ${lot.lot_no} un-approved.`);
   };
 
-  const handleCreateVersion = async () => {
-    if (!reason.trim()) { toast.error('Reason for change is required.'); return; }
-    const v = await addVersion(lot.lot_no, reason.trim());
-    if (v) {
-      toast.success(`Version ${v.version_code} created.`);
-      setShowNewVersion(false);
-      setReason('');
-    }
-  };
-
-  const handlePostDyeSubmit = async (data: Parameters<typeof addPostDyeAction>[1]) => {
-    await addPostDyeAction(lot.lot_no, data);
-    toast.success(`${data.action_type} action recorded.`);
-    setShowPostDyeForm(false);
+  const handleStepSubmit = async (data: Parameters<typeof addProcessStep>[1]) => {
+    await addProcessStep(lot.lot_no, data);
+    toast.success(`${data.step_type} step recorded.`);
+    setShowStepForm(false);
   };
 
   return (
@@ -96,11 +80,8 @@ const LotDetail: React.FC = () => {
                 Mark as Approved
               </button>
             )}
-            <button onClick={() => setShowNewVersion(true)} className="px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring inline-flex items-center gap-2">
-              <Plus className="w-4 h-4" /> New Version
-            </button>
-            <button onClick={() => setShowPostDyeForm(true)} className="px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring inline-flex items-center gap-2">
-              <Plus className="w-4 h-4" /> Post-Dye Action
+            <button onClick={() => setShowStepForm(true)} className="px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring inline-flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Add Process Step
             </button>
           </div>
         </div>
@@ -127,96 +108,45 @@ const LotDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* New Version Dialog (inline) */}
-      {showNewVersion && (
-        <div className="card-industrial p-4 border-l-4 border-correction">
-          <h3 className="text-sm font-semibold mb-3">Create New Version</h3>
-          <div className="flex items-end gap-3">
-            <div className="flex-1 space-y-1.5">
-              <label className="text-sm text-muted-foreground">Reason for change</label>
-              <input type="text" value={reason} onChange={e => setReason(e.target.value)} className="input-industrial w-full" placeholder="e.g. Color correction — added Blue 2G" />
-            </div>
-            <button onClick={handleCreateVersion} className="px-4 h-11 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90">Create</button>
-            <button onClick={() => { setShowNewVersion(false); setReason(''); }} className="px-4 h-11 border border-input rounded-md text-sm btn-transition hover:bg-secondary">Cancel</button>
-          </div>
-        </div>
-      )}
-
-      {/* Post-Dye Action Form */}
-      {showPostDyeForm && (
-        <PostDyeActionForm
+      {/* Process Step Form */}
+      {showStepForm && (
+        <ProcessStepForm
           netWeight={lot.net_weight}
           masterItems={masterItems}
-          onSubmit={handlePostDyeSubmit}
-          onCancel={() => setShowPostDyeForm(false)}
+          onSubmit={handleStepSubmit}
+          onCancel={() => setShowStepForm(false)}
         />
       )}
 
-      {/* Version Timeline */}
-      {versions.length > 0 && (
-        <div className="card-industrial p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Versions</h2>
-          <div className="flex items-center gap-1 flex-wrap">
-            {versions.map((v, idx) => (
-              <React.Fragment key={v.id}>
-                {idx > 0 && <span className="text-muted-foreground mx-1">→</span>}
-                <button
-                  onClick={() => setActiveVersionIdx(idx)}
-                  className={`px-3 py-1.5 rounded text-sm font-medium btn-transition ${
-                    idx === activeVersionIdx ? 'bg-primary text-primary-foreground' : 'bg-secondary hover:bg-secondary/80'
-                  }`}
-                >
-                  Version {v.version_code}{v.version_code === 'A' ? ' (Original)' : ''}
-                </button>
-              </React.Fragment>
-            ))}
-          </div>
-          {activeVersion && activeVersion.reason_for_change && (
-            <p className="text-sm text-muted-foreground mt-2">
-              <span className="font-medium">Reason:</span> {activeVersion.reason_for_change}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Recipe Editor */}
-      {activeVersion && (
-        <div className="card-industrial p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">
-            Recipe — Version {activeVersion.version_code}
-          </h2>
-          <RecipeEditor key={activeVersion.id} versionId={activeVersion.id} lotNo={lot.lot_no} netWeight={lot.net_weight} readOnly={activeVersionIdx < versions.length - 1} />
-        </div>
-      )}
-
-      {/* Comparison Table */}
-      {versions.length > 1 && (
-        <div className="card-industrial p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">Version Comparison</h2>
-          <ComparisonTable versions={versions} lotNo={lot.lot_no} masterItems={masterItems} />
-        </div>
-      )}
-
-      {/* Post-Dye Actions */}
+      {/* Base Recipe */}
       <div className="card-industrial p-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-          Post-Dye Actions {postDyeActions.length > 0 && `(${postDyeActions.length})`}
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">
+          Base Recipe (Initial Dyeing)
         </h2>
-        <PostDyeActionList
-          actions={postDyeActions}
-          actionDyes={postDyeActionDyes}
-          actionChemicals={postDyeActionChemicals}
-          masterItems={masterItems}
-          netWeight={lot.net_weight}
-        />
+        <RecipeEditor lotNo={lot.lot_no} netWeight={lot.net_weight} />
       </div>
 
-      {/* Lot Photos */}
+      {/* Base Photos */}
       <div className="card-industrial p-4">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-          Photos
+          Base Result Photos
         </h2>
         <LotPhotos lotNo={lot.lot_no} />
+      </div>
+
+      {/* Process Steps Timeline */}
+      <div className="card-industrial p-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+          Process Steps {processSteps.length > 0 && `(${processSteps.length})`}
+        </h2>
+        <ProcessStepList
+          steps={processSteps}
+          stepDyes={stepDyes}
+          stepChemicals={stepChemicals}
+          masterItems={masterItems}
+          netWeight={lot.net_weight}
+          lotNo={lot.lot_no}
+        />
       </div>
 
       {/* Referencing Lots */}
