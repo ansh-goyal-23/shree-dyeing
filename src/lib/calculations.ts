@@ -1,4 +1,4 @@
-const CHESSE_WEIGHT = 0.160;
+const CHESSE_WEIGHT = 0.180;
 
 export const calculateNetWeight = (gross: number, count: number): number => {
   return parseFloat((gross - count * CHESSE_WEIGHT).toFixed(3));
