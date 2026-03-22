@@ -56,8 +56,19 @@ const CreateLot: React.FC = () => {
     });
 
     if (success) {
+      // Link intake item if creating from sampling
+      if (intakeItemId) {
+        await supabase.from('intake_items').update({
+          linked_lot_no: form.lot_no.trim(),
+          status: 'In Development',
+        }).eq('id', intakeItemId);
+      }
       toast.success(`Lot ${form.lot_no} created successfully.`);
-      navigate(`/shade-management/lots/${form.lot_no}`);
+      if (intakeId) {
+        navigate(`/sampling/${intakeId}`);
+      } else {
+        navigate(`/shade-management/lots/${form.lot_no}`);
+      }
     } else {
       toast.error(`Failed to create lot. Lot No may already exist.`);
     }
