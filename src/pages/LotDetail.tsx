@@ -211,6 +211,14 @@ const LotDetail: React.FC = () => {
         />
       </div>
 
+      {/* Lot Photos */}
+      <div className="card-industrial p-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+          Photos
+        </h2>
+        <LotPhotos lotNo={lot.lot_no} />
+      </div>
+
       {/* Referencing Lots */}
       {referencingLots.length > 0 && (
         <div className="card-industrial p-4">
