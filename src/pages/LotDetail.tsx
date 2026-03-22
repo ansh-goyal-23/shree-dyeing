@@ -5,6 +5,7 @@ import RecipeEditor from '@/components/RecipeEditor';
 import ComparisonTable from '@/components/ComparisonTable';
 import PostDyeActionForm from '@/components/PostDyeActionForm';
 import PostDyeActionList from '@/components/PostDyeActionList';
+import LotPhotos from '@/components/LotPhotos';
 import { CheckCircle2, Clock, Plus, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -208,6 +209,14 @@ const LotDetail: React.FC = () => {
           masterItems={masterItems}
           netWeight={lot.net_weight}
         />
+      </div>
+
+      {/* Lot Photos */}
+      <div className="card-industrial p-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+          Photos
+        </h2>
+        <LotPhotos lotNo={lot.lot_no} />
       </div>
 
       {/* Referencing Lots */}
