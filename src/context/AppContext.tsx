@@ -16,7 +16,7 @@ interface AppState {
 }
 
 interface AppContextType extends AppState {
-  addLot: (lot: Omit<Lot, 'net_weight' | 'is_approved'>, sourceLotNo?: string) => Promise<boolean>;
+  addLot: (lot: Omit<Lot, 'net_weight' | 'is_approved'>) => Promise<boolean>;
   approveLot: (lotNo: string) => Promise<void>;
   unapproveLot: (lotNo: string) => Promise<void>;
   updateRecipeDyes: (lotNo: string, dyes: RecipeDye[]) => Promise<void>;
