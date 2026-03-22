@@ -16,7 +16,7 @@ interface AppState {
 }
 
 interface AppContextType extends AppState {
-  addLot: (lot: Omit<Lot, 'net_weight' | 'is_approved'>, sourceLotNo?: string) => Promise<boolean>;
+  addLot: (lot: Omit<Lot, 'net_weight' | 'is_approved'>) => Promise<boolean>;
   approveLot: (lotNo: string) => Promise<void>;
   unapproveLot: (lotNo: string) => Promise<void>;
   updateRecipeDyes: (lotNo: string, dyes: RecipeDye[]) => Promise<void>;
@@ -81,27 +81,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const addLot = useCallback(async (lotData: Omit<Lot, 'net_weight' | 'is_approved'>, sourceLotNo?: string): Promise<boolean> => {
+  const addLot = useCallback(async (lotData: Omit<Lot, 'net_weight' | 'is_approved'>): Promise<boolean> => {
     const net_weight = calculateNetWeight(lotData.gross_weight, lotData.number_of_chesses);
+    const shade_number = lotData.shade_number?.trim() || lotData.lot_no;
     const { error: lotErr } = await supabase.from('lots').insert({
       lot_no: lotData.lot_no, date: lotData.date, yarn_company_name: lotData.yarn_company_name,
       color_name: lotData.color_name, denier: lotData.denier, number_of_chesses: lotData.number_of_chesses,
-      gross_weight: lotData.gross_weight, net_weight, is_approved: false, source_lot_no: sourceLotNo || null,
+      gross_weight: lotData.gross_weight, net_weight, is_approved: false,
+      shade_number, source_lot_no: lotData.source_lot_no || null,
     });
     if (lotErr) return false;
-
-    if (sourceLotNo) {
-      const { data: srcDyes } = await supabase.from('recipe_dyes').select('*').eq('lot_no', sourceLotNo);
-      const { data: srcChems } = await supabase.from('recipe_chemicals').select('*').eq('lot_no', sourceLotNo);
-      if (srcDyes?.length) {
-        await supabase.from('recipe_dyes').insert(
-          srcDyes.map(d => ({ lot_no: lotData.lot_no, dye_id: d.dye_id, percentage: d.percentage, qty_grams: parseFloat(((d.percentage / 100) * net_weight * 1000).toFixed(3)) }))
-        );
-      }
-      if (srcChems?.length) {
-        await supabase.from('recipe_chemicals').insert(srcChems.map(c => ({ lot_no: lotData.lot_no, chemical_id: c.chemical_id, qty: c.qty })));
-      }
-    }
     await fetchAll();
     return true;
   }, [fetchAll]);
@@ -202,7 +191,8 @@ const mapLot = (row: any): Lot => ({
   lot_no: row.lot_no, date: row.date, yarn_company_name: row.yarn_company_name,
   color_name: row.color_name || '', denier: row.denier || '',
   number_of_chesses: Number(row.number_of_chesses) || 0, gross_weight: Number(row.gross_weight) || 0,
-  net_weight: Number(row.net_weight) || 0, is_approved: row.is_approved || false, source_lot_no: row.source_lot_no || null,
+  net_weight: Number(row.net_weight) || 0, is_approved: row.is_approved || false,
+  shade_number: row.shade_number || row.lot_no, source_lot_no: row.source_lot_no || null,
 });
 
 const mapDye = (row: any): RecipeDye => ({
