@@ -16,7 +16,6 @@ const CreateIntake: React.FC = () => {
   const [form, setForm] = useState({
     intake_type: 'Sheet' as IntakeType,
     received_date: new Date().toISOString().split('T')[0],
-    sheet_date: '',
     client_id: '',
     notes: '',
     reference_photo_path: null as string | null,
@@ -45,7 +44,7 @@ const CreateIntake: React.FC = () => {
       const entry = await createEntry.mutateAsync({
         intake_type: form.intake_type,
         received_date: form.received_date,
-        sheet_date: form.sheet_date || null,
+        sheet_date: null,
         client_id: form.client_id,
         notes: form.notes.trim(),
         reference_photo_path: form.reference_photo_path,
@@ -75,15 +74,9 @@ const CreateIntake: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">Client *</label>
-            <ClientSelect value={form.client_id} onChange={v => update('client_id', v)} />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">Sheet Date</label>
-            <input type="date" value={form.sheet_date} onChange={e => update('sheet_date', e.target.value)} className="input-industrial w-full" />
-          </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Client *</label>
+          <ClientSelect value={form.client_id} onChange={v => update('client_id', v)} />
         </div>
 
         <div className="space-y-1.5">

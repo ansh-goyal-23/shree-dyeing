@@ -45,11 +45,10 @@ const IntakeDetail: React.FC = () => {
       </div>
 
       <div className="card-industrial p-4 space-y-3">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
           <div><span className="text-muted-foreground">Type</span><p className="font-medium">{entry.intake_type}</p></div>
           <div><span className="text-muted-foreground">Received</span><p className="font-medium font-data">{entry.received_date}</p></div>
-          {entry.sheet_date && <div><span className="text-muted-foreground">Sheet Date</span><p className="font-medium font-data">{entry.sheet_date}</p></div>}
-          {totalQty > 0 && <div><span className="text-muted-foreground">Total Qty</span><p className="font-medium font-data">{totalQty}</p></div>}
+          {totalQty > 0 && <div><span className="text-muted-foreground">Total Qty</span><p className="font-medium font-data">{totalQty} kg</p></div>}
         </div>
         {entry.notes && <p className="text-sm text-muted-foreground">{entry.notes}</p>}
         {entry.reference_photo_path && (
@@ -68,7 +67,7 @@ const IntakeDetail: React.FC = () => {
         </button>
       </div>
 
-      {showAddForm && <AddItemForm intakeId={id!} onClose={() => setShowAddForm(false)} />}
+      {showAddForm && <AddItemForm intakeId={id!} existingCount={items.length} onClose={() => setShowAddForm(false)} />}
 
       {itemsLoading ? (
         <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
@@ -91,11 +90,10 @@ const IntakeDetail: React.FC = () => {
                       <span className="font-semibold text-sm">#{item.sample_identifier}</span>
                       <Badge className={`text-[10px] ${statusColors[item.status]}`}>{item.status}</Badge>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 mt-1.5 text-xs">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 mt-1.5 text-xs">
                       {item.shade_reference && <div><span className="text-muted-foreground">Shade: </span>{item.shade_reference}</div>}
                       {item.yarn_type && <div><span className="text-muted-foreground">Yarn: </span>{item.yarn_type}</div>}
-                      {item.product_type && <div><span className="text-muted-foreground">Product: </span>{item.product_type}</div>}
-                      {item.order_quantity && <div><span className="text-muted-foreground">Qty: </span>{item.order_quantity}</div>}
+                      {item.order_quantity && <div><span className="text-muted-foreground">Qty: </span>{item.order_quantity} kg</div>}
                     </div>
                     {item.notes && <p className="text-xs text-muted-foreground mt-1">{item.notes}</p>}
                     {item.linked_lot_no && (
@@ -139,12 +137,12 @@ const IntakeDetail: React.FC = () => {
   );
 };
 
-const AddItemForm: React.FC<{ intakeId: string; onClose: () => void }> = ({ intakeId, onClose }) => {
+const AddItemForm: React.FC<{ intakeId: string; existingCount: number; onClose: () => void }> = ({ intakeId, existingCount, onClose }) => {
   const createItem = useCreateIntakeItem();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({
-    sample_identifier: '', shade_reference: '', yarn_type: '', product_type: '',
+    shade_reference: '', yarn_type: '',
     order_quantity: '', notes: '', sample_photo_path: null as string | null,
   });
 
@@ -163,14 +161,14 @@ const AddItemForm: React.FC<{ intakeId: string; onClose: () => void }> = ({ inta
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.sample_identifier.trim()) { toast.error('Sample identifier is required.'); return; }
+    const autoId = String(existingCount + 1);
     try {
       await createItem.mutateAsync({
         intake_id: intakeId,
-        sample_identifier: form.sample_identifier.trim(),
+        sample_identifier: autoId,
         shade_reference: form.shade_reference.trim(),
         yarn_type: form.yarn_type.trim(),
-        product_type: form.product_type.trim(),
+        product_type: '',
         order_quantity: form.order_quantity.trim(),
         notes: form.notes.trim(),
         sample_photo_path: form.sample_photo_path,
@@ -188,12 +186,8 @@ const AddItemForm: React.FC<{ intakeId: string; onClose: () => void }> = ({ inta
 
   return (
     <form onSubmit={handleSubmit} className="card-industrial p-4 space-y-4 border-2 border-primary/20">
-      <h3 className="text-sm font-semibold">Add Item</h3>
+      <h3 className="text-sm font-semibold">Add Item #{existingCount + 1}</h3>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Identifier *</label>
-          <input type="text" value={form.sample_identifier} onChange={e => update('sample_identifier', e.target.value)} className="input-industrial w-full text-sm" placeholder="A, B, 1..." required />
-        </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">Shade Reference</label>
           <input type="text" value={form.shade_reference} onChange={e => update('shade_reference', e.target.value)} className="input-industrial w-full text-sm" />
@@ -203,12 +197,8 @@ const AddItemForm: React.FC<{ intakeId: string; onClose: () => void }> = ({ inta
           <input type="text" value={form.yarn_type} onChange={e => update('yarn_type', e.target.value)} className="input-industrial w-full text-sm" />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Product Type</label>
-          <input type="text" value={form.product_type} onChange={e => update('product_type', e.target.value)} className="input-industrial w-full text-sm" placeholder="lace / webbing / elastic" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Order Quantity</label>
-          <input type="text" value={form.order_quantity} onChange={e => update('order_quantity', e.target.value)} className="input-industrial w-full text-sm" />
+          <label className="text-xs text-muted-foreground">Order Qty (kg)</label>
+          <input type="text" value={form.order_quantity} onChange={e => update('order_quantity', e.target.value)} className="input-industrial w-full text-sm" placeholder="e.g. 50" />
         </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">Photo</label>
