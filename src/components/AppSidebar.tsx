@@ -31,6 +31,11 @@ const shadeItems = [
   { title: 'Master Data', url: '/shade-management/master', icon: Database },
 ];
 
+const samplingItems = [
+  { title: 'All Intakes', url: '/sampling', icon: ClipboardList },
+  { title: 'New Intake', url: '/sampling/create', icon: PlusCircle },
+];
+
 const modules = [
   { title: 'Production', url: '/production', icon: Factory },
   { title: 'Expenses', url: '/expenses', icon: DollarSign },
