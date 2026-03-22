@@ -55,6 +55,7 @@ const App = () => (
                       <Route path="/shade-management/master" element={<MasterData />} />
                       <Route path="/sampling" element={<IntakeList />} />
                       <Route path="/sampling/create" element={<CreateIntake />} />
+                      <Route path="/sampling/order/create" element={<CreateDirectOrder />} />
                       <Route path="/sampling/:id" element={<IntakeDetail />} />
                       <Route path="/production" element={<PlaceholderModule />} />
                       <Route path="/expenses" element={<PlaceholderModule />} />
