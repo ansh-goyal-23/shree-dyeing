@@ -1,10 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useIntakeEntry, useIntakeItems, useCreateIntakeItem, useUpdateIntakeItem, useDeleteIntakeItem, getPhotoUrl } from '@/hooks/useSampling';
+import { useApp } from '@/context/AppContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, PlusCircle, Camera, Loader2, Trash2, ExternalLink, X } from 'lucide-react';
+import LotFieldAutocomplete from '@/components/LotFieldAutocomplete';
 import type { IntakeItemStatus } from '@/types/sampling';
 
 const statusColors: Record<IntakeItemStatus, string> = {
@@ -104,7 +106,7 @@ const IntakeDetail: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  {!item.linked_lot_no && item.status !== 'Cancelled' && (
+                  {item.status !== 'Cancelled' && (
                     <Link to={`/shade-management/lots/create?yarn=${encodeURIComponent(item.yarn_type)}&color=${encodeURIComponent(item.shade_reference)}&intake_item=${item.id}&intake_id=${item.intake_id || ''}`}
                       className="px-2 h-7 bg-approved/10 text-approved rounded text-[10px] font-medium btn-transition hover:bg-approved/20 inline-flex items-center gap-1">
                       Create Lot
@@ -139,12 +141,19 @@ const IntakeDetail: React.FC = () => {
 
 const AddItemForm: React.FC<{ intakeId: string; existingCount: number; onClose: () => void }> = ({ intakeId, existingCount, onClose }) => {
   const createItem = useCreateIntakeItem();
+  const { lots } = useApp();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({
     shade_reference: '', yarn_type: '',
     order_quantity: '', notes: '', sample_photo_path: null as string | null,
   });
+
+  const yarnSuggestions = useMemo(() => {
+    const set = new Set<string>();
+    lots.forEach(l => { if (l.denier?.trim()) set.add(l.denier.trim()); });
+    return Array.from(set).sort();
+  }, [lots]);
 
   const update = (f: string, v: any) => setForm(prev => ({ ...prev, [f]: v }));
 
@@ -194,7 +203,13 @@ const AddItemForm: React.FC<{ intakeId: string; existingCount: number; onClose: 
         </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">Yarn Type</label>
-          <input type="text" value={form.yarn_type} onChange={e => update('yarn_type', e.target.value)} className="input-industrial w-full text-sm" />
+          <LotFieldAutocomplete
+            value={form.yarn_type}
+            onChange={v => update('yarn_type', v)}
+            suggestions={yarnSuggestions}
+            placeholder="e.g. 150D"
+            className="input-industrial w-full text-sm"
+          />
         </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">Order Qty (kg)</label>
