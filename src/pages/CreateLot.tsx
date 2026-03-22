@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { calculateNetWeight } from '@/lib/calculations';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import LotFieldAutocomplete from '@/components/LotFieldAutocomplete';
 
 const CreateLot: React.FC = () => {
@@ -10,12 +11,18 @@ const CreateLot: React.FC = () => {
   const companyNames = useMemo(() => lots.map(l => l.yarn_company_name), [lots]);
   const colorNames = useMemo(() => lots.map(l => l.color_name).filter(Boolean) as string[], [lots]);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const prefillYarn = searchParams.get('yarn') || '';
+  const prefillColor = searchParams.get('color') || '';
+  const intakeItemId = searchParams.get('intake_item');
+  const intakeId = searchParams.get('intake_id');
 
   const [form, setForm] = useState({
     lot_no: '',
     date: new Date().toISOString().split('T')[0],
-    yarn_company_name: '',
-    color_name: '',
+    yarn_company_name: prefillYarn,
+    color_name: prefillColor,
     denier: '',
     shade_number: '',
     number_of_chesses: 0,
@@ -49,8 +56,19 @@ const CreateLot: React.FC = () => {
     });
 
     if (success) {
+      // Link intake item if creating from sampling
+      if (intakeItemId) {
+        await supabase.from('intake_items').update({
+          linked_lot_no: form.lot_no.trim(),
+          status: 'In Development',
+        }).eq('id', intakeItemId);
+      }
       toast.success(`Lot ${form.lot_no} created successfully.`);
-      navigate(`/shade-management/lots/${form.lot_no}`);
+      if (intakeId) {
+        navigate(`/sampling/${intakeId}`);
+      } else {
+        navigate(`/shade-management/lots/${form.lot_no}`);
+      }
     } else {
       toast.error(`Failed to create lot. Lot No may already exist.`);
     }

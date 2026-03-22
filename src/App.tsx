@@ -11,6 +11,9 @@ import CreateLot from "@/pages/CreateLot";
 import LotDetail from "@/pages/LotDetail";
 import MasterData from "@/pages/MasterData";
 import PlaceholderModule from "@/pages/PlaceholderModule";
+import IntakeList from "@/pages/IntakeList";
+import CreateIntake from "@/pages/CreateIntake";
+import IntakeDetail from "@/pages/IntakeDetail";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -49,6 +52,9 @@ const App = () => (
                       <Route path="/shade-management/lots/create" element={<CreateLot />} />
                       <Route path="/shade-management/lots/:lotNo" element={<LotDetail />} />
                       <Route path="/shade-management/master" element={<MasterData />} />
+                      <Route path="/sampling" element={<IntakeList />} />
+                      <Route path="/sampling/create" element={<CreateIntake />} />
+                      <Route path="/sampling/:id" element={<IntakeDetail />} />
                       <Route path="/production" element={<PlaceholderModule />} />
                       <Route path="/expenses" element={<PlaceholderModule />} />
                       <Route path="/dispatch" element={<PlaceholderModule />} />
