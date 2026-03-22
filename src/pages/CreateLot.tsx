@@ -50,7 +50,7 @@ const CreateLot: React.FC = () => {
 
     if (success) {
       toast.success(`Lot ${form.lot_no} created successfully.`);
-      navigate(`/lots/${form.lot_no}`);
+      navigate(`/shade-management/lots/${form.lot_no}`);
     } else {
       toast.error(`Failed to create lot. Lot No may already exist.`);
     }
@@ -170,7 +170,7 @@ const CreateLot: React.FC = () => {
         <div className="flex justify-end gap-3 pt-2">
           <button
             type="button"
-            onClick={() => navigate('/lots')}
+            onClick={() => navigate('/shade-management/lots')}
             className="px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring"
           >
             Cancel

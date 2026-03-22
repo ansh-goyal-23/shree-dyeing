@@ -21,7 +21,7 @@ const Dashboard: React.FC = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
         <Link
-          to="/lots/create"
+          to="/shade-management/lots/create"
           className="inline-flex items-center gap-2 px-4 h-11 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 focus-ring"
         >
           <PlusCircle className="w-4 h-4" />
@@ -46,21 +46,21 @@ const Dashboard: React.FC = () => {
       <div className="card-industrial">
         <div className="flex items-center justify-between p-4 row-separator">
           <h2 className="text-lg font-semibold">Recent Lots</h2>
-          <Link to="/lots" className="text-sm text-muted-foreground hover:text-foreground btn-transition flex items-center gap-1">
+          <Link to="/shade-management/lots" className="text-sm text-muted-foreground hover:text-foreground btn-transition flex items-center gap-1">
             View all <ArrowRight className="w-3 h-3" />
           </Link>
         </div>
         {recentLots.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
             <p>No lots created yet.</p>
-            <Link to="/lots/create" className="text-primary underline text-sm mt-2 inline-block">Create your first lot</Link>
+            <Link to="/shade-management/lots/create" className="text-primary underline text-sm mt-2 inline-block">Create your first lot</Link>
           </div>
         ) : (
           <div className="divide-y divide-border">
             {recentLots.map(lot => (
               <Link
                 key={lot.lot_no}
-                to={`/lots/${lot.lot_no}`}
+                to={`/shade-management/lots/${lot.lot_no}`}
                 className="flex items-center justify-between px-4 py-3 hover:bg-secondary/50 btn-transition"
               >
                 <div className="flex items-center gap-4">

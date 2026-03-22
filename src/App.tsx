@@ -10,6 +10,7 @@ import LotList from "@/pages/LotList";
 import CreateLot from "@/pages/CreateLot";
 import LotDetail from "@/pages/LotDetail";
 import MasterData from "@/pages/MasterData";
+import PlaceholderModule from "@/pages/PlaceholderModule";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -25,7 +26,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const AuthRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading...</div>;
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to="/shade-management" replace />;
   return <>{children}</>;
 };
 
@@ -37,16 +38,21 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
+            <Route path="/" element={<Navigate to="/shade-management" replace />} />
             <Route path="*" element={
               <ProtectedRoute>
                 <AppProvider>
                   <Layout>
                     <Routes>
-                      <Route path="/" element={<Dashboard />} />
-                      <Route path="/lots" element={<LotList />} />
-                      <Route path="/lots/create" element={<CreateLot />} />
-                      <Route path="/lots/:lotNo" element={<LotDetail />} />
-                      <Route path="/master" element={<MasterData />} />
+                      <Route path="/shade-management" element={<Dashboard />} />
+                      <Route path="/shade-management/lots" element={<LotList />} />
+                      <Route path="/shade-management/lots/create" element={<CreateLot />} />
+                      <Route path="/shade-management/lots/:lotNo" element={<LotDetail />} />
+                      <Route path="/shade-management/master" element={<MasterData />} />
+                      <Route path="/production" element={<PlaceholderModule />} />
+                      <Route path="/expenses" element={<PlaceholderModule />} />
+                      <Route path="/dispatch" element={<PlaceholderModule />} />
+                      <Route path="/inventory" element={<PlaceholderModule />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </Layout>

@@ -19,7 +19,7 @@ const LotList: React.FC = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Lot List</h1>
         <Link
-          to="/lots/create"
+          to="/shade-management/lots/create"
           className="inline-flex items-center gap-2 px-4 h-11 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 focus-ring"
         >
           New Lot
@@ -61,7 +61,7 @@ const LotList: React.FC = () => {
               filtered.map(lot => (
                 <tr key={lot.lot_no} className="row-separator hover:bg-secondary/30 btn-transition">
                   <td className="px-4 py-3">
-                    <Link to={`/lots/${lot.lot_no}`} className="font-data font-semibold text-primary hover:underline">
+                    <Link to={`/shade-management/lots/${lot.lot_no}`} className="font-data font-semibold text-primary hover:underline">
                       {lot.lot_no}
                     </Link>
                   </td>
