@@ -14,6 +14,7 @@ import PlaceholderModule from "@/pages/PlaceholderModule";
 import IntakeList from "@/pages/IntakeList";
 import CreateIntake from "@/pages/CreateIntake";
 import IntakeDetail from "@/pages/IntakeDetail";
+import CreateDirectOrder from "@/pages/CreateDirectOrder";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
