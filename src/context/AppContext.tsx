@@ -81,27 +81,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const addLot = useCallback(async (lotData: Omit<Lot, 'net_weight' | 'is_approved'>, sourceLotNo?: string): Promise<boolean> => {
+  const addLot = useCallback(async (lotData: Omit<Lot, 'net_weight' | 'is_approved'>): Promise<boolean> => {
     const net_weight = calculateNetWeight(lotData.gross_weight, lotData.number_of_chesses);
+    const shade_number = lotData.shade_number?.trim() || lotData.lot_no;
     const { error: lotErr } = await supabase.from('lots').insert({
       lot_no: lotData.lot_no, date: lotData.date, yarn_company_name: lotData.yarn_company_name,
       color_name: lotData.color_name, denier: lotData.denier, number_of_chesses: lotData.number_of_chesses,
-      gross_weight: lotData.gross_weight, net_weight, is_approved: false, source_lot_no: sourceLotNo || null,
+      gross_weight: lotData.gross_weight, net_weight, is_approved: false,
+      shade_number, source_lot_no: lotData.source_lot_no || null,
     });
     if (lotErr) return false;
-
-    if (sourceLotNo) {
-      const { data: srcDyes } = await supabase.from('recipe_dyes').select('*').eq('lot_no', sourceLotNo);
-      const { data: srcChems } = await supabase.from('recipe_chemicals').select('*').eq('lot_no', sourceLotNo);
-      if (srcDyes?.length) {
-        await supabase.from('recipe_dyes').insert(
-          srcDyes.map(d => ({ lot_no: lotData.lot_no, dye_id: d.dye_id, percentage: d.percentage, qty_grams: parseFloat(((d.percentage / 100) * net_weight * 1000).toFixed(3)) }))
-        );
-      }
-      if (srcChems?.length) {
-        await supabase.from('recipe_chemicals').insert(srcChems.map(c => ({ lot_no: lotData.lot_no, chemical_id: c.chemical_id, qty: c.qty })));
-      }
-    }
     await fetchAll();
     return true;
   }, [fetchAll]);
