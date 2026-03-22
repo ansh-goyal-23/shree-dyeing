@@ -46,7 +46,7 @@ const LotList: React.FC = () => {
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Company</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Color</th>
               <th className="text-right px-4 py-3 font-medium text-muted-foreground">Net Wt (kg)</th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Source</th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Shade No</th>
               <th className="text-center px-4 py-3 font-medium text-muted-foreground">Status</th>
             </tr>
           </thead>
