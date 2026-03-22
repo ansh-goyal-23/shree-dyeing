@@ -46,7 +46,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>
-        <SidebarGroup defaultOpen={isShadeActive}>
+        <SidebarGroup>
           <SidebarGroupLabel>
             <Palette className="mr-2 h-4 w-4" />
             {!collapsed && 'Shade Management'}
