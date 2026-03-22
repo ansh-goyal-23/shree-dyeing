@@ -51,7 +51,7 @@ const LotDetail: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Back */}
-      <button onClick={() => navigate('/lots')} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground btn-transition">
+      <button onClick={() => navigate('/shade-management/lots')} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground btn-transition">
         <ArrowLeft className="w-4 h-4" /> Back to Lot List
       </button>
 

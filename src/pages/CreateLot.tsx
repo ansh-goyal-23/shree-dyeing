@@ -50,7 +50,7 @@ const CreateLot: React.FC = () => {
 
     if (success) {
       toast.success(`Lot ${form.lot_no} created successfully.`);
-      navigate(`/lots/${form.lot_no}`);
+      navigate(`/shade-management/lots/${form.lot_no}`);
     } else {
       toast.error(`Failed to create lot. Lot No may already exist.`);
     }
