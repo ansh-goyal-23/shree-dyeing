@@ -11,6 +11,9 @@ import CreateLot from "@/pages/CreateLot";
 import LotDetail from "@/pages/LotDetail";
 import MasterData from "@/pages/MasterData";
 import PlaceholderModule from "@/pages/PlaceholderModule";
+import IntakeList from "@/pages/IntakeList";
+import CreateIntake from "@/pages/CreateIntake";
+import IntakeDetail from "@/pages/IntakeDetail";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
