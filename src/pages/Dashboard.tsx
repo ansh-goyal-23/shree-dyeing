@@ -60,7 +60,7 @@ const Dashboard: React.FC = () => {
             {recentLots.map(lot => (
               <Link
                 key={lot.lot_no}
-                to={`/lots/${lot.lot_no}`}
+                to={`/shade-management/lots/${lot.lot_no}`}
                 className="flex items-center justify-between px-4 py-3 hover:bg-secondary/50 btn-transition"
               >
                 <div className="flex items-center gap-4">

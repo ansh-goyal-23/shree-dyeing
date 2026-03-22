@@ -61,7 +61,7 @@ const LotList: React.FC = () => {
               filtered.map(lot => (
                 <tr key={lot.lot_no} className="row-separator hover:bg-secondary/30 btn-transition">
                   <td className="px-4 py-3">
-                    <Link to={`/lots/${lot.lot_no}`} className="font-data font-semibold text-primary hover:underline">
+                    <Link to={`/shade-management/lots/${lot.lot_no}`} className="font-data font-semibold text-primary hover:underline">
                       {lot.lot_no}
                     </Link>
                   </td>
