@@ -46,7 +46,7 @@ const Dashboard: React.FC = () => {
       <div className="card-industrial">
         <div className="flex items-center justify-between p-4 row-separator">
           <h2 className="text-lg font-semibold">Recent Lots</h2>
-          <Link to="/lots" className="text-sm text-muted-foreground hover:text-foreground btn-transition flex items-center gap-1">
+          <Link to="/shade-management/lots" className="text-sm text-muted-foreground hover:text-foreground btn-transition flex items-center gap-1">
             View all <ArrowRight className="w-3 h-3" />
           </Link>
         </div>
