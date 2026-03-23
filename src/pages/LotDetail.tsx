@@ -6,9 +6,10 @@ import ProcessStepForm from '@/components/ProcessStepForm';
 import ProcessStepList from '@/components/ProcessStepList';
 import LotPhotos from '@/components/LotPhotos';
 import { useOrdersForLot } from '@/hooks/useSampling';
-import { CheckCircle2, Clock, Plus, ArrowLeft, ShoppingCart } from 'lucide-react';
+import { CheckCircle2, Clock, Plus, ArrowLeft, ShoppingCart, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const LotDetail: React.FC = () => {
   const { lotNo } = useParams<{ lotNo: string }>();
