@@ -81,6 +81,33 @@ const CreateLot: React.FC = () => {
     });
 
     if (success) {
+      // Clone base recipe from shade source lot if selected
+      const shadeLotNo = form.shade_number.trim();
+      if (shadeLotNo && shadeLotNo !== form.lot_no.trim()) {
+        const sourceDyes = getDyesForLot(shadeLotNo);
+        const sourceChemicals = getChemicalsForLot(shadeLotNo);
+        const newNetWeight = calculateNetWeight(form.gross_weight, form.number_of_chesses);
+        if (sourceDyes.length > 0) {
+          const clonedDyes = sourceDyes.map(d => ({
+            id: crypto.randomUUID(),
+            lot_no: form.lot_no.trim(),
+            dye_id: d.dye_id,
+            percentage: d.percentage,
+            qty_grams: calculateDyeGrams(d.percentage, newNetWeight),
+          }));
+          await updateRecipeDyes(form.lot_no.trim(), clonedDyes);
+        }
+        if (sourceChemicals.length > 0) {
+          const clonedChemicals = sourceChemicals.map(c => ({
+            id: crypto.randomUUID(),
+            lot_no: form.lot_no.trim(),
+            chemical_id: c.chemical_id,
+            qty: c.qty,
+          }));
+          await updateRecipeChemicals(form.lot_no.trim(), clonedChemicals);
+        }
+      }
+
       if (intakeItemId) {
         await supabase.from('intake_items').update({
           linked_lot_no: form.lot_no.trim(),
