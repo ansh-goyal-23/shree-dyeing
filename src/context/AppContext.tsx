@@ -17,6 +17,7 @@ interface AppState {
 
 interface AppContextType extends AppState {
   addLot: (lot: Omit<Lot, 'net_weight' | 'is_approved'>) => Promise<boolean>;
+  deleteLot: (lotNo: string) => Promise<boolean>;
   approveLot: (lotNo: string) => Promise<void>;
   unapproveLot: (lotNo: string) => Promise<void>;
   updateRecipeDyes: (lotNo: string, dyes: RecipeDye[]) => Promise<void>;
@@ -91,6 +92,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       shade_number, source_lot_no: lotData.source_lot_no || null,
     });
     if (lotErr) return false;
+    await fetchAll();
+    return true;
+  }, [fetchAll]);
+
+  const deleteLot = useCallback(async (lotNo: string): Promise<boolean> => {
+    // Delete child records first, then the lot
+    await Promise.all([
+      supabase.from('recipe_dyes').delete().eq('lot_no', lotNo),
+      supabase.from('recipe_chemicals').delete().eq('lot_no', lotNo),
+      supabase.from('lot_photos').delete().eq('lot_no', lotNo),
+    ]);
+    // Delete process steps and their children
+    const { data: steps } = await supabase.from('process_steps').select('id').eq('lot_no', lotNo);
+    if (steps && steps.length > 0) {
+      const stepIds = steps.map(s => s.id);
+      await Promise.all([
+        supabase.from('step_dyes').delete().in('step_id', stepIds),
+        supabase.from('step_chemicals').delete().in('step_id', stepIds),
+      ]);
+      await supabase.from('process_steps').delete().eq('lot_no', lotNo);
+    }
+    const { error } = await supabase.from('lots').delete().eq('lot_no', lotNo);
+    if (error) return false;
     await fetchAll();
     return true;
   }, [fetchAll]);
@@ -170,7 +194,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      ...state, addLot, approveLot, unapproveLot, updateRecipeDyes, updateRecipeChemicals,
+      ...state, addLot, deleteLot, approveLot, unapproveLot, updateRecipeDyes, updateRecipeChemicals,
       addMasterItem, updateMasterItem, addProcessStep, getLot, getDyesForLot,
       getChemicalsForLot, getApprovedLots, getLotsReferencingSource,
       getProcessStepsForLot, getStepDyes, getStepChemicals,
