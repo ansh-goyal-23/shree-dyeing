@@ -86,6 +86,38 @@ const LotDetail: React.FC = () => {
             <button onClick={() => setShowStepForm(true)} className="px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring inline-flex items-center gap-2">
               <Plus className="w-4 h-4" /> Add Process Step
             </button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button className="px-4 h-11 border border-destructive text-destructive rounded-md text-sm font-medium btn-transition hover:bg-destructive/10 focus-ring inline-flex items-center gap-2">
+                  <Trash2 className="w-4 h-4" /> Delete
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Lot {lot.lot_no}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete this lot along with its recipe, process steps, and photos. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={async () => {
+                      const success = await deleteLot(lot.lot_no);
+                      if (success) {
+                        toast.success(`Lot ${lot.lot_no} deleted.`);
+                        navigate('/shade-management/lots');
+                      } else {
+                        toast.error('Failed to delete lot.');
+                      }
+                    }}
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       </div>
