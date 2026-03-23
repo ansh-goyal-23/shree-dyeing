@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { calculateNetWeight } from '@/lib/calculations';
@@ -10,6 +10,7 @@ const CreateLot: React.FC = () => {
   const { addLot, lots } = useApp();
   const companyNames = useMemo(() => lots.map(l => l.yarn_company_name), [lots]);
   const colorNames = useMemo(() => lots.map(l => l.color_name).filter(Boolean) as string[], [lots]);
+  const denierValues = useMemo(() => lots.map(l => l.denier).filter(Boolean) as string[], [lots]);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -29,10 +30,34 @@ const CreateLot: React.FC = () => {
     gross_weight: 0,
   });
 
+  // Build shade dropdown options: "lot_no (color_name)"
+  const shadeOptions = useMemo(() => {
+    return lots.map(l => ({
+      label: `${l.lot_no} (${l.color_name || 'No Color'})`,
+      lot_no: l.lot_no,
+      yarn_company_name: l.yarn_company_name,
+      color_name: l.color_name,
+      denier: l.denier,
+    }));
+  }, [lots]);
+
   const netWeight = useMemo(
     () => calculateNetWeight(form.gross_weight, form.number_of_chesses),
     [form.gross_weight, form.number_of_chesses]
   );
+
+  const handleShadeSelect = useCallback((lotNo: string) => {
+    const sourceLot = lots.find(l => l.lot_no === lotNo);
+    if (sourceLot) {
+      setForm(prev => ({
+        ...prev,
+        shade_number: lotNo,
+        yarn_company_name: sourceLot.yarn_company_name,
+        color_name: sourceLot.color_name,
+        denier: sourceLot.denier,
+      }));
+    }
+  }, [lots]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +81,6 @@ const CreateLot: React.FC = () => {
     });
 
     if (success) {
-      // Link intake item if creating from sampling
       if (intakeItemId) {
         await supabase.from('intake_items').update({
           linked_lot_no: form.lot_no.trim(),
@@ -83,6 +107,7 @@ const CreateLot: React.FC = () => {
       <h1 className="text-2xl font-semibold tracking-tight">Create Lot</h1>
 
       <form onSubmit={handleSubmit} className="card-industrial p-6 space-y-5">
+        {/* Row 1: Lot No + Shade Number */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Lot No *</label>
@@ -96,6 +121,21 @@ const CreateLot: React.FC = () => {
             />
           </div>
           <div className="space-y-1.5">
+            <label className="text-sm font-medium">Shade Number</label>
+            <ShadeDropdown
+              value={form.shade_number}
+              onChange={v => update('shade_number', v)}
+              onSelect={handleShadeSelect}
+              options={shadeOptions}
+              placeholder={form.lot_no || 'Defaults to Lot No'}
+            />
+            <p className="text-xs text-muted-foreground">Leave empty to use Lot No</p>
+          </div>
+        </div>
+
+        {/* Row 2: Date */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
             <label className="text-sm font-medium">Date *</label>
             <input
               type="date"
@@ -107,6 +147,7 @@ const CreateLot: React.FC = () => {
           </div>
         </div>
 
+        {/* Row 3: Yarn Company + Color Name (autofilled if shade selected) */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Yarn Company *</label>
@@ -128,31 +169,20 @@ const CreateLot: React.FC = () => {
           </div>
         </div>
 
+        {/* Row 4: Denier */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Denier *</label>
-            <input
-              type="text"
+            <LotFieldAutocomplete
               value={form.denier}
-              onChange={e => update('denier', e.target.value)}
-              className="input-industrial w-full"
+              onChange={v => update('denier', v)}
+              suggestions={denierValues}
               placeholder="e.g. 150D"
-              required
             />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">Shade Number</label>
-            <input
-              type="text"
-              value={form.shade_number}
-              onChange={e => update('shade_number', e.target.value)}
-              className="input-industrial w-full"
-              placeholder={form.lot_no || 'Defaults to Lot No'}
-            />
-            <p className="text-xs text-muted-foreground">Leave empty to use Lot No</p>
           </div>
         </div>
 
+        {/* Row 5: Chesses, Gross, Net */}
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">No. of Chesses *</label>
@@ -201,6 +231,70 @@ const CreateLot: React.FC = () => {
           </button>
         </div>
       </form>
+    </div>
+  );
+};
+
+/* ─── Shade Dropdown with search ─── */
+interface ShadeOption {
+  label: string;
+  lot_no: string;
+  yarn_company_name: string;
+  color_name: string;
+  denier: string;
+}
+
+interface ShadeDropdownProps {
+  value: string;
+  onChange: (v: string) => void;
+  onSelect: (lotNo: string) => void;
+  options: ShadeOption[];
+  placeholder?: string;
+}
+
+const ShadeDropdown: React.FC<ShadeDropdownProps> = ({ value, onChange, onSelect, options, placeholder }) => {
+  const [open, setOpen] = useState(false);
+  const wrapperRef = React.useRef<HTMLDivElement>(null);
+
+  const filtered = useMemo(() => {
+    if (!value.trim()) return options;
+    const lower = value.toLowerCase().trim();
+    return options.filter(o => o.label.toLowerCase().includes(lower) || o.lot_no.toLowerCase().includes(lower));
+  }, [options, value]);
+
+  React.useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <input
+        type="text"
+        value={value}
+        onChange={e => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        className="input-industrial w-full"
+        placeholder={placeholder}
+      />
+      {open && filtered.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-40 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+          {filtered.map(o => (
+            <button
+              key={o.lot_no}
+              type="button"
+              onMouseDown={e => e.preventDefault()}
+              onClick={() => { onSelect(o.lot_no); setOpen(false); }}
+              className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground btn-transition"
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
