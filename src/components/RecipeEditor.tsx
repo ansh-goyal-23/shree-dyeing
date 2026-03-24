@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { calculateDyeGrams } from '@/lib/calculations';
 import { Plus, Trash2 } from 'lucide-react';
 import type { RecipeDye, RecipeChemical } from '@/types';
+
+const DEFAULT_CHEMICAL_NAMES = ['BUF', 'CDFT', 'CWS'];
+const DEFAULT_PH_VALUE = 4.5;
 
 interface Props {
   lotNo: string;
@@ -18,9 +21,35 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
   const dyeItems = masterItems.filter(m => m.type === 'dye' && m.is_active);
   const chemicalItems = masterItems.filter(m => m.type === 'chemical' && m.is_active);
 
+  // Build default chemicals list based on master items
+  const defaultChemicals = useMemo(() => {
+    return DEFAULT_CHEMICAL_NAMES.map(name => {
+      const item = chemicalItems.find(c => c.name.toUpperCase() === name);
+      if (!item) return null;
+      return {
+        id: crypto.randomUUID(),
+        lot_no: lotNo,
+        chemical_id: item.id,
+        qty: 0,
+        ph_value: name === 'BUF' ? DEFAULT_PH_VALUE : null,
+      } as RecipeChemical;
+    }).filter(Boolean) as RecipeChemical[];
+  }, [chemicalItems, lotNo]);
+
+  // Initialize chemicals: use existing if any, otherwise use defaults
+  const initialChemicals = useMemo(() => {
+    if (chemicals.length > 0) return chemicals;
+    return defaultChemicals;
+  }, [chemicals, defaultChemicals]);
+
   const [localDyes, setLocalDyes] = useState<RecipeDye[]>(dyes);
-  const [localChemicals, setLocalChemicals] = useState<RecipeChemical[]>(chemicals);
+  const [localChemicals, setLocalChemicals] = useState<RecipeChemical[]>(initialChemicals);
   const [dirty, setDirty] = useState(false);
+
+  const isBufChemical = (chemicalId: string) => {
+    const item = masterItems.find(m => m.id === chemicalId);
+    return item?.name?.toUpperCase() === 'BUF';
+  };
 
   const addDye = () => {
     setLocalDyes(prev => [...prev, {
@@ -57,14 +86,20 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
       lot_no: lotNo,
       chemical_id: '',
       qty: 0,
+      ph_value: null,
     }]);
     setDirty(true);
   };
 
-  const updateChemical = (idx: number, field: string, value: string | number) => {
+  const updateChemical = (idx: number, field: string, value: string | number | null) => {
     setLocalChemicals(prev => {
       const updated = [...prev];
-      updated[idx] = { ...updated[idx], [field]: value };
+      const chem = { ...updated[idx], [field]: value };
+      // If chemical changed to BUF, set default pH; if changed away from BUF, clear pH
+      if (field === 'chemical_id') {
+        chem.ph_value = isBufChemical(value as string) ? DEFAULT_PH_VALUE : null;
+      }
+      updated[idx] = chem;
       return updated;
     });
     setDirty(true);
@@ -145,36 +180,58 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
           <p className="text-sm text-muted-foreground py-4">No chemicals added.</p>
         ) : (
           <div className="space-y-2">
-            <div className="grid grid-cols-[1fr_120px_60px_40px] gap-2 text-xs font-medium text-muted-foreground px-1">
-              <span>Chemical</span><span>Qty</span><span>Unit</span><span></span>
+            <div className="grid grid-cols-[1fr_100px_80px_80px_40px] gap-2 text-xs font-medium text-muted-foreground px-1">
+              <span>Chemical</span><span>Qty</span><span>Unit</span><span>pH</span><span></span>
             </div>
-            {localChemicals.map((chem, idx) => (
-              <div key={chem.id} className="grid grid-cols-[1fr_120px_60px_40px] gap-2 items-center">
-                {readOnly ? (
-                  <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed text-sm">
-                    {masterItems.find(m => m.id === chem.chemical_id)?.name || ''}
+            {localChemicals.map((chem, idx) => {
+              const showPh = isBufChemical(chem.chemical_id);
+              return (
+                <div key={chem.id} className="grid grid-cols-[1fr_100px_80px_80px_40px] gap-2 items-center">
+                  {readOnly ? (
+                    <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed text-sm">
+                      {masterItems.find(m => m.id === chem.chemical_id)?.name || ''}
+                    </span>
+                  ) : (
+                    <select value={chem.chemical_id} onChange={e => updateChemical(idx, 'chemical_id', e.target.value)} className="input-industrial text-sm">
+                      <option value="">Select chemical...</option>
+                      {chemicalItems.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  )}
+                  {readOnly ? (
+                    <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed font-data text-sm">{chem.qty}</span>
+                  ) : (
+                    <input type="number" step="0.01" min={0} value={chem.qty || ''} onChange={e => updateChemical(idx, 'qty', parseFloat(e.target.value) || 0)} className="input-industrial font-data text-sm" />
+                  )}
+                  <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed text-sm text-muted-foreground">
+                    {masterItems.find(m => m.id === chem.chemical_id)?.unit || '—'}
                   </span>
-                ) : (
-                  <select value={chem.chemical_id} onChange={e => updateChemical(idx, 'chemical_id', e.target.value)} className="input-industrial text-sm">
-                    <option value="">Select chemical...</option>
-                    {chemicalItems.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                )}
-                {readOnly ? (
-                  <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed font-data text-sm">{chem.qty}</span>
-                ) : (
-                  <input type="number" step="0.01" min={0} value={chem.qty || ''} onChange={e => updateChemical(idx, 'qty', parseFloat(e.target.value) || 0)} className="input-industrial font-data text-sm" />
-                )}
-                <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed text-sm text-muted-foreground">
-                  {masterItems.find(m => m.id === chem.chemical_id)?.unit || '—'}
-                </span>
-                {!readOnly && (
-                  <button onClick={() => removeChemical(idx)} className="p-2 text-destructive hover:bg-destructive/10 rounded btn-transition">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            ))}
+                  {/* pH field - only for BUF */}
+                  {showPh ? (
+                    readOnly ? (
+                      <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed font-data text-sm">{chem.ph_value ?? '—'}</span>
+                    ) : (
+                      <input
+                        type="number"
+                        step="0.1"
+                        min={0}
+                        max={14}
+                        value={chem.ph_value ?? ''}
+                        onChange={e => updateChemical(idx, 'ph_value', e.target.value ? parseFloat(e.target.value) : null)}
+                        className="input-industrial font-data text-sm"
+                        placeholder="pH"
+                      />
+                    )
+                  ) : (
+                    <span className="text-sm text-muted-foreground">—</span>
+                  )}
+                  {!readOnly && (
+                    <button onClick={() => removeChemical(idx)} className="p-2 text-destructive hover:bg-destructive/10 rounded btn-transition">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
