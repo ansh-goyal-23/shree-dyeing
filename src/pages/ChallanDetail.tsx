@@ -5,7 +5,7 @@ import { useApp } from '@/context/AppContext';
 import ClientSelect from '@/components/ClientSelect';
 import ChallanItemRow from '@/components/ChallanItemRow';
 import type { ItemData } from '@/components/ChallanItemRow';
-import { downloadChallanPdf } from '@/lib/challanPdf';
+import { downloadChallanPdf, shareChallanPdf } from '@/lib/challanPdf';
 import { toast } from 'sonner';
 import { PlusCircle, Loader2, Pencil, Trash2, ArrowLeft, Download, Share2 } from 'lucide-react';
 
@@ -98,16 +98,13 @@ const ChallanDetail: React.FC = () => {
     if (challan) downloadChallanPdf(challan, challanItems);
   };
 
-  const handleShare = () => {
-    if (navigator.share && challan) {
-      navigator.share({
-        title: `Challan ${challan.challan_number}`,
-        text: `Challan ${challan.challan_number} for ${challan.client_name}`,
-        url: window.location.href,
-      }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      toast.success('Link copied to clipboard.');
+  const handleShare = async () => {
+    if (challan) {
+      try {
+        await shareChallanPdf(challan, challanItems);
+      } catch {
+        toast.error('Sharing failed.');
+      }
     }
   };
 
