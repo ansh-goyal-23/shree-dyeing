@@ -38,10 +38,14 @@ const samplingItems = [
   { title: 'Direct Order', url: '/sampling/order/create', icon: ShoppingCart },
 ];
 
+const dispatchItems = [
+  { title: 'All Challans', url: '/dispatch', icon: Truck },
+  { title: 'New Challan', url: '/dispatch/create', icon: PlusCircle },
+];
+
 const modules = [
   { title: 'Production', url: '/production', icon: Factory },
   { title: 'Expenses', url: '/expenses', icon: DollarSign },
-  { title: 'Dispatch', url: '/dispatch', icon: Truck },
   { title: 'Inventory', url: '/inventory', icon: Package },
 ];
 

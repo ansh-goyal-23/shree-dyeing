@@ -11,6 +11,9 @@ import CreateLot from "@/pages/CreateLot";
 import LotDetail from "@/pages/LotDetail";
 import MasterData from "@/pages/MasterData";
 import PlaceholderModule from "@/pages/PlaceholderModule";
+import ChallanList from "@/pages/ChallanList";
+import CreateChallan from "@/pages/CreateChallan";
+import ChallanDetail from "@/pages/ChallanDetail";
 import IntakeList from "@/pages/IntakeList";
 import CreateIntake from "@/pages/CreateIntake";
 import IntakeDetail from "@/pages/IntakeDetail";
@@ -59,7 +62,9 @@ const App = () => (
                       <Route path="/sampling/:id" element={<IntakeDetail />} />
                       <Route path="/production" element={<PlaceholderModule />} />
                       <Route path="/expenses" element={<PlaceholderModule />} />
-                      <Route path="/dispatch" element={<PlaceholderModule />} />
+                      <Route path="/dispatch" element={<ChallanList />} />
+                      <Route path="/dispatch/create" element={<CreateChallan />} />
+                      <Route path="/dispatch/:id" element={<ChallanDetail />} />
                       <Route path="/inventory" element={<PlaceholderModule />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
