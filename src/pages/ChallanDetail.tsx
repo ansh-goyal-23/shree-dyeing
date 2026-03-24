@@ -207,9 +207,9 @@ const ChallanDetail: React.FC = () => {
               <th className="p-2 font-medium">Shade #</th>
               <th className="p-2 font-medium">Color</th>
               <th className="p-2 font-medium">Packaging</th>
-              <th className="p-2 font-medium">Gross Wt</th>
+              <th className="p-2 font-medium">Gross Wt (kg)</th>
               <th className="p-2 font-medium">Units</th>
-              <th className="p-2 font-medium">Net Wt</th>
+              <th className="p-2 font-medium">Net Wt (kg)</th>
               <th className="p-2 font-medium">Rate/kg</th>
               <th className="p-2 font-medium">Amount</th>
               {editing && <th className="p-2"></th>}

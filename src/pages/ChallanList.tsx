@@ -115,7 +115,7 @@ const ChallanList: React.FC = () => {
                 <th className="p-3 font-medium">Date</th>
                 <th className="p-3 font-medium">Client</th>
                 <th className="p-3 font-medium text-right">Items</th>
-                <th className="p-3 font-medium text-right">Net Weight</th>
+                <th className="p-3 font-medium text-right">Net Weight (kg)</th>
                 <th className="p-3 font-medium text-right">Amount</th>
               </tr>
             </thead>
