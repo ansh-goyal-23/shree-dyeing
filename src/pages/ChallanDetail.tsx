@@ -5,7 +5,7 @@ import { useApp } from '@/context/AppContext';
 import ClientSelect from '@/components/ClientSelect';
 import ChallanItemRow from '@/components/ChallanItemRow';
 import type { ItemData } from '@/components/ChallanItemRow';
-import { downloadChallanPdf } from '@/lib/challanPdf';
+import { downloadChallanPdf, shareChallanPdf } from '@/lib/challanPdf';
 import { toast } from 'sonner';
 import { PlusCircle, Loader2, Pencil, Trash2, ArrowLeft, Download, Share2 } from 'lucide-react';
 
