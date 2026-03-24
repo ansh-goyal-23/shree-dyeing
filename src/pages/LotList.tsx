@@ -10,6 +10,7 @@ const LotList: React.FC = () => {
   const filtered = lots.filter(l => {
     const q = search.toLowerCase();
     return l.lot_no.toLowerCase().includes(q) ||
+      l.shade_number.toLowerCase().includes(q) ||
       l.yarn_company_name.toLowerCase().includes(q) ||
       l.color_name.toLowerCase().includes(q);
   }).sort((a, b) => b.date.localeCompare(a.date));
