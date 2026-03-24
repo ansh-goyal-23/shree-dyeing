@@ -30,6 +30,13 @@ interface AppContextType extends AppState {
     dyes: Omit<StepDye, 'id' | 'step_id'>[];
     chemicals: Omit<StepChemical, 'id' | 'step_id'>[];
   }) => Promise<void>;
+  updateProcessStep: (stepId: string, data: {
+    step_type: ProcessStepType;
+    description: string;
+    dyes: Omit<StepDye, 'id' | 'step_id'>[];
+    chemicals: Omit<StepChemical, 'id' | 'step_id'>[];
+  }) => Promise<void>;
+  deleteProcessStep: (stepId: string) => Promise<void>;
   getLot: (lotNo: string) => Lot | undefined;
   getDyesForLot: (lotNo: string) => RecipeDye[];
   getChemicalsForLot: (lotNo: string) => RecipeChemical[];
