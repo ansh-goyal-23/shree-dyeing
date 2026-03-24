@@ -4,12 +4,13 @@ import { useCreateChallan } from '@/hooks/useChallan';
 import { useApp } from '@/context/AppContext';
 import ClientSelect from '@/components/ClientSelect';
 import ChallanItemRow from '@/components/ChallanItemRow';
+import type { ItemData } from '@/components/ChallanItemRow';
 import { toast } from 'sonner';
 import { PlusCircle, Loader2 } from 'lucide-react';
 
-const emptyItem = () => ({
-  lot_no: '', shade_number: '', color_name: '',
-  gross_weight: 0, num_of_paper_tubes: 0, net_weight: 0, rate: 0, amount: 0,
+const emptyItem = (): ItemData => ({
+  lot_no: '', shade_number: '', color_name: '', packaging_type: 'paper_tube',
+  gross_weight: 0, num_of_units: 0, net_weight: 0, rate: 0, amount: 0,
 });
 
 const CreateChallan: React.FC = () => {
@@ -22,10 +23,13 @@ const CreateChallan: React.FC = () => {
     date: new Date().toISOString().split('T')[0],
     client_id: '',
     notes: '',
+    prepared_by_name: '',
+    receiver_name: '',
+    receiver_contact_number: '',
   });
-  const [items, setItems] = useState([emptyItem()]);
+  const [items, setItems] = useState<ItemData[]>([emptyItem()]);
 
-  const updateItem = (index: number, updated: any) => {
+  const updateItem = (index: number, updated: ItemData) => {
     setItems(prev => prev.map((it, i) => i === index ? updated : it));
   };
   const removeItem = (index: number) => {
@@ -50,6 +54,9 @@ const CreateChallan: React.FC = () => {
         date: form.date,
         client_id: form.client_id,
         notes: form.notes.trim(),
+        prepared_by_name: form.prepared_by_name.trim(),
+        receiver_name: form.receiver_name.trim(),
+        receiver_contact_number: form.receiver_contact_number.trim(),
         items: validItems,
       });
       toast.success('Challan created successfully.');
@@ -110,8 +117,9 @@ const CreateChallan: React.FC = () => {
                 <th className="p-2 font-medium">Lot No</th>
                 <th className="p-2 font-medium">Shade #</th>
                 <th className="p-2 font-medium">Color</th>
+                <th className="p-2 font-medium">Packaging</th>
                 <th className="p-2 font-medium">Gross Wt</th>
-                <th className="p-2 font-medium">Paper Tubes</th>
+                <th className="p-2 font-medium">Units</th>
                 <th className="p-2 font-medium">Net Wt</th>
                 <th className="p-2 font-medium">Rate/kg</th>
                 <th className="p-2 font-medium">Amount</th>
@@ -125,7 +133,7 @@ const CreateChallan: React.FC = () => {
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-border font-semibold">
-                <td colSpan={5} className="p-3 text-right">Totals:</td>
+                <td colSpan={6} className="p-3 text-right">Totals:</td>
                 <td className="p-3">{totalNetWeight.toFixed(3)} kg</td>
                 <td className="p-3"></td>
                 <td className="p-3">₹{totalAmount.toFixed(2)}</td>
@@ -133,6 +141,28 @@ const CreateChallan: React.FC = () => {
               </tr>
             </tfoot>
           </table>
+        </div>
+
+        {/* Footer Details */}
+        <div className="card-industrial p-5 space-y-4">
+          <h2 className="text-sm font-semibold">Footer Details</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-sm font-medium text-foreground">Prepared By</label>
+              <input type="text" value={form.prepared_by_name} onChange={e => setForm(p => ({ ...p, prepared_by_name: e.target.value }))}
+                className="input-industrial w-full mt-1" placeholder="Signing authority name" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground">Receiver Name</label>
+              <input type="text" value={form.receiver_name} onChange={e => setForm(p => ({ ...p, receiver_name: e.target.value }))}
+                className="input-industrial w-full mt-1" placeholder="Receiver name" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground">Receiver Contact</label>
+              <input type="text" value={form.receiver_contact_number} onChange={e => setForm(p => ({ ...p, receiver_contact_number: e.target.value }))}
+                className="input-industrial w-full mt-1" placeholder="+91 XXXXXXXXXX" />
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end gap-3">
