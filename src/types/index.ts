@@ -35,6 +35,7 @@ export interface RecipeChemical {
   lot_no: string;
   chemical_id: string;
   qty: number;
+  ph_value: number | null;
 }
 
 export type ProcessStepType = 'Color Addition' | 'RC' | 'Leveling';

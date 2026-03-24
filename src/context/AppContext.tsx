@@ -267,6 +267,7 @@ const mapDye = (row: any): RecipeDye => ({
 const mapChemical = (row: any): RecipeChemical => ({
   id: row.id, lot_no: row.lot_no,
   chemical_id: row.chemical_id, qty: Number(row.qty) || 0,
+  ph_value: row.ph_value != null ? Number(row.ph_value) : null,
 });
 
 const mapMasterItem = (row: any): MasterItem => ({
