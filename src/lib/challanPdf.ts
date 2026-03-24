@@ -72,7 +72,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
-    head: [['#', 'Lot No', 'Shade #', 'Color', 'Packaging', 'Units', 'Gross Wt (kg)', 'Net Wt (kg)', 'Rate (₹)', 'Amount (₹)']],
+    head: [['#', 'Lot No', 'Shade #', 'Color', 'Packaging', 'Units', 'Gross Wt (kg)', 'Net Wt (kg)', 'Rate/kg (₹)', 'Amount (₹)']],
     body: tableData,
     foot: [['', '', '', '', '', '', 'TOTAL', totalNetWeight.toFixed(3), '', totalAmount.toFixed(2)]],
     theme: 'grid',
