@@ -98,16 +98,13 @@ const ChallanDetail: React.FC = () => {
     if (challan) downloadChallanPdf(challan, challanItems);
   };
 
-  const handleShare = () => {
-    if (navigator.share && challan) {
-      navigator.share({
-        title: `Challan ${challan.challan_number}`,
-        text: `Challan ${challan.challan_number} for ${challan.client_name}`,
-        url: window.location.href,
-      }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      toast.success('Link copied to clipboard.');
+  const handleShare = async () => {
+    if (challan) {
+      try {
+        await shareChallanPdf(challan, challanItems);
+      } catch {
+        toast.error('Sharing failed.');
+      }
     }
   };
 
