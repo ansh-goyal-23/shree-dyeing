@@ -177,6 +177,8 @@ const LotDetail: React.FC = () => {
           masterItems={masterItems}
           netWeight={lot.net_weight}
           lotNo={lot.lot_no}
+          onUpdateStep={updateProcessStep}
+          onDeleteStep={deleteProcessStep}
         />
       </div>
 

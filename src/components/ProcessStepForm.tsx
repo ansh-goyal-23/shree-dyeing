@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { calculateDyeGrams } from '@/lib/calculations';
 import type { ProcessStepType, StepDye, StepChemical, MasterItem } from '@/types';
@@ -13,16 +13,22 @@ interface Props {
     chemicals: Omit<StepChemical, 'id' | 'step_id'>[];
   }) => Promise<void>;
   onCancel: () => void;
+  editingData?: {
+    step_type: ProcessStepType;
+    description: string;
+    dyes: { dye_id: string; percentage: number; qty_grams: number }[];
+    chemicals: { chemical_id: string; qty: number }[];
+  };
 }
 
 const STEP_TYPES: ProcessStepType[] = ['Color Addition', 'RC', 'Leveling'];
 
-const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, onSubmit, onCancel }) => {
-  const [step, setStep] = useState<1 | 2>(1);
-  const [stepType, setStepType] = useState<ProcessStepType | ''>('');
-  const [description, setDescription] = useState('');
-  const [dyes, setDyes] = useState<{ dye_id: string; percentage: number; qty_grams: number }[]>([]);
-  const [chemicals, setChemicals] = useState<{ chemical_id: string; qty: number }[]>([]);
+const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, onSubmit, onCancel, editingData }) => {
+  const [step, setStep] = useState<1 | 2>(editingData ? 2 : 1);
+  const [stepType, setStepType] = useState<ProcessStepType | ''>(editingData?.step_type || '');
+  const [description, setDescription] = useState(editingData?.description || '');
+  const [dyes, setDyes] = useState<{ dye_id: string; percentage: number; qty_grams: number }[]>(editingData?.dyes || []);
+  const [chemicals, setChemicals] = useState<{ chemical_id: string; qty: number }[]>(editingData?.chemicals || []);
   const [submitting, setSubmitting] = useState(false);
 
   const dyeItems = masterItems.filter(m => m.type === 'dye' && m.is_active);
@@ -65,6 +71,8 @@ const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, onSubmit, on
     setSubmitting(false);
   };
 
+  const isEditing = !!editingData;
+
   if (step === 1) {
     return (
       <div className="card-industrial p-4 border-l-4 border-primary space-y-4">
@@ -94,9 +102,18 @@ const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, onSubmit, on
   return (
     <div className="card-industrial p-4 border-l-4 border-primary space-y-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Step 2: {stepType} Details</h3>
-        <button onClick={() => setStep(1)} className="text-xs text-muted-foreground hover:text-foreground btn-transition">← Back</button>
+        <h3 className="text-sm font-semibold">{isEditing ? 'Edit' : 'Step 2'}: {stepType} Details</h3>
+        {!isEditing && <button onClick={() => setStep(1)} className="text-xs text-muted-foreground hover:text-foreground btn-transition">← Back</button>}
       </div>
+
+      {/* Description (editable in step 2 when editing) */}
+      {isEditing && (
+        <div className="space-y-1.5">
+          <label className="text-sm text-muted-foreground">Description / Notes (optional)</label>
+          <input type="text" value={description} onChange={e => setDescription(e.target.value)}
+            className="input-industrial w-full" placeholder="e.g. Added extra blue for shade match" />
+        </div>
+      )}
 
       {showDyes && (
         <div>
@@ -160,7 +177,7 @@ const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, onSubmit, on
         <button onClick={onCancel} className="px-4 h-10 border border-input rounded-md text-sm btn-transition hover:bg-secondary">Cancel</button>
         <button onClick={handleSubmit} disabled={submitting}
           className="px-6 h-10 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 disabled:opacity-50">
-          {submitting ? 'Saving...' : 'Save Step'}
+          {submitting ? 'Saving...' : isEditing ? 'Update Step' : 'Save Step'}
         </button>
       </div>
     </div>
