@@ -147,7 +147,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateRecipeChemicals = useCallback(async (lotNo: string, chemicals: RecipeChemical[]) => {
     await supabase.from('recipe_chemicals').delete().eq('lot_no', lotNo);
     if (chemicals.length > 0) {
-      await supabase.from('recipe_chemicals').insert(chemicals.map(c => ({ lot_no: c.lot_no, chemical_id: c.chemical_id, qty: c.qty })));
+      await supabase.from('recipe_chemicals').insert(chemicals.map(c => ({ lot_no: c.lot_no, chemical_id: c.chemical_id, qty: c.qty, ph_value: c.ph_value ?? null })));
     }
     await fetchAll();
   }, [fetchAll]);
