@@ -103,6 +103,7 @@ const CreateLot: React.FC = () => {
             lot_no: form.lot_no.trim(),
             chemical_id: c.chemical_id,
             qty: c.qty,
+            ph_value: c.ph_value ?? null,
           }));
           await updateRecipeChemicals(form.lot_no.trim(), clonedChemicals);
         }
