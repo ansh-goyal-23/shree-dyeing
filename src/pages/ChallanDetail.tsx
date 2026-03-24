@@ -1,17 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useChallan, useChallanItems, useUpdateChallan, useDeleteChallan } from '@/hooks/useChallan';
 import { useApp } from '@/context/AppContext';
 import ClientSelect from '@/components/ClientSelect';
 import ChallanItemRow from '@/components/ChallanItemRow';
+import type { ItemData } from '@/components/ChallanItemRow';
+import { downloadChallanPdf } from '@/lib/challanPdf';
 import { toast } from 'sonner';
-import { PlusCircle, Loader2, Pencil, Trash2, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { PlusCircle, Loader2, Pencil, Trash2, ArrowLeft, Download, Share2 } from 'lucide-react';
 
-const emptyItem = () => ({
-  lot_no: '', shade_number: '', color_name: '',
-  gross_weight: 0, num_of_paper_tubes: 0, net_weight: 0, rate: 0, amount: 0,
+const emptyItem = (): ItemData => ({
+  lot_no: '', shade_number: '', color_name: '', packaging_type: 'paper_tube',
+  gross_weight: 0, num_of_units: 0, net_weight: 0, rate: 0, amount: 0,
 });
+
+const PACKAGING_LABEL: Record<string, string> = {
+  paper_tube: 'Paper Tube',
+  chesse: 'Chesse',
+};
 
 const ChallanDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -23,8 +29,11 @@ const ChallanDetail: React.FC = () => {
   const { lots } = useApp();
 
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ challan_number: '', date: '', client_id: '', notes: '' });
-  const [items, setItems] = useState<any[]>([]);
+  const [form, setForm] = useState({
+    challan_number: '', date: '', client_id: '', notes: '',
+    prepared_by_name: '', receiver_name: '', receiver_contact_number: '',
+  });
+  const [items, setItems] = useState<ItemData[]>([]);
 
   useEffect(() => {
     if (challan) {
@@ -33,6 +42,9 @@ const ChallanDetail: React.FC = () => {
         date: challan.date,
         client_id: challan.client_id,
         notes: challan.notes,
+        prepared_by_name: challan.prepared_by_name,
+        receiver_name: challan.receiver_name,
+        receiver_contact_number: challan.receiver_contact_number,
       });
     }
   }, [challan]);
@@ -41,8 +53,8 @@ const ChallanDetail: React.FC = () => {
     if (challanItems.length > 0) {
       setItems(challanItems.map(i => ({
         lot_no: i.lot_no, shade_number: i.shade_number, color_name: i.color_name,
-        gross_weight: i.gross_weight, num_of_paper_tubes: i.num_of_paper_tubes,
-        net_weight: i.net_weight, rate: i.rate, amount: i.amount,
+        packaging_type: i.packaging_type, gross_weight: i.gross_weight,
+        num_of_units: i.num_of_units, net_weight: i.net_weight, rate: i.rate, amount: i.amount,
       })));
     }
   }, [challanItems]);
@@ -50,7 +62,7 @@ const ChallanDetail: React.FC = () => {
   const totalNetWeight = items.reduce((s, i) => s + (i.net_weight || 0), 0);
   const totalAmount = items.reduce((s, i) => s + (i.amount || 0), 0);
 
-  const updateItem = (index: number, updated: any) => setItems(prev => prev.map((it, i) => i === index ? updated : it));
+  const updateItem = (index: number, updated: ItemData) => setItems(prev => prev.map((it, i) => i === index ? updated : it));
   const removeItem = (index: number) => { if (items.length > 1) setItems(prev => prev.filter((_, i) => i !== index)); };
   const addItem = () => setItems(prev => [...prev, emptyItem()]);
 
@@ -82,6 +94,23 @@ const ChallanDetail: React.FC = () => {
     }
   };
 
+  const handleDownloadPdf = () => {
+    if (challan) downloadChallanPdf(challan, challanItems);
+  };
+
+  const handleShare = () => {
+    if (navigator.share && challan) {
+      navigator.share({
+        title: `Challan ${challan.challan_number}`,
+        text: `Challan ${challan.challan_number} for ${challan.client_name}`,
+        url: window.location.href,
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success('Link copied to clipboard.');
+    }
+  };
+
   if (challanLoading || itemsLoading) {
     return <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   }
@@ -99,6 +128,14 @@ const ChallanDetail: React.FC = () => {
         <div className="flex gap-2">
           {!editing ? (
             <>
+              <button onClick={handleDownloadPdf}
+                className="inline-flex items-center gap-1.5 px-3 h-9 border border-input rounded-md text-sm font-medium hover:bg-secondary btn-transition">
+                <Download className="w-3.5 h-3.5" /> PDF
+              </button>
+              <button onClick={handleShare}
+                className="inline-flex items-center gap-1.5 px-3 h-9 border border-input rounded-md text-sm font-medium hover:bg-secondary btn-transition">
+                <Share2 className="w-3.5 h-3.5" /> Share
+              </button>
               <button onClick={() => setEditing(true)}
                 className="inline-flex items-center gap-1.5 px-3 h-9 border border-input rounded-md text-sm font-medium hover:bg-secondary btn-transition">
                 <Pencil className="w-3.5 h-3.5" /> Edit
@@ -172,8 +209,9 @@ const ChallanDetail: React.FC = () => {
               <th className="p-2 font-medium">Lot No</th>
               <th className="p-2 font-medium">Shade #</th>
               <th className="p-2 font-medium">Color</th>
+              <th className="p-2 font-medium">Packaging</th>
               <th className="p-2 font-medium">Gross Wt</th>
-              <th className="p-2 font-medium">Paper Tubes</th>
+              <th className="p-2 font-medium">Units</th>
               <th className="p-2 font-medium">Net Wt</th>
               <th className="p-2 font-medium">Rate/kg</th>
               <th className="p-2 font-medium">Amount</th>
@@ -187,7 +225,7 @@ const ChallanDetail: React.FC = () => {
               ))
             ) : (
               (challanItems.length === 0 ? (
-                <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">No items.</td></tr>
+                <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">No items.</td></tr>
               ) : challanItems.map(item => (
                 <tr key={item.id} className="border-b border-border">
                   <td className="p-2 font-medium">
@@ -195,8 +233,9 @@ const ChallanDetail: React.FC = () => {
                   </td>
                   <td className="p-2">{item.shade_number}</td>
                   <td className="p-2">{item.color_name}</td>
+                  <td className="p-2">{PACKAGING_LABEL[item.packaging_type] || item.packaging_type}</td>
                   <td className="p-2">{item.gross_weight.toFixed(3)}</td>
-                  <td className="p-2">{item.num_of_paper_tubes}</td>
+                  <td className="p-2">{item.num_of_units}</td>
                   <td className="p-2">{item.net_weight.toFixed(3)}</td>
                   <td className="p-2">₹{item.rate.toFixed(2)}</td>
                   <td className="p-2 font-medium">₹{item.amount.toFixed(2)}</td>
@@ -206,7 +245,7 @@ const ChallanDetail: React.FC = () => {
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-border font-semibold">
-              <td colSpan={5} className="p-3 text-right">Totals:</td>
+              <td colSpan={6} className="p-3 text-right">Totals:</td>
               <td className="p-3">{totalNetWeight.toFixed(3)} kg</td>
               <td className="p-3"></td>
               <td className="p-3">₹{totalAmount.toFixed(2)}</td>
@@ -215,6 +254,46 @@ const ChallanDetail: React.FC = () => {
           </tfoot>
         </table>
       </div>
+
+      {/* Footer details */}
+      {editing ? (
+        <div className="card-industrial p-5 space-y-4">
+          <h2 className="text-sm font-semibold">Footer Details</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-sm font-medium text-foreground">Prepared By</label>
+              <input type="text" value={form.prepared_by_name} onChange={e => setForm(p => ({ ...p, prepared_by_name: e.target.value }))}
+                className="input-industrial w-full mt-1" placeholder="Signing authority" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground">Receiver Name</label>
+              <input type="text" value={form.receiver_name} onChange={e => setForm(p => ({ ...p, receiver_name: e.target.value }))}
+                className="input-industrial w-full mt-1" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground">Receiver Contact</label>
+              <input type="text" value={form.receiver_contact_number} onChange={e => setForm(p => ({ ...p, receiver_contact_number: e.target.value }))}
+                className="input-industrial w-full mt-1" />
+            </div>
+          </div>
+        </div>
+      ) : (
+        (challan.prepared_by_name || challan.receiver_name) && (
+          <div className="card-industrial p-5">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+              {challan.prepared_by_name && (
+                <div><span className="text-muted-foreground">Prepared By</span><p className="font-medium mt-0.5">{challan.prepared_by_name}</p></div>
+              )}
+              {challan.receiver_name && (
+                <div><span className="text-muted-foreground">Received By</span><p className="font-medium mt-0.5">{challan.receiver_name}</p></div>
+              )}
+              {challan.receiver_contact_number && (
+                <div><span className="text-muted-foreground">Contact</span><p className="font-medium mt-0.5">{challan.receiver_contact_number}</p></div>
+              )}
+            </div>
+          </div>
+        )
+      )}
     </div>
   );
 };

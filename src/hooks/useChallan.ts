@@ -9,6 +9,9 @@ const mapChallan = (r: any): Challan => ({
   client_id: r.client_id,
   client_name: r.clients?.client_name || '',
   notes: r.notes || '',
+  prepared_by_name: r.prepared_by_name || '',
+  receiver_name: r.receiver_name || '',
+  receiver_contact_number: r.receiver_contact_number || '',
   created_at: r.created_at,
 });
 
@@ -18,8 +21,9 @@ const mapItem = (r: any): ChallanItem => ({
   lot_no: r.lot_no,
   shade_number: r.shade_number || '',
   color_name: r.color_name || '',
+  packaging_type: r.packaging_type || 'paper_tube',
   gross_weight: Number(r.gross_weight) || 0,
-  num_of_paper_tubes: Number(r.num_of_paper_tubes) || 0,
+  num_of_units: Number(r.num_of_units) ?? Number(r.num_of_paper_tubes) ?? 0,
   net_weight: Number(r.net_weight) || 0,
   rate: Number(r.rate) || 0,
   amount: Number(r.amount) || 0,
@@ -79,6 +83,9 @@ export function useCreateChallan() {
       date: string;
       client_id: string;
       notes: string;
+      prepared_by_name: string;
+      receiver_name: string;
+      receiver_contact_number: string;
       items: Omit<ChallanItem, 'id' | 'challan_id'>[];
     }) => {
       const { data: challan, error: cErr } = await supabase
@@ -88,6 +95,9 @@ export function useCreateChallan() {
           date: payload.date,
           client_id: payload.client_id,
           notes: payload.notes,
+          prepared_by_name: payload.prepared_by_name,
+          receiver_name: payload.receiver_name,
+          receiver_contact_number: payload.receiver_contact_number,
         })
         .select()
         .single();
@@ -100,8 +110,9 @@ export function useCreateChallan() {
             lot_no: item.lot_no,
             shade_number: item.shade_number,
             color_name: item.color_name,
+            packaging_type: item.packaging_type,
             gross_weight: item.gross_weight,
-            num_of_paper_tubes: item.num_of_paper_tubes,
+            num_of_units: item.num_of_units,
             net_weight: item.net_weight,
             rate: item.rate,
             amount: item.amount,
@@ -124,6 +135,9 @@ export function useUpdateChallan() {
       date: string;
       client_id: string;
       notes: string;
+      prepared_by_name: string;
+      receiver_name: string;
+      receiver_contact_number: string;
       items: Omit<ChallanItem, 'id' | 'challan_id'>[];
     }) => {
       const { error: cErr } = await supabase
@@ -133,11 +147,13 @@ export function useUpdateChallan() {
           date: payload.date,
           client_id: payload.client_id,
           notes: payload.notes,
+          prepared_by_name: payload.prepared_by_name,
+          receiver_name: payload.receiver_name,
+          receiver_contact_number: payload.receiver_contact_number,
         })
         .eq('id', payload.id);
       if (cErr) throw cErr;
 
-      // Replace all items
       await supabase.from('challan_items').delete().eq('challan_id', payload.id);
       if (payload.items.length > 0) {
         const { error: iErr } = await supabase.from('challan_items').insert(
@@ -146,8 +162,9 @@ export function useUpdateChallan() {
             lot_no: item.lot_no,
             shade_number: item.shade_number,
             color_name: item.color_name,
+            packaging_type: item.packaging_type,
             gross_weight: item.gross_weight,
-            num_of_paper_tubes: item.num_of_paper_tubes,
+            num_of_units: item.num_of_units,
             net_weight: item.net_weight,
             rate: item.rate,
             amount: item.amount,
