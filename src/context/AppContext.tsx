@@ -190,6 +190,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await fetchAll();
   }, [state.processSteps, fetchAll]);
 
+  const updateProcessStep = useCallback(async (stepId: string, data: {
+    step_type: ProcessStepType;
+    description: string;
+    dyes: Omit<StepDye, 'id' | 'step_id'>[];
+    chemicals: Omit<StepChemical, 'id' | 'step_id'>[];
+  }) => {
+    await supabase.from('process_steps').update({
+      step_type: data.step_type, description: data.description,
+    }).eq('id', stepId);
+    await supabase.from('step_dyes').delete().eq('step_id', stepId);
+    await supabase.from('step_chemicals').delete().eq('step_id', stepId);
+    if (data.dyes.length > 0) {
+      await supabase.from('step_dyes').insert(
+        data.dyes.map(d => ({ step_id: stepId, dye_id: d.dye_id, percentage: d.percentage, qty_grams: d.qty_grams }))
+      );
+    }
+    if (data.chemicals.length > 0) {
+      await supabase.from('step_chemicals').insert(
+        data.chemicals.map(c => ({ step_id: stepId, chemical_id: c.chemical_id, qty: c.qty }))
+      );
+    }
+    await fetchAll();
+  }, [fetchAll]);
+
+  const deleteProcessStep = useCallback(async (stepId: string) => {
+    await Promise.all([
+      supabase.from('step_dyes').delete().eq('step_id', stepId),
+      supabase.from('step_chemicals').delete().eq('step_id', stepId),
+    ]);
+    await supabase.from('process_steps').delete().eq('id', stepId);
+    await fetchAll();
+  }, [fetchAll]);
+
   const getLot = useCallback((lotNo: string) => state.lots.find(l => l.lot_no === lotNo), [state.lots]);
   const getDyesForLot = useCallback((lotNo: string) => state.recipeDyes.filter(d => d.lot_no === lotNo), [state.recipeDyes]);
   const getChemicalsForLot = useCallback((lotNo: string) => state.recipeChemicals.filter(c => c.lot_no === lotNo), [state.recipeChemicals]);
