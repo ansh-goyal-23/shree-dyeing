@@ -16,8 +16,8 @@ const LotDetail: React.FC = () => {
   const navigate = useNavigate();
   const {
     getLot, deleteLot, approveLot, unapproveLot, masterItems,
-    getLotsReferencingSource, addProcessStep, getProcessStepsForLot,
-    stepDyes, stepChemicals,
+    getLotsReferencingSource, addProcessStep, updateProcessStep, deleteProcessStep,
+    getProcessStepsForLot, stepDyes, stepChemicals,
   } = useApp();
 
   const lot = getLot(lotNo || '');
@@ -177,6 +177,8 @@ const LotDetail: React.FC = () => {
           masterItems={masterItems}
           netWeight={lot.net_weight}
           lotNo={lot.lot_no}
+          onUpdateStep={updateProcessStep}
+          onDeleteStep={deleteProcessStep}
         />
       </div>
 
