@@ -225,8 +225,7 @@ const CreateLot: React.FC = () => {
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Gross Weight (kg) *</label>
-            <input
-              type="number"
+            <DecimalInput
               min={0}
               step="0.001"
               value={form.gross_weight}
