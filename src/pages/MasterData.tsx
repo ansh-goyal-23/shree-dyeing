@@ -64,7 +64,7 @@ const MasterData: React.FC = () => {
       {showForm && (
         <form onSubmit={handleSubmit} className="card-industrial p-4 space-y-4">
           <h2 className="text-sm font-semibold">{editItem ? 'Edit Item' : 'Add New Item'}</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Name *</label>
               <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="input-industrial w-full" required />
@@ -100,7 +100,7 @@ const MasterData: React.FC = () => {
               </label>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <button type="submit" className="px-4 h-11 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 focus-ring">
               {editItem ? 'Update' : 'Add'}
             </button>
@@ -122,8 +122,33 @@ const MasterData: React.FC = () => {
         ))}
       </div>
 
-      {/* Table */}
-      <div className="card-industrial overflow-hidden">
+      {/* Mobile card view */}
+      <div className="block sm:hidden space-y-2">
+        {filtered.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">No items found.</div>
+        ) : (
+          filtered.map(item => (
+            <div key={item.id} className="card-industrial p-3 flex items-center justify-between">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-sm">{item.name}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 bg-secondary rounded capitalize">{item.type}</span>
+                  {!item.is_active && <span className="text-[10px] text-muted-foreground">Inactive</span>}
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  {item.unit}{item.shade_family ? ` • ${item.shade_family}` : ''}{item.company ? ` • ${item.company}` : ''}
+                </div>
+              </div>
+              <button onClick={() => startEdit(item)} className="p-2 hover:bg-secondary rounded btn-transition">
+                <Pencil className="w-4 h-4" />
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden sm:block card-industrial overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-secondary/50">

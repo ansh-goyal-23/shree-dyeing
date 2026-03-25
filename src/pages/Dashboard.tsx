@@ -19,24 +19,25 @@ const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Dashboard</h1>
         <Link
           to="/shade-management/lots/create"
-          className="inline-flex items-center gap-2 px-4 h-11 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 focus-ring"
+          className="inline-flex items-center gap-2 px-3 sm:px-4 h-10 sm:h-11 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 focus-ring"
         >
           <PlusCircle className="w-4 h-4" />
-          New Lot
+          <span className="hidden sm:inline">New Lot</span>
+          <span className="sm:hidden">New</span>
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {stats.map(s => (
-          <div key={s.label} className="card-industrial p-4">
-            <div className="flex items-center gap-3">
-              <s.icon className={`w-5 h-5 ${s.color}`} />
+          <div key={s.label} className="card-industrial p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <s.icon className={`w-4 sm:w-5 h-4 sm:h-5 ${s.color}`} />
               <div>
-                <p className="text-sm text-muted-foreground">{s.label}</p>
-                <p className="text-2xl font-semibold font-data">{s.value}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">{s.label}</p>
+                <p className="text-xl sm:text-2xl font-semibold font-data">{s.value}</p>
               </div>
             </div>
           </div>
@@ -44,8 +45,8 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="card-industrial">
-        <div className="flex items-center justify-between p-4 row-separator">
-          <h2 className="text-lg font-semibold">Recent Lots</h2>
+        <div className="flex items-center justify-between p-3 sm:p-4 row-separator">
+          <h2 className="text-base sm:text-lg font-semibold">Recent Lots</h2>
           <Link to="/shade-management/lots" className="text-sm text-muted-foreground hover:text-foreground btn-transition flex items-center gap-1">
             View all <ArrowRight className="w-3 h-3" />
           </Link>
@@ -61,22 +62,22 @@ const Dashboard: React.FC = () => {
               <Link
                 key={lot.lot_no}
                 to={`/shade-management/lots/${lot.lot_no}`}
-                className="flex items-center justify-between px-4 py-3 hover:bg-secondary/50 btn-transition"
+                className="flex items-center justify-between px-3 sm:px-4 py-3 hover:bg-secondary/50 btn-transition"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                   <span className="font-data font-semibold text-sm">{lot.lot_no}</span>
-                  <span className="text-sm text-muted-foreground">{lot.yarn_company_name}</span>
-                  {lot.color_name && <span className="text-sm text-muted-foreground">• {lot.color_name}</span>}
+                  <span className="text-sm text-muted-foreground truncate hidden sm:inline">{lot.yarn_company_name}</span>
+                  {lot.color_name && <span className="text-sm text-muted-foreground truncate hidden sm:inline">• {lot.color_name}</span>}
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-data text-sm">{lot.net_weight} kg</span>
+                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                  <span className="font-data text-xs sm:text-sm">{lot.net_weight} kg</span>
                   {lot.is_approved ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-approved/10 text-approved rounded">
-                      <CheckCircle2 className="w-3 h-3" /> Approved
+                    <span className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-medium bg-approved/10 text-approved rounded">
+                      <CheckCircle2 className="w-2.5 sm:w-3 h-2.5 sm:h-3" /> <span className="hidden sm:inline">Approved</span><span className="sm:hidden">OK</span>
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-correction/10 text-correction rounded">
-                      <Clock className="w-3 h-3" /> Draft
+                    <span className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-medium bg-correction/10 text-correction rounded">
+                      <Clock className="w-2.5 sm:w-3 h-2.5 sm:h-3" /> Draft
                     </span>
                   )}
                 </div>
