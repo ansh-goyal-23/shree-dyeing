@@ -229,8 +229,8 @@ const CreateLot: React.FC = () => {
               type="number"
               min={0}
               step="0.001"
-              value={form.gross_weight || ''}
-              onChange={e => update('gross_weight', parseFloat(e.target.value) || 0)}
+              value={form.gross_weight}
+              onValueChange={v => update('gross_weight', v)}
               className="input-industrial w-full font-data"
               required
             />

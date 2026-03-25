@@ -54,8 +54,7 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, onCh
     onChange(index, updated);
   };
 
-  const handleField = (field: keyof ItemData, raw: string) => {
-    const val = parseFloat(raw) || 0;
+  const handleField = (field: keyof ItemData, val: number) => {
     const updated = { ...item, [field]: val };
     if (field === 'gross_weight' || field === 'num_of_units') {
       const gw = field === 'gross_weight' ? val : item.gross_weight;
