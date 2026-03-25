@@ -1,5 +1,6 @@
 import React from 'react';
 import { Trash2 } from 'lucide-react';
+import DecimalInput from '@/components/DecimalInput';
 import type { Lot } from '@/types';
 import type { PackagingType } from '@/types/challan';
 

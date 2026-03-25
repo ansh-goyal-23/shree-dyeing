@@ -5,6 +5,7 @@ import { calculateNetWeight, calculateDyeGrams } from '@/lib/calculations';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import LotFieldAutocomplete from '@/components/LotFieldAutocomplete';
+import DecimalInput from '@/components/DecimalInput';
 
 const CreateLot: React.FC = () => {
   const { addLot, lots, getDyesForLot, getChemicalsForLot, updateRecipeDyes, updateRecipeChemicals } = useApp();
