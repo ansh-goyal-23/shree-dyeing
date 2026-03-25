@@ -164,7 +164,7 @@ const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, onSubmit, on
                     <option value="">Select chemical...</option>
                     {chemicalItems.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
-                  <input type="number" step="0.01" min={0} value={chem.qty || ''} onChange={e => updateChemical(idx, 'qty', parseFloat(e.target.value) || 0)} className="input-industrial font-data text-sm" />
+                  <DecimalInput step="0.01" min={0} value={chem.qty} onValueChange={v => updateChemical(idx, 'qty', v)} className="input-industrial font-data text-sm" />
                   <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed text-sm text-muted-foreground">{masterItems.find(m => m.id === chem.chemical_id)?.unit || '—'}</span>
                   <button onClick={() => removeChemical(idx)} className="p-2 text-destructive hover:bg-destructive/10 rounded btn-transition"><Trash2 className="w-4 h-4" /></button>
                 </div>
