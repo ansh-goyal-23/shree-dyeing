@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { X, Loader2, Image as ImageIcon, Upload, RefreshCw } from 'lucide-react';
+import { X, Loader2, Image as ImageIcon, Upload } from 'lucide-react';
 import { toast } from 'sonner';
-import { normalizeImage } from '@/lib/imageNormalize';
 
 interface LotPhoto {
   id: string;
@@ -22,19 +21,11 @@ interface LotPhotosProps {
 const LotPhotos: React.FC<LotPhotosProps> = ({ lotNo, stepId = null }) => {
   const [photos, setPhotos] = useState<LotPhoto[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [processing, setProcessing] = useState(false);
   const [label, setLabel] = useState('');
   const [viewPhoto, setViewPhoto] = useState<LotPhoto | null>(null);
-
-  // Preview state
-  const [originalUrl, setOriginalUrl] = useState<string | null>(null);
-  const [normalizedUrl, setNormalizedUrl] = useState<string | null>(null);
-  const [normalizedFile, setNormalizedFile] = useState<File | null>(null);
-  const [rawFile, setRawFile] = useState<File | null>(null);
-  const [useOriginal, setUseOriginal] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  const hasPreview = originalUrl !== null;
 
   const fetchPhotos = async () => {
     let query = supabase.from('lot_photos').select('*').eq('lot_no', lotNo).order('created_at', { ascending: false });
@@ -49,48 +40,29 @@ const LotPhotos: React.FC<LotPhotosProps> = ({ lotNo, stepId = null }) => {
 
   useEffect(() => { fetchPhotos(); }, [lotNo, stepId]);
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) { toast.error('Please select an image file.'); return; }
-
-    setRawFile(file);
-    setUseOriginal(false);
-    setProcessing(true);
-
-    try {
-      const result = await normalizeImage(file);
-      setOriginalUrl(result.originalUrl);
-      setNormalizedUrl(result.normalizedUrl);
-      setNormalizedFile(result.normalizedFile);
-    } catch {
-      const url = URL.createObjectURL(file);
-      setOriginalUrl(url);
-      setNormalizedUrl(null);
-      setNormalizedFile(null);
-    }
-    setProcessing(false);
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    setSelectedFile(file);
   };
 
   const clearPreview = () => {
-    if (originalUrl) URL.revokeObjectURL(originalUrl);
-    if (normalizedUrl) URL.revokeObjectURL(normalizedUrl);
-    setOriginalUrl(null);
-    setNormalizedUrl(null);
-    setNormalizedFile(null);
-    setRawFile(null);
-    setUseOriginal(false);
+    if (preview) URL.revokeObjectURL(preview);
+    setPreview(null);
+    setSelectedFile(null);
     if (fileRef.current) fileRef.current.value = '';
   };
 
   const handleConfirmUpload = async () => {
-    const fileToUpload = (useOriginal || !normalizedFile) ? rawFile : normalizedFile;
-    if (!fileToUpload) return;
+    if (!selectedFile) return;
     setUploading(true);
-    const ext = fileToUpload.name.split('.').pop();
+    const ext = selectedFile.name.split('.').pop();
     const filePath = `${lotNo}/${crypto.randomUUID()}.${ext}`;
 
-    const { error: uploadErr } = await supabase.storage.from('lot-photos').upload(filePath, fileToUpload);
+    const { error: uploadErr } = await supabase.storage.from('lot-photos').upload(filePath, selectedFile);
     if (uploadErr) { toast.error('Upload failed: ' + uploadErr.message); setUploading(false); return; }
 
     const { error: insertErr } = await supabase.from('lot_photos').insert({
@@ -120,10 +92,6 @@ const LotPhotos: React.FC<LotPhotosProps> = ({ lotNo, stepId = null }) => {
     return data.publicUrl;
   };
 
-  const displayUrl = hasPreview
-    ? (useOriginal || !normalizedUrl ? originalUrl : normalizedUrl)
-    : null;
-
   return (
     <div className="space-y-3">
       <div className="flex items-end gap-3 flex-wrap">
@@ -133,58 +101,38 @@ const LotPhotos: React.FC<LotPhotosProps> = ({ lotNo, stepId = null }) => {
         </div>
         <div>
           <input ref={fileRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
-          <button onClick={() => fileRef.current?.click()} disabled={uploading || processing}
+          <button onClick={() => fileRef.current?.click()} disabled={uploading}
             className="px-3 h-9 bg-primary text-primary-foreground rounded-md text-xs font-medium btn-transition hover:opacity-90 focus-ring inline-flex items-center gap-1.5">
-            {processing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-            {processing ? 'Processing…' : 'Select Photo'}
+            {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+            {uploading ? 'Uploading…' : 'Select Photo'}
           </button>
         </div>
       </div>
 
-      {/* Preview before upload with original/corrected toggle */}
-      {hasPreview && !processing && (
-        <div className="space-y-2">
-          <div className="relative inline-block">
-            <img src={displayUrl!} alt="Preview" className="w-32 h-32 sm:w-40 sm:h-40 object-cover rounded-lg border-2 border-primary/30" />
-            {normalizedUrl && (
-              <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-black/60 text-white">
-                {useOriginal ? 'Original' : 'Corrected'}
-              </span>
-            )}
-            <div className="absolute inset-x-0 bottom-0 flex gap-1 p-1.5 bg-black/50 rounded-b-lg">
-              <button onClick={handleConfirmUpload} disabled={uploading}
-                className="flex-1 px-2 py-1.5 bg-approved text-approved-foreground rounded text-xs font-medium btn-transition hover:opacity-90 disabled:opacity-50">
-                {uploading ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : 'Upload'}
-              </button>
-              {normalizedUrl && (
-                <button onClick={() => setUseOriginal(!useOriginal)} disabled={uploading}
-                  title={useOriginal ? 'Use corrected' : 'Use original'}
-                  className="px-2 py-1.5 bg-white/20 text-white rounded text-xs btn-transition hover:bg-white/30">
-                  <RefreshCw className="w-3 h-3" />
-                </button>
-              )}
-              <button onClick={clearPreview} disabled={uploading}
-                className="px-2 py-1.5 bg-white/20 text-white rounded text-xs btn-transition hover:bg-white/30">
-                <X className="w-3 h-3" />
-              </button>
-            </div>
+      {/* Preview before upload */}
+      {preview && (
+        <div className="relative inline-block">
+          <img src={preview} alt="Preview" className="w-32 h-32 sm:w-40 sm:h-40 object-cover rounded-lg border-2 border-primary/30" />
+          <div className="absolute inset-x-0 bottom-0 flex gap-1 p-1.5 bg-black/50 rounded-b-lg">
+            <button
+              onClick={handleConfirmUpload}
+              disabled={uploading}
+              className="flex-1 px-2 py-1.5 bg-approved text-approved-foreground rounded text-xs font-medium btn-transition hover:opacity-90 disabled:opacity-50"
+            >
+              {uploading ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : 'Upload'}
+            </button>
+            <button
+              onClick={clearPreview}
+              disabled={uploading}
+              className="px-2 py-1.5 bg-white/20 text-white rounded text-xs btn-transition hover:bg-white/30"
+            >
+              <X className="w-3 h-3" />
+            </button>
           </div>
-          {normalizedUrl && (
-            <p className="text-[10px] text-muted-foreground">
-              Tap <RefreshCw className="w-2.5 h-2.5 inline" /> to toggle original / color-corrected
-            </p>
-          )}
         </div>
       )}
 
-      {processing && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Optimizing image…
-        </div>
-      )}
-
-      {photos.length === 0 && !hasPreview && !processing ? (
+      {photos.length === 0 && !preview ? (
         <div className="text-center py-4 text-muted-foreground text-xs flex flex-col items-center gap-1">
           <ImageIcon className="w-6 h-6 opacity-40" />
           No photos yet.
