@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useChallans } from '@/hooks/useChallan';
-import { useChallanItems } from '@/hooks/useChallan';
 import { PlusCircle, Search, FileText, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,7 +11,6 @@ const ChallanList: React.FC = () => {
   const [clientFilter, setClientFilter] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'client' | 'challan'>('date');
 
-  // Fetch all items for summary
   const { data: allItems = [] } = useQuery({
     queryKey: ['all_challan_items'],
     queryFn: async () => {
@@ -32,7 +30,6 @@ const ChallanList: React.FC = () => {
     let list = challans;
 
     if (q) {
-      // Also check items for lot_no, shade_number, color_name
       const challanIdsWithMatchingItems = new Set(
         allItems
           .filter(i =>
@@ -74,25 +71,25 @@ const ChallanList: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Dispatch — Challans</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Dispatch — Challans</h1>
         <Link to="/dispatch/create"
-          className="inline-flex items-center gap-2 px-4 h-11 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 focus-ring">
-          <PlusCircle className="w-4 h-4" /> New Challan
+          className="inline-flex items-center gap-2 px-3 sm:px-4 h-10 sm:h-11 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 focus-ring">
+          <PlusCircle className="w-4 h-4" /> <span className="hidden sm:inline">New</span> Challan
         </Link>
       </div>
 
       {/* Search, Filter, Sort */}
-      <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="flex gap-2 sm:gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input type="text" placeholder="Search challan, client, lot, shade, color..." value={search} onChange={e => setSearch(e.target.value)}
+          <input type="text" placeholder="Search challan, client, lot..." value={search} onChange={e => setSearch(e.target.value)}
             className="input-industrial w-full pl-10" />
         </div>
-        <select value={clientFilter} onChange={e => setClientFilter(e.target.value)} className="input-industrial w-44">
+        <select value={clientFilter} onChange={e => setClientFilter(e.target.value)} className="input-industrial w-32 sm:w-44">
           <option value="">All Clients</option>
           {uniqueClients.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
-        <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="input-industrial w-36">
+        <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="input-industrial w-28 sm:w-36">
           <option value="date">Sort: Date</option>
           <option value="client">Sort: Client</option>
           <option value="challan">Sort: Challan #</option>
@@ -107,37 +104,62 @@ const ChallanList: React.FC = () => {
           <p>{search || clientFilter ? 'No matching challans.' : 'No challans yet.'}</p>
         </div>
       ) : (
-        <div className="card-industrial overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-muted-foreground">
-                <th className="p-3 font-medium">Challan #</th>
-                <th className="p-3 font-medium">Date</th>
-                <th className="p-3 font-medium">Client</th>
-                <th className="p-3 font-medium text-right">Items</th>
-                <th className="p-3 font-medium text-right">Net Weight (kg)</th>
-                <th className="p-3 font-medium text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(c => {
-                const s = getItemsSummary(c.id);
-                return (
-                  <tr key={c.id} className="border-b border-border hover:bg-secondary/30 btn-transition">
-                    <td className="p-3">
-                      <Link to={`/dispatch/${c.id}`} className="text-primary font-medium hover:underline">{c.challan_number}</Link>
-                    </td>
-                    <td className="p-3">{new Date(c.date).toLocaleDateString()}</td>
-                    <td className="p-3">{c.client_name}</td>
-                    <td className="p-3 text-right">{s.totalItems}</td>
-                    <td className="p-3 text-right">{s.totalNetWeight.toFixed(3)} kg</td>
-                    <td className="p-3 text-right font-medium">₹{s.totalAmount.toFixed(2)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {/* Mobile card view */}
+          <div className="block sm:hidden space-y-2">
+            {filtered.map(c => {
+              const s = getItemsSummary(c.id);
+              return (
+                <Link key={c.id} to={`/dispatch/${c.id}`}
+                  className="card-industrial p-3 flex items-center justify-between hover:bg-secondary/30 btn-transition">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-primary">{c.challan_number}</span>
+                      <span className="text-xs text-muted-foreground">{s.totalItems} items</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5 truncate">
+                      {c.client_name} • {s.totalNetWeight.toFixed(3)} kg • ₹{s.totalAmount.toFixed(2)}
+                    </div>
+                  </div>
+                  <span className="text-xs text-muted-foreground font-data ml-2">{new Date(c.date).toLocaleDateString()}</span>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Desktop table view */}
+          <div className="hidden sm:block card-industrial overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-muted-foreground">
+                  <th className="p-3 font-medium">Challan #</th>
+                  <th className="p-3 font-medium">Date</th>
+                  <th className="p-3 font-medium">Client</th>
+                  <th className="p-3 font-medium text-right">Items</th>
+                  <th className="p-3 font-medium text-right">Net Weight (kg)</th>
+                  <th className="p-3 font-medium text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(c => {
+                  const s = getItemsSummary(c.id);
+                  return (
+                    <tr key={c.id} className="border-b border-border hover:bg-secondary/30 btn-transition">
+                      <td className="p-3">
+                        <Link to={`/dispatch/${c.id}`} className="text-primary font-medium hover:underline">{c.challan_number}</Link>
+                      </td>
+                      <td className="p-3">{new Date(c.date).toLocaleDateString()}</td>
+                      <td className="p-3">{c.client_name}</td>
+                      <td className="p-3 text-right">{s.totalItems}</td>
+                      <td className="p-3 text-right">{s.totalNetWeight.toFixed(3)} kg</td>
+                      <td className="p-3 text-right font-medium">₹{s.totalAmount.toFixed(2)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

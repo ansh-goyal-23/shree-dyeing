@@ -5,6 +5,7 @@ import { calculateNetWeight, calculateDyeGrams } from '@/lib/calculations';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import LotFieldAutocomplete from '@/components/LotFieldAutocomplete';
+import DecimalInput from '@/components/DecimalInput';
 
 const CreateLot: React.FC = () => {
   const { addLot, lots, getDyesForLot, getChemicalsForLot, updateRecipeDyes, updateRecipeChemicals } = useApp();
@@ -30,7 +31,6 @@ const CreateLot: React.FC = () => {
     gross_weight: 0,
   });
 
-  // Build shade dropdown options: "lot_no (color_name)"
   const shadeOptions = useMemo(() => {
     return lots.map(l => ({
       label: `${l.lot_no} (${l.color_name || 'No Color'})`,
@@ -81,7 +81,6 @@ const CreateLot: React.FC = () => {
     });
 
     if (success) {
-      // Clone base recipe from shade source lot if selected
       const shadeLotNo = form.shade_number.trim();
       if (shadeLotNo && shadeLotNo !== form.lot_no.trim()) {
         const sourceDyes = getDyesForLot(shadeLotNo);
@@ -134,9 +133,9 @@ const CreateLot: React.FC = () => {
     <div className="max-w-2xl mx-auto space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Create Lot</h1>
 
-      <form onSubmit={handleSubmit} className="card-industrial p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="card-industrial p-4 sm:p-6 space-y-5">
         {/* Row 1: Lot No + Shade Number */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Lot No *</label>
             <input
@@ -162,7 +161,7 @@ const CreateLot: React.FC = () => {
         </div>
 
         {/* Row 2: Date */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Date *</label>
             <input
@@ -175,8 +174,8 @@ const CreateLot: React.FC = () => {
           </div>
         </div>
 
-        {/* Row 3: Yarn Company + Color Name (autofilled if shade selected) */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Row 3: Yarn Company + Color Name */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Yarn Company *</label>
             <LotFieldAutocomplete
@@ -198,7 +197,7 @@ const CreateLot: React.FC = () => {
         </div>
 
         {/* Row 4: Denier */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Denier *</label>
             <LotFieldAutocomplete
@@ -211,27 +210,24 @@ const CreateLot: React.FC = () => {
         </div>
 
         {/* Row 5: Chesses, Gross, Net */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">No. of Chesses *</label>
-            <input
-              type="number"
-              min={1}
-              value={form.number_of_chesses || ''}
-              onChange={e => update('number_of_chesses', parseInt(e.target.value) || 0)}
+            <DecimalInput
+              value={form.number_of_chesses}
+              onValueChange={v => update('number_of_chesses', Math.floor(v))}
               className="input-industrial w-full font-data"
+              min={1}
               required
             />
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Gross Weight (kg) *</label>
-            <input
-              type="number"
-              min={0}
-              step="0.001"
-              value={form.gross_weight || ''}
-              onChange={e => update('gross_weight', parseFloat(e.target.value) || 0)}
+            <DecimalInput
+              value={form.gross_weight}
+              onValueChange={v => update('gross_weight', v)}
               className="input-industrial w-full font-data"
+              min={0}
               required
             />
           </div>
@@ -243,7 +239,7 @@ const CreateLot: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-2">
+        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
           <button
             type="button"
             onClick={() => navigate('/shade-management/lots')}

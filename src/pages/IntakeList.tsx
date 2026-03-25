@@ -46,18 +46,18 @@ const IntakeList: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Sampling & Orders</h1>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Sampling & Orders</h1>
         <div className="flex gap-2">
           <Link to="/sampling/order/create"
-            className="inline-flex items-center gap-2 px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring">
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 h-10 sm:h-11 border border-input rounded-md text-xs sm:text-sm font-medium btn-transition hover:bg-secondary focus-ring">
             <ShoppingCart className="w-4 h-4" />
-            Direct Order
+            <span className="hidden sm:inline">Direct</span> Order
           </Link>
           <Link to="/sampling/create"
-            className="inline-flex items-center gap-2 px-4 h-11 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 focus-ring">
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 h-10 sm:h-11 bg-primary text-primary-foreground rounded-md text-xs sm:text-sm font-medium btn-transition hover:opacity-90 focus-ring">
             <PlusCircle className="w-4 h-4" />
-            New Intake
+            <span className="hidden sm:inline">New</span> Intake
           </Link>
         </div>
       </div>
@@ -65,27 +65,27 @@ const IntakeList: React.FC = () => {
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border">
         <button onClick={() => setTab('intakes')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 btn-transition ${tab === 'intakes' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
-          Intake Entries
+          className={`px-3 sm:px-4 py-2 text-sm font-medium border-b-2 btn-transition ${tab === 'intakes' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
+          Intakes
         </button>
         <button onClick={() => setTab('orders')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 btn-transition ${tab === 'orders' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
-          All Orders ({allOrders.length})
+          className={`px-3 sm:px-4 py-2 text-sm font-medium border-b-2 btn-transition ${tab === 'orders' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
+          Orders ({allOrders.length})
         </button>
       </div>
 
       {/* Search & Filter */}
-      <div className="flex gap-3">
-        <div className="relative flex-1">
+      <div className="flex gap-2 sm:gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input type="text" placeholder={tab === 'intakes' ? 'Search by client...' : 'Search by client, shade, lot...'} value={search} onChange={e => setSearch(e.target.value)} className="input-industrial w-full pl-10" />
         </div>
         {tab === 'orders' && (
-          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input-industrial w-40">
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input-industrial w-32 sm:w-40">
             <option value="all">All Status</option>
             <option value="Pending">Pending</option>
-            <option value="In Development">In Development</option>
-            <option value="In Production">In Production</option>
+            <option value="In Development">In Dev</option>
+            <option value="In Production">In Prod</option>
             <option value="Completed">Completed</option>
             <option value="Cancelled">Cancelled</option>
           </select>
@@ -95,7 +95,6 @@ const IntakeList: React.FC = () => {
       {isLoading ? (
         <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
       ) : tab === 'intakes' ? (
-        /* Intake Entries Tab */
         filteredEntries.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <FileText className="w-12 h-12 mx-auto mb-3 opacity-40" />
@@ -105,23 +104,22 @@ const IntakeList: React.FC = () => {
           <div className="card-industrial divide-y divide-border">
             {filteredEntries.map(entry => (
               <Link key={entry.id} to={`/sampling/${entry.id}`}
-                className="flex items-center justify-between px-4 py-3 hover:bg-secondary/50 btn-transition">
-                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center">
+                className="flex items-center justify-between px-3 sm:px-4 py-3 hover:bg-secondary/50 btn-transition">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                  <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center flex-shrink-0">
                     {entry.intake_type === 'Sheet' ? <FileText className="w-4 h-4 text-muted-foreground" /> : <ImageIcon className="w-4 h-4 text-muted-foreground" />}
                   </div>
-                  <div>
-                    <p className="font-medium text-sm">{entry.client_name}</p>
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm truncate">{entry.client_name}</p>
                     <p className="text-xs text-muted-foreground">{new Date(entry.received_date).toLocaleDateString()} • {entry.intake_type}</p>
                   </div>
                 </div>
-                <Badge variant="secondary" className="text-xs">{entry.intake_type}</Badge>
+                <Badge variant="secondary" className="text-xs flex-shrink-0">{entry.intake_type}</Badge>
               </Link>
             ))}
           </div>
         )
       ) : (
-        /* Orders Tab */
         filteredOrders.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <ShoppingCart className="w-12 h-12 mx-auto mb-3 opacity-40" />
@@ -130,19 +128,19 @@ const IntakeList: React.FC = () => {
         ) : (
           <div className="space-y-2">
             {filteredOrders.map(order => (
-              <div key={order.id} className={`card-industrial p-4 ${order.status === 'Cancelled' ? 'opacity-50' : ''}`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div>
+              <div key={order.id} className={`card-industrial p-3 sm:p-4 ${order.status === 'Cancelled' ? 'opacity-50' : ''}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm">{order.client_name || 'Unknown'}</span>
                         <Badge className={`text-[10px] ${statusColors[order.status]}`}>{order.status}</Badge>
                         {order.is_direct_order && <Badge variant="outline" className="text-[10px]">Direct</Badge>}
                       </div>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
                         {order.shade_reference && <span>Shade: {order.shade_reference}</span>}
                         {order.order_quantity && <span>Qty: {order.order_quantity}</span>}
-                        {order.yarn_type && <span>Yarn: {order.yarn_type}</span>}
+                        {order.yarn_type && <span className="hidden sm:inline">Yarn: {order.yarn_type}</span>}
                         <span>{new Date(order.created_at).toLocaleDateString()}</span>
                       </div>
                     </div>
@@ -150,7 +148,7 @@ const IntakeList: React.FC = () => {
                   {order.linked_lot_no && (
                     <Link to={`/shade-management/lots/${order.linked_lot_no}`}
                       className="inline-flex items-center gap-1 text-xs text-primary hover:underline flex-shrink-0">
-                      <ExternalLink className="w-3 h-3" /> Lot {order.linked_lot_no}
+                      <ExternalLink className="w-3 h-3" /> <span className="hidden sm:inline">Lot</span> {order.linked_lot_no}
                     </Link>
                   )}
                 </div>

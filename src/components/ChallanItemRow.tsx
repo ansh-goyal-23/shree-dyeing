@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import type { Lot } from '@/types';
 import type { PackagingType } from '@/types/challan';
@@ -32,6 +32,11 @@ const calcNet = (gross: number, units: number, type: PackagingType) =>
   parseFloat((gross - DEDUCTION[type] * units).toFixed(3));
 
 const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, onChange, onRemove }) => {
+  // String state for decimal-friendly inputs
+  const [grossStr, setGrossStr] = useState(item.gross_weight ? String(item.gross_weight) : '');
+  const [unitsStr, setUnitsStr] = useState(item.num_of_units ? String(item.num_of_units) : '');
+  const [rateStr, setRateStr] = useState(item.rate ? String(item.rate) : '');
+
   const handleLotChange = (lotNo: string) => {
     const lot = lots.find(l => l.lot_no === lotNo);
     const updated: ItemData = {
@@ -54,19 +59,30 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, onCh
     onChange(index, updated);
   };
 
-  const handleField = (field: keyof ItemData, raw: string) => {
-    const val = parseFloat(raw) || 0;
-    const updated = { ...item, [field]: val };
-    if (field === 'gross_weight' || field === 'num_of_units') {
-      const gw = field === 'gross_weight' ? val : item.gross_weight;
-      const units = field === 'num_of_units' ? val : item.num_of_units;
-      updated.net_weight = calcNet(gw, units, item.packaging_type);
-      updated.amount = parseFloat((updated.net_weight * updated.rate).toFixed(2));
+  const handleGrossChange = (raw: string) => {
+    setGrossStr(raw);
+    const val = parseFloat(raw);
+    if (!isNaN(val)) {
+      const net = calcNet(val, item.num_of_units, item.packaging_type);
+      onChange(index, { ...item, gross_weight: val, net_weight: net, amount: parseFloat((net * item.rate).toFixed(2)) });
     }
-    if (field === 'rate') {
-      updated.amount = parseFloat((item.net_weight * val).toFixed(2));
+  };
+
+  const handleUnitsChange = (raw: string) => {
+    setUnitsStr(raw);
+    const val = parseInt(raw);
+    if (!isNaN(val)) {
+      const net = calcNet(item.gross_weight, val, item.packaging_type);
+      onChange(index, { ...item, num_of_units: val, net_weight: net, amount: parseFloat((net * item.rate).toFixed(2)) });
     }
-    onChange(index, updated);
+  };
+
+  const handleRateChange = (raw: string) => {
+    setRateStr(raw);
+    const val = parseFloat(raw);
+    if (!isNaN(val)) {
+      onChange(index, { ...item, rate: val, amount: parseFloat((item.net_weight * val).toFixed(2)) });
+    }
   };
 
   const unitLabel = item.packaging_type === 'chesse' ? 'Chesses' : 'Tubes';
@@ -88,17 +104,20 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, onCh
         </select>
       </td>
       <td className="p-2">
-        <input type="number" step="0.001" value={item.gross_weight || ''} onChange={e => handleField('gross_weight', e.target.value)}
-          className="input-industrial w-24 text-sm" placeholder="0.000" />
+        <input type="number" step="any" value={grossStr} onChange={e => handleGrossChange(e.target.value)}
+          onBlur={() => setGrossStr(item.gross_weight ? String(item.gross_weight) : '')}
+          className="input-industrial w-full min-w-[80px] text-sm" placeholder="0.000" />
       </td>
       <td className="p-2">
-        <input type="number" step="1" min="0" value={item.num_of_units || ''} onChange={e => handleField('num_of_units', e.target.value)}
-          className="input-industrial w-20 text-sm" placeholder={`# ${unitLabel}`} />
+        <input type="number" step="1" min="0" value={unitsStr} onChange={e => handleUnitsChange(e.target.value)}
+          onBlur={() => setUnitsStr(item.num_of_units ? String(item.num_of_units) : '')}
+          className="input-industrial w-full min-w-[60px] text-sm" placeholder={`# ${unitLabel}`} />
       </td>
       <td className="p-2 text-sm font-medium">{item.net_weight.toFixed(3)}</td>
       <td className="p-2">
-        <input type="number" step="0.01" value={item.rate || ''} onChange={e => handleField('rate', e.target.value)}
-          className="input-industrial w-24 text-sm" placeholder="0.00" />
+        <input type="number" step="any" value={rateStr} onChange={e => handleRateChange(e.target.value)}
+          onBlur={() => setRateStr(item.rate ? String(item.rate) : '')}
+          className="input-industrial w-full min-w-[80px] text-sm" placeholder="0.00" />
       </td>
       <td className="p-2 text-sm font-medium">₹{item.amount.toFixed(2)}</td>
       <td className="p-2">

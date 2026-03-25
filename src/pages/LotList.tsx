@@ -38,7 +38,41 @@ const LotList: React.FC = () => {
         />
       </div>
 
-      <div className="card-industrial overflow-hidden">
+      {/* Mobile card view */}
+      <div className="block sm:hidden space-y-2">
+        {filtered.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            {search ? 'No lots match your search.' : 'No lots created yet.'}
+          </div>
+        ) : (
+          filtered.map(lot => (
+            <Link key={lot.lot_no} to={`/shade-management/lots/${lot.lot_no}`}
+              className="card-industrial p-3 flex items-center justify-between hover:bg-secondary/30 btn-transition">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-data font-semibold text-primary">{lot.lot_no}</span>
+                  {lot.is_approved ? (
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium bg-approved/10 text-approved rounded">
+                      <CheckCircle2 className="w-2.5 h-2.5" /> OK
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium bg-correction/10 text-correction rounded">
+                      <Clock className="w-2.5 h-2.5" /> Draft
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5 truncate">
+                  {lot.yarn_company_name} • {lot.color_name || '—'} • {lot.net_weight} kg
+                </div>
+              </div>
+              <span className="text-xs text-muted-foreground font-data ml-2">{lot.date}</span>
+            </Link>
+          ))
+        )}
+      </div>
+
+      {/* Desktop table view */}
+      <div className="hidden sm:block card-industrial overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-secondary/50">
