@@ -151,7 +151,7 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
                 {readOnly ? (
                   <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed font-data text-sm">{dye.percentage}</span>
                 ) : (
-                  <input type="number" step="0.001" min={0} value={dye.percentage || ''} onChange={e => updateDye(idx, 'percentage', parseFloat(e.target.value) || 0)} className="input-industrial font-data text-sm" />
+                  <DecimalInput step="0.001" min={0} value={dye.percentage} onValueChange={v => updateDye(idx, 'percentage', v)} className="input-industrial font-data text-sm" />
                 )}
                 <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed font-data font-semibold text-sm">
                   {calculateDyeGrams(dye.percentage, netWeight).toFixed(3)}
