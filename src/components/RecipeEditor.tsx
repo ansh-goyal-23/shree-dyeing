@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { calculateDyeGrams } from '@/lib/calculations';
 import { Plus, Trash2 } from 'lucide-react';
+import DecimalInput from '@/components/DecimalInput';
 import type { RecipeDye, RecipeChemical } from '@/types';
 
 const DEFAULT_CHEMICAL_NAMES = ['BUF', 'CDFT', 'CWS'];
@@ -150,7 +151,7 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
                 {readOnly ? (
                   <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed font-data text-sm">{dye.percentage}</span>
                 ) : (
-                  <input type="number" step="0.001" min={0} value={dye.percentage || ''} onChange={e => updateDye(idx, 'percentage', parseFloat(e.target.value) || 0)} className="input-industrial font-data text-sm" />
+                  <DecimalInput step="0.001" min={0} value={dye.percentage} onValueChange={v => updateDye(idx, 'percentage', v)} className="input-industrial font-data text-sm" />
                 )}
                 <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed font-data font-semibold text-sm">
                   {calculateDyeGrams(dye.percentage, netWeight).toFixed(3)}
@@ -200,7 +201,7 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
                   {readOnly ? (
                     <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed font-data text-sm">{chem.qty}</span>
                   ) : (
-                    <input type="number" step="0.01" min={0} value={chem.qty || ''} onChange={e => updateChemical(idx, 'qty', parseFloat(e.target.value) || 0)} className="input-industrial font-data text-sm" />
+                    <DecimalInput step="0.01" min={0} value={chem.qty} onValueChange={v => updateChemical(idx, 'qty', v)} className="input-industrial font-data text-sm" />
                   )}
                   <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed text-sm text-muted-foreground">
                     {masterItems.find(m => m.id === chem.chemical_id)?.unit || '—'}

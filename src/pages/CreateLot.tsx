@@ -5,6 +5,7 @@ import { calculateNetWeight, calculateDyeGrams } from '@/lib/calculations';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import LotFieldAutocomplete from '@/components/LotFieldAutocomplete';
+import DecimalInput from '@/components/DecimalInput';
 
 const CreateLot: React.FC = () => {
   const { addLot, lots, getDyesForLot, getChemicalsForLot, updateRecipeDyes, updateRecipeChemicals } = useApp();
@@ -225,12 +226,11 @@ const CreateLot: React.FC = () => {
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Gross Weight (kg) *</label>
-            <input
-              type="number"
+            <DecimalInput
               min={0}
               step="0.001"
-              value={form.gross_weight || ''}
-              onChange={e => update('gross_weight', parseFloat(e.target.value) || 0)}
+              value={form.gross_weight}
+              onValueChange={v => update('gross_weight', v)}
               className="input-industrial w-full font-data"
               required
             />

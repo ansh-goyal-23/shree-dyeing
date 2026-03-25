@@ -1,5 +1,6 @@
 import React from 'react';
 import { Trash2 } from 'lucide-react';
+import DecimalInput from '@/components/DecimalInput';
 import type { Lot } from '@/types';
 import type { PackagingType } from '@/types/challan';
 
@@ -54,8 +55,7 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, onCh
     onChange(index, updated);
   };
 
-  const handleField = (field: keyof ItemData, raw: string) => {
-    const val = parseFloat(raw) || 0;
+  const handleField = (field: keyof ItemData, val: number) => {
     const updated = { ...item, [field]: val };
     if (field === 'gross_weight' || field === 'num_of_units') {
       const gw = field === 'gross_weight' ? val : item.gross_weight;
@@ -88,16 +88,16 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, onCh
         </select>
       </td>
       <td className="p-2">
-        <input type="number" step="0.001" value={item.gross_weight || ''} onChange={e => handleField('gross_weight', e.target.value)}
+        <DecimalInput step="0.001" value={item.gross_weight} onValueChange={v => handleField('gross_weight', v)}
           className="input-industrial w-24 text-sm" placeholder="0.000" />
       </td>
       <td className="p-2">
-        <input type="number" step="1" min="0" value={item.num_of_units || ''} onChange={e => handleField('num_of_units', e.target.value)}
+        <DecimalInput step="1" min={0} value={item.num_of_units} onValueChange={v => handleField('num_of_units', v)}
           className="input-industrial w-20 text-sm" placeholder={`# ${unitLabel}`} />
       </td>
       <td className="p-2 text-sm font-medium">{item.net_weight.toFixed(3)}</td>
       <td className="p-2">
-        <input type="number" step="0.01" value={item.rate || ''} onChange={e => handleField('rate', e.target.value)}
+        <DecimalInput step="0.01" value={item.rate} onValueChange={v => handleField('rate', v)}
           className="input-industrial w-24 text-sm" placeholder="0.00" />
       </td>
       <td className="p-2 text-sm font-medium">₹{item.amount.toFixed(2)}</td>

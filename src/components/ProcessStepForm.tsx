@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
+import DecimalInput from '@/components/DecimalInput';
 import { calculateDyeGrams } from '@/lib/calculations';
 import type { ProcessStepType, StepDye, StepChemical, MasterItem } from '@/types';
 
@@ -134,7 +135,7 @@ const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, onSubmit, on
                     <option value="">Select dye...</option>
                     {dyeItems.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                   </select>
-                  <input type="number" step="0.001" min={0} value={dye.percentage || ''} onChange={e => updateDye(idx, 'percentage', parseFloat(e.target.value) || 0)} className="input-industrial font-data text-sm" />
+                  <DecimalInput step="0.001" min={0} value={dye.percentage} onValueChange={v => updateDye(idx, 'percentage', v)} className="input-industrial font-data text-sm" />
                   <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed font-data font-semibold text-sm">{calculateDyeGrams(dye.percentage, netWeight).toFixed(3)}</span>
                   <button onClick={() => removeDye(idx)} className="p-2 text-destructive hover:bg-destructive/10 rounded btn-transition"><Trash2 className="w-4 h-4" /></button>
                 </div>
@@ -163,7 +164,7 @@ const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, onSubmit, on
                     <option value="">Select chemical...</option>
                     {chemicalItems.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
-                  <input type="number" step="0.01" min={0} value={chem.qty || ''} onChange={e => updateChemical(idx, 'qty', parseFloat(e.target.value) || 0)} className="input-industrial font-data text-sm" />
+                  <DecimalInput step="0.01" min={0} value={chem.qty} onValueChange={v => updateChemical(idx, 'qty', v)} className="input-industrial font-data text-sm" />
                   <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed text-sm text-muted-foreground">{masterItems.find(m => m.id === chem.chemical_id)?.unit || '—'}</span>
                   <button onClick={() => removeChemical(idx)} className="p-2 text-destructive hover:bg-destructive/10 rounded btn-transition"><Trash2 className="w-4 h-4" /></button>
                 </div>
