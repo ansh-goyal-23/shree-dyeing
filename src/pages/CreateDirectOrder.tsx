@@ -56,13 +56,13 @@ const CreateDirectOrder: React.FC = () => {
       <h1 className="text-2xl font-semibold tracking-tight">New Direct Order</h1>
       <p className="text-sm text-muted-foreground">Create an order without a sample — e.g. WhatsApp or phone orders.</p>
 
-      <form onSubmit={handleSubmit} className="card-industrial p-4 sm:p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="card-industrial p-6 space-y-5">
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Client *</label>
           <ClientSelect value={form.client_id} onChange={v => update('client_id', v)} />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Shade / Lot *</label>
             <select value={form.linked_lot_no} onChange={e => update('linked_lot_no', e.target.value)} className="input-industrial w-full">
@@ -90,7 +90,7 @@ const CreateDirectOrder: React.FC = () => {
           <textarea value={form.notes} onChange={e => update('notes', e.target.value)} className="input-industrial w-full min-h-[80px] py-2" placeholder="Order notes..." />
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+        <div className="flex justify-end gap-3 pt-2">
           <button type="button" onClick={() => navigate('/sampling')}
             className="px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring">
             Cancel

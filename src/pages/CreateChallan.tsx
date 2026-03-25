@@ -76,8 +76,8 @@ const CreateChallan: React.FC = () => {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Header */}
-        <div className="card-industrial p-4 sm:p-5 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="card-industrial p-5 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium text-foreground">Challan Number *</label>
               <input type="text" value={form.challan_number} onChange={e => setForm(p => ({ ...p, challan_number: e.target.value }))}
@@ -111,44 +111,42 @@ const CreateChallan: React.FC = () => {
               <PlusCircle className="w-3.5 h-3.5" /> Add Row
             </button>
           </div>
-          <div className="min-w-[700px]">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-muted-foreground">
-                  <th className="p-2 font-medium">Lot No</th>
-                  <th className="p-2 font-medium">Shade #</th>
-                  <th className="p-2 font-medium">Color</th>
-                  <th className="p-2 font-medium">Packaging</th>
-                  <th className="p-2 font-medium">Gross Wt (kg)</th>
-                  <th className="p-2 font-medium">Units</th>
-                  <th className="p-2 font-medium">Net Wt (kg)</th>
-                  <th className="p-2 font-medium">Rate/kg</th>
-                  <th className="p-2 font-medium">Amount</th>
-                  <th className="p-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item, i) => (
-                  <ChallanItemRow key={i} index={i} item={item} lots={lots} onChange={updateItem} onRemove={removeItem} />
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-border font-semibold">
-                  <td colSpan={6} className="p-3 text-right">Totals:</td>
-                  <td className="p-3">{totalNetWeight.toFixed(3)} kg</td>
-                  <td className="p-3"></td>
-                  <td className="p-3">₹{totalAmount.toFixed(2)}</td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-muted-foreground">
+                <th className="p-2 font-medium">Lot No</th>
+                <th className="p-2 font-medium">Shade #</th>
+                <th className="p-2 font-medium">Color</th>
+                <th className="p-2 font-medium">Packaging</th>
+                <th className="p-2 font-medium">Gross Wt (kg)</th>
+                <th className="p-2 font-medium">Units</th>
+                <th className="p-2 font-medium">Net Wt (kg)</th>
+                <th className="p-2 font-medium">Rate/kg</th>
+                <th className="p-2 font-medium">Amount</th>
+                <th className="p-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, i) => (
+                <ChallanItemRow key={i} index={i} item={item} lots={lots} onChange={updateItem} onRemove={removeItem} />
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-border font-semibold">
+                <td colSpan={6} className="p-3 text-right">Totals:</td>
+                <td className="p-3">{totalNetWeight.toFixed(3)} kg</td>
+                <td className="p-3"></td>
+                <td className="p-3">₹{totalAmount.toFixed(2)}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
 
         {/* Footer Details */}
-        <div className="card-industrial p-4 sm:p-5 space-y-4">
+        <div className="card-industrial p-5 space-y-4">
           <h2 className="text-sm font-semibold">Footer Details</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium text-foreground">Prepared By</label>
               <input type="text" value={form.prepared_by_name} onChange={e => setForm(p => ({ ...p, prepared_by_name: e.target.value }))}
@@ -167,11 +165,11 @@ const CreateChallan: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-end gap-3">
+        <div className="flex justify-end gap-3">
           <button type="button" onClick={() => navigate('/dispatch')}
             className="px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary">Cancel</button>
           <button type="submit" disabled={createChallan.isPending}
-            className="inline-flex items-center justify-center gap-2 px-6 h-11 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 disabled:opacity-50">
+            className="inline-flex items-center gap-2 px-6 h-11 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 disabled:opacity-50">
             {createChallan.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
             Save Challan
           </button>

@@ -117,29 +117,29 @@ const ChallanDetail: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-2">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link to="/dispatch" className="p-2 hover:bg-secondary rounded btn-transition"><ArrowLeft className="w-4 h-4" /></Link>
-          <h1 className="text-lg sm:text-2xl font-semibold tracking-tight">Challan: {challan.challan_number}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Challan: {challan.challan_number}</h1>
         </div>
-        <div className="flex gap-1.5 sm:gap-2 flex-wrap">
+        <div className="flex gap-2">
           {!editing ? (
             <>
               <button onClick={handleDownloadPdf}
-                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 h-9 border border-input rounded-md text-xs sm:text-sm font-medium hover:bg-secondary btn-transition">
-                <Download className="w-3.5 h-3.5" /> <span className="hidden sm:inline">PDF</span>
+                className="inline-flex items-center gap-1.5 px-3 h-9 border border-input rounded-md text-sm font-medium hover:bg-secondary btn-transition">
+                <Download className="w-3.5 h-3.5" /> PDF
               </button>
               <button onClick={handleShare}
-                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 h-9 border border-input rounded-md text-xs sm:text-sm font-medium hover:bg-secondary btn-transition">
-                <Share2 className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Share</span>
+                className="inline-flex items-center gap-1.5 px-3 h-9 border border-input rounded-md text-sm font-medium hover:bg-secondary btn-transition">
+                <Share2 className="w-3.5 h-3.5" /> Share
               </button>
               <button onClick={() => setEditing(true)}
-                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 h-9 border border-input rounded-md text-xs sm:text-sm font-medium hover:bg-secondary btn-transition">
-                <Pencil className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Edit</span>
+                className="inline-flex items-center gap-1.5 px-3 h-9 border border-input rounded-md text-sm font-medium hover:bg-secondary btn-transition">
+                <Pencil className="w-3.5 h-3.5" /> Edit
               </button>
               <button onClick={handleDelete}
-                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 h-9 border border-destructive text-destructive rounded-md text-xs sm:text-sm font-medium hover:bg-destructive/10 btn-transition">
-                <Trash2 className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Delete</span>
+                className="inline-flex items-center gap-1.5 px-3 h-9 border border-destructive text-destructive rounded-md text-sm font-medium hover:bg-destructive/10 btn-transition">
+                <Trash2 className="w-3.5 h-3.5" /> Delete
               </button>
             </>
           ) : (
@@ -156,9 +156,9 @@ const ChallanDetail: React.FC = () => {
       </div>
 
       {/* Header */}
-      <div className="card-industrial p-4 sm:p-5">
+      <div className="card-industrial p-5">
         {editing ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium text-foreground">Challan Number</label>
               <input type="text" value={form.challan_number} onChange={e => setForm(p => ({ ...p, challan_number: e.target.value }))}
@@ -173,7 +173,7 @@ const ChallanDetail: React.FC = () => {
               <label className="text-sm font-medium text-foreground">Client</label>
               <div className="mt-1"><ClientSelect value={form.client_id} onChange={v => setForm(p => ({ ...p, client_id: v }))} /></div>
             </div>
-            <div className="sm:col-span-2 md:col-span-3">
+            <div className="md:col-span-3">
               <label className="text-sm font-medium text-foreground">Notes</label>
               <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
                 className="input-industrial w-full mt-1" rows={2} />
@@ -200,65 +200,63 @@ const ChallanDetail: React.FC = () => {
             </button>
           )}
         </div>
-        <div className="min-w-[700px]">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-muted-foreground">
-                <th className="p-2 font-medium">Lot No</th>
-                <th className="p-2 font-medium">Shade #</th>
-                <th className="p-2 font-medium">Color</th>
-                <th className="p-2 font-medium">Packaging</th>
-                <th className="p-2 font-medium">Gross Wt (kg)</th>
-                <th className="p-2 font-medium">Units</th>
-                <th className="p-2 font-medium">Net Wt (kg)</th>
-                <th className="p-2 font-medium">Rate/kg</th>
-                <th className="p-2 font-medium">Amount</th>
-                {editing && <th className="p-2"></th>}
-              </tr>
-            </thead>
-            <tbody>
-              {editing ? (
-                items.map((item, i) => (
-                  <ChallanItemRow key={i} index={i} item={item} lots={lots} onChange={updateItem} onRemove={removeItem} />
-                ))
-              ) : (
-                (challanItems.length === 0 ? (
-                  <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">No items.</td></tr>
-                ) : challanItems.map(item => (
-                  <tr key={item.id} className="border-b border-border">
-                    <td className="p-2 font-medium">
-                      <Link to={`/shade-management/lots/${item.lot_no}`} className="text-primary hover:underline">{item.lot_no}</Link>
-                    </td>
-                    <td className="p-2">{item.shade_number}</td>
-                    <td className="p-2">{item.color_name}</td>
-                    <td className="p-2">{PACKAGING_LABEL[item.packaging_type] || item.packaging_type}</td>
-                    <td className="p-2">{item.gross_weight.toFixed(3)}</td>
-                    <td className="p-2">{item.num_of_units}</td>
-                    <td className="p-2">{item.net_weight.toFixed(3)}</td>
-                    <td className="p-2">₹{item.rate.toFixed(2)}</td>
-                    <td className="p-2 font-medium">₹{item.amount.toFixed(2)}</td>
-                  </tr>
-                )))
-              )}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-border font-semibold">
-                <td colSpan={6} className="p-3 text-right">Totals:</td>
-                <td className="p-3">{totalNetWeight.toFixed(3)} kg</td>
-                <td className="p-3"></td>
-                <td className="p-3">₹{totalAmount.toFixed(2)}</td>
-                {editing && <td></td>}
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-muted-foreground">
+              <th className="p-2 font-medium">Lot No</th>
+              <th className="p-2 font-medium">Shade #</th>
+              <th className="p-2 font-medium">Color</th>
+              <th className="p-2 font-medium">Packaging</th>
+              <th className="p-2 font-medium">Gross Wt (kg)</th>
+              <th className="p-2 font-medium">Units</th>
+              <th className="p-2 font-medium">Net Wt (kg)</th>
+              <th className="p-2 font-medium">Rate/kg</th>
+              <th className="p-2 font-medium">Amount</th>
+              {editing && <th className="p-2"></th>}
+            </tr>
+          </thead>
+          <tbody>
+            {editing ? (
+              items.map((item, i) => (
+                <ChallanItemRow key={i} index={i} item={item} lots={lots} onChange={updateItem} onRemove={removeItem} />
+              ))
+            ) : (
+              (challanItems.length === 0 ? (
+                <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">No items.</td></tr>
+              ) : challanItems.map(item => (
+                <tr key={item.id} className="border-b border-border">
+                  <td className="p-2 font-medium">
+                    <Link to={`/shade-management/lots/${item.lot_no}`} className="text-primary hover:underline">{item.lot_no}</Link>
+                  </td>
+                  <td className="p-2">{item.shade_number}</td>
+                  <td className="p-2">{item.color_name}</td>
+                  <td className="p-2">{PACKAGING_LABEL[item.packaging_type] || item.packaging_type}</td>
+                  <td className="p-2">{item.gross_weight.toFixed(3)}</td>
+                  <td className="p-2">{item.num_of_units}</td>
+                  <td className="p-2">{item.net_weight.toFixed(3)}</td>
+                  <td className="p-2">₹{item.rate.toFixed(2)}</td>
+                  <td className="p-2 font-medium">₹{item.amount.toFixed(2)}</td>
+                </tr>
+              )))
+            )}
+          </tbody>
+          <tfoot>
+            <tr className="border-t-2 border-border font-semibold">
+              <td colSpan={6} className="p-3 text-right">Totals:</td>
+              <td className="p-3">{totalNetWeight.toFixed(3)} kg</td>
+              <td className="p-3"></td>
+              <td className="p-3">₹{totalAmount.toFixed(2)}</td>
+              {editing && <td></td>}
+            </tr>
+          </tfoot>
+        </table>
       </div>
 
       {/* Footer details */}
       {editing ? (
-        <div className="card-industrial p-4 sm:p-5 space-y-4">
+        <div className="card-industrial p-5 space-y-4">
           <h2 className="text-sm font-semibold">Footer Details</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium text-foreground">Prepared By</label>
               <input type="text" value={form.prepared_by_name} onChange={e => setForm(p => ({ ...p, prepared_by_name: e.target.value }))}
@@ -278,7 +276,7 @@ const ChallanDetail: React.FC = () => {
         </div>
       ) : (
         (challan.prepared_by_name || challan.receiver_name) && (
-          <div className="card-industrial p-4 sm:p-5">
+          <div className="card-industrial p-5">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
               {challan.prepared_by_name && (
                 <div><span className="text-muted-foreground">Prepared By</span><p className="font-medium mt-0.5">{challan.prepared_by_name}</p></div>

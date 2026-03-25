@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { calculateDyeGrams } from '@/lib/calculations';
-import DecimalInput from '@/components/DecimalInput';
 import type { ProcessStepType, StepDye, StepChemical, MasterItem } from '@/types';
 
 interface Props {
@@ -81,7 +80,7 @@ const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, onSubmit, on
         <div className="flex gap-2 flex-wrap">
           {STEP_TYPES.map(t => (
             <button key={t} onClick={() => setStepType(t)}
-              className={`px-4 py-2.5 rounded-md text-sm font-medium btn-transition border ${
+              className={`px-4 py-2 rounded-md text-sm font-medium btn-transition border ${
                 stepType === t ? 'bg-primary text-primary-foreground border-primary' : 'border-input hover:bg-secondary'
               }`}>{t}</button>
           ))}
@@ -107,6 +106,7 @@ const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, onSubmit, on
         {!isEditing && <button onClick={() => setStep(1)} className="text-xs text-muted-foreground hover:text-foreground btn-transition">← Back</button>}
       </div>
 
+      {/* Description (editable in step 2 when editing) */}
       {isEditing && (
         <div className="space-y-1.5">
           <label className="text-sm text-muted-foreground">Description / Notes (optional)</label>
@@ -125,16 +125,16 @@ const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, onSubmit, on
             <p className="text-sm text-muted-foreground py-2">No dyes added yet.</p>
           ) : (
             <div className="space-y-2">
-              <div className="hidden sm:grid grid-cols-[1fr_100px_120px_40px] gap-2 text-xs font-medium text-muted-foreground px-1">
+              <div className="grid grid-cols-[1fr_100px_120px_40px] gap-2 text-xs font-medium text-muted-foreground px-1">
                 <span>Dye</span><span>%</span><span>Grams</span><span></span>
               </div>
               {dyes.map((dye, idx) => (
-                <div key={idx} className="grid grid-cols-2 sm:grid-cols-[1fr_100px_120px_40px] gap-2 items-center">
-                  <select value={dye.dye_id} onChange={e => updateDye(idx, 'dye_id', e.target.value)} className="input-industrial text-sm col-span-2 sm:col-span-1">
+                <div key={idx} className="grid grid-cols-[1fr_100px_120px_40px] gap-2 items-center">
+                  <select value={dye.dye_id} onChange={e => updateDye(idx, 'dye_id', e.target.value)} className="input-industrial text-sm">
                     <option value="">Select dye...</option>
                     {dyeItems.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                   </select>
-                  <DecimalInput value={dye.percentage} onValueChange={v => updateDye(idx, 'percentage', v)} className="input-industrial font-data text-sm w-full" min={0} placeholder="%" />
+                  <input type="number" step="0.001" min={0} value={dye.percentage || ''} onChange={e => updateDye(idx, 'percentage', parseFloat(e.target.value) || 0)} className="input-industrial font-data text-sm" />
                   <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed font-data font-semibold text-sm">{calculateDyeGrams(dye.percentage, netWeight).toFixed(3)}</span>
                   <button onClick={() => removeDye(idx)} className="p-2 text-destructive hover:bg-destructive/10 rounded btn-transition"><Trash2 className="w-4 h-4" /></button>
                 </div>
@@ -154,16 +154,16 @@ const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, onSubmit, on
             <p className="text-sm text-muted-foreground py-2">No chemicals added yet.</p>
           ) : (
             <div className="space-y-2">
-              <div className="hidden sm:grid grid-cols-[1fr_120px_60px_40px] gap-2 text-xs font-medium text-muted-foreground px-1">
+              <div className="grid grid-cols-[1fr_120px_60px_40px] gap-2 text-xs font-medium text-muted-foreground px-1">
                 <span>Chemical</span><span>Qty</span><span>Unit</span><span></span>
               </div>
               {chemicals.map((chem, idx) => (
-                <div key={idx} className="grid grid-cols-2 sm:grid-cols-[1fr_120px_60px_40px] gap-2 items-center">
-                  <select value={chem.chemical_id} onChange={e => updateChemical(idx, 'chemical_id', e.target.value)} className="input-industrial text-sm col-span-2 sm:col-span-1">
+                <div key={idx} className="grid grid-cols-[1fr_120px_60px_40px] gap-2 items-center">
+                  <select value={chem.chemical_id} onChange={e => updateChemical(idx, 'chemical_id', e.target.value)} className="input-industrial text-sm">
                     <option value="">Select chemical...</option>
                     {chemicalItems.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
-                  <DecimalInput value={chem.qty} onValueChange={v => updateChemical(idx, 'qty', v)} className="input-industrial font-data text-sm w-full" min={0} placeholder="Qty" />
+                  <input type="number" step="0.01" min={0} value={chem.qty || ''} onChange={e => updateChemical(idx, 'qty', parseFloat(e.target.value) || 0)} className="input-industrial font-data text-sm" />
                   <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed text-sm text-muted-foreground">{masterItems.find(m => m.id === chem.chemical_id)?.unit || '—'}</span>
                   <button onClick={() => removeChemical(idx)} className="p-2 text-destructive hover:bg-destructive/10 rounded btn-transition"><Trash2 className="w-4 h-4" /></button>
                 </div>
@@ -173,7 +173,7 @@ const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, onSubmit, on
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row gap-2 justify-end pt-2">
+      <div className="flex gap-2 justify-end pt-2">
         <button onClick={onCancel} className="px-4 h-10 border border-input rounded-md text-sm btn-transition hover:bg-secondary">Cancel</button>
         <button onClick={handleSubmit} disabled={submitting}
           className="px-6 h-10 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 disabled:opacity-50">

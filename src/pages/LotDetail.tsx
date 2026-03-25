@@ -60,9 +60,9 @@ const LotDetail: React.FC = () => {
 
       {/* Lot Header */}
       <div className="card-industrial p-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
-            <span className="font-mono text-xl sm:text-2xl font-bold">{lot.lot_no}</span>
+            <span className="font-mono text-2xl font-bold">{lot.lot_no}</span>
             {lot.is_approved ? (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-approved/10 text-approved rounded">
                 <CheckCircle2 className="w-3 h-3" /> Approved
@@ -73,24 +73,23 @@ const LotDetail: React.FC = () => {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+          <div className="flex items-center gap-2 flex-wrap">
             {lot.is_approved ? (
-              <button onClick={handleUnapprove} className="flex-1 sm:flex-none px-3 sm:px-4 h-10 sm:h-11 border border-correction text-correction rounded-md text-xs sm:text-sm font-medium btn-transition hover:bg-correction/10 focus-ring">
+              <button onClick={handleUnapprove} className="px-4 h-11 border border-correction text-correction rounded-md text-sm font-medium btn-transition hover:bg-correction/10 focus-ring">
                 Un-approve
               </button>
             ) : (
-              <button onClick={handleApprove} className="flex-1 sm:flex-none px-3 sm:px-4 h-10 sm:h-11 bg-approved text-approved-foreground rounded-md text-xs sm:text-sm font-medium btn-transition hover:opacity-90 focus-ring">
+              <button onClick={handleApprove} className="px-4 h-11 bg-approved text-approved-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 focus-ring">
                 Mark as Approved
               </button>
             )}
-            <button onClick={() => setShowStepForm(true)} className="flex-1 sm:flex-none px-3 sm:px-4 h-10 sm:h-11 border border-input rounded-md text-xs sm:text-sm font-medium btn-transition hover:bg-secondary focus-ring inline-flex items-center justify-center gap-1.5">
-              <Plus className="w-4 h-4" /> Add Step
+            <button onClick={() => setShowStepForm(true)} className="px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring inline-flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Add Process Step
             </button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <button className="px-3 sm:px-4 h-10 sm:h-11 border border-destructive text-destructive rounded-md text-xs sm:text-sm font-medium btn-transition hover:bg-destructive/10 focus-ring inline-flex items-center gap-1.5">
-                  <Trash2 className="w-4 h-4" />
-                  <span className="hidden sm:inline">Delete</span>
+                <button className="px-4 h-11 border border-destructive text-destructive rounded-md text-sm font-medium btn-transition hover:bg-destructive/10 focus-ring inline-flex items-center gap-2">
+                  <Trash2 className="w-4 h-4" /> Delete
                 </button>
               </AlertDialogTrigger>
               <AlertDialogContent>
@@ -125,7 +124,7 @@ const LotDetail: React.FC = () => {
 
       {/* Lot Info */}
       <div className="card-industrial p-4">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-sm">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div><span className="text-muted-foreground">Date</span><p className="font-data font-medium mt-0.5">{lot.date}</p></div>
           <div><span className="text-muted-foreground">Yarn Company</span><p className="font-medium mt-0.5">{lot.yarn_company_name}</p></div>
           <div><span className="text-muted-foreground">Color</span><p className="font-medium mt-0.5">{lot.color_name || '—'}</p></div>
