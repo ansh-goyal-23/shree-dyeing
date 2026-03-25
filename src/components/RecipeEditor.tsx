@@ -201,7 +201,7 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
                   {readOnly ? (
                     <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed font-data text-sm">{chem.qty}</span>
                   ) : (
-                    <input type="number" step="0.01" min={0} value={chem.qty || ''} onChange={e => updateChemical(idx, 'qty', parseFloat(e.target.value) || 0)} className="input-industrial font-data text-sm" />
+                    <DecimalInput step="0.01" min={0} value={chem.qty} onValueChange={v => updateChemical(idx, 'qty', v)} className="input-industrial font-data text-sm" />
                   )}
                   <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed text-sm text-muted-foreground">
                     {masterItems.find(m => m.id === chem.chemical_id)?.unit || '—'}
