@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { calculateDyeGrams } from '@/lib/calculations';
 import { Plus, Trash2 } from 'lucide-react';
+import DecimalInput from '@/components/DecimalInput';
 import type { RecipeDye, RecipeChemical } from '@/types';
 
 const DEFAULT_CHEMICAL_NAMES = ['BUF', 'CDFT', 'CWS'];
