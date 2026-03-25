@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
+import DecimalInput from '@/components/DecimalInput';
 import { calculateDyeGrams } from '@/lib/calculations';
 import type { ProcessStepType, StepDye, StepChemical, MasterItem } from '@/types';
 
