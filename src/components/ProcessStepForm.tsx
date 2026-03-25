@@ -135,7 +135,7 @@ const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, onSubmit, on
                     <option value="">Select dye...</option>
                     {dyeItems.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                   </select>
-                  <input type="number" step="0.001" min={0} value={dye.percentage || ''} onChange={e => updateDye(idx, 'percentage', parseFloat(e.target.value) || 0)} className="input-industrial font-data text-sm" />
+                  <DecimalInput step="0.001" min={0} value={dye.percentage} onValueChange={v => updateDye(idx, 'percentage', v)} className="input-industrial font-data text-sm" />
                   <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed font-data font-semibold text-sm">{calculateDyeGrams(dye.percentage, netWeight).toFixed(3)}</span>
                   <button onClick={() => removeDye(idx)} className="p-2 text-destructive hover:bg-destructive/10 rounded btn-transition"><Trash2 className="w-4 h-4" /></button>
                 </div>
