@@ -1,7 +1,22 @@
+export interface Supplier {
+  id: string;
+  supplier_name: string;
+  contact: string;
+  notes: string;
+}
+
+export interface ExpenseCategory {
+  id: string;
+  category_name: string;
+  expense_type: ExpenseType;
+}
+
 export interface ExpenseItem {
   id: string;
   item_name: string;
-  category: string;
+  category_id: string | null;
+  category_name?: string;
+  expense_type: string;
   unit: string;
   item_type: 'Consumable' | 'Asset';
   is_active: boolean;
@@ -10,22 +25,34 @@ export interface ExpenseItem {
 export type ExpenseType = 'Purchase' | 'Direct Expense' | 'Asset';
 export type PaymentStatus = 'Paid' | 'Unpaid';
 
+export interface ExpenseLineItem {
+  id: string;
+  expense_id: string;
+  item_id: string | null;
+  item_name: string;
+  quantity: number;
+  unit: string;
+  rate: number;
+  amount: number;
+}
+
 export interface Expense {
   id: string;
   date: string;
   expense_type: ExpenseType;
-  item_id: string | null;
-  item_name?: string;
-  category: string;
-  quantity: number | null;
-  unit: string | null;
-  rate: number | null;
+  category_id: string | null;
+  category_name?: string;
+  supplier_id: string | null;
+  supplier_name?: string;
+  subtotal: number;
+  gst_percent: number;
+  gst_amount: number;
   total_amount: number;
-  supplier_name: string;
   linked_lot_no: string;
   payment_status: PaymentStatus;
   notes: string;
   created_at: string;
+  line_items?: ExpenseLineItem[];
 }
 
 export interface ExpenseDocument {
