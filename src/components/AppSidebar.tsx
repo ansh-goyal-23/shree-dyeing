@@ -43,9 +43,13 @@ const dispatchItems = [
   { title: 'New Challan', url: '/dispatch/create', icon: PlusCircle },
 ];
 
+const expenseItems = [
+  { title: 'All Expenses', url: '/expenses', icon: DollarSign },
+  { title: 'New Expense', url: '/expenses/create', icon: PlusCircle },
+];
+
 const modules = [
   { title: 'Production', url: '/production', icon: Factory },
-  { title: 'Expenses', url: '/expenses', icon: DollarSign },
   { title: 'Inventory', url: '/inventory', icon: Package },
 ];
 
@@ -123,6 +127,32 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === '/dispatch'}
+                      className="hover:bg-sidebar-accent/50"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                    >
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>
+            <DollarSign className="mr-2 h-4 w-4" />
+            {!collapsed && 'Expenses'}
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {expenseItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.url}
+                      end={item.url === '/expenses'}
                       className="hover:bg-sidebar-accent/50"
                       activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
                     >
