@@ -18,6 +18,8 @@ import IntakeList from "@/pages/IntakeList";
 import CreateIntake from "@/pages/CreateIntake";
 import IntakeDetail from "@/pages/IntakeDetail";
 import CreateDirectOrder from "@/pages/CreateDirectOrder";
+import ExpenseList from "@/pages/ExpenseList";
+import CreateExpense from "@/pages/CreateExpense";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -61,7 +63,8 @@ const App = () => (
                       <Route path="/sampling/order/create" element={<CreateDirectOrder />} />
                       <Route path="/sampling/:id" element={<IntakeDetail />} />
                       <Route path="/production" element={<PlaceholderModule />} />
-                      <Route path="/expenses" element={<PlaceholderModule />} />
+                      <Route path="/expenses" element={<ExpenseList />} />
+                      <Route path="/expenses/create" element={<CreateExpense />} />
                       <Route path="/dispatch" element={<ChallanList />} />
                       <Route path="/dispatch/create" element={<CreateChallan />} />
                       <Route path="/dispatch/:id" element={<ChallanDetail />} />

@@ -43,9 +43,13 @@ const dispatchItems = [
   { title: 'New Challan', url: '/dispatch/create', icon: PlusCircle },
 ];
 
+const expenseItems = [
+  { title: 'All Expenses', url: '/expenses', icon: DollarSign },
+  { title: 'New Expense', url: '/expenses/create', icon: PlusCircle },
+];
+
 const modules = [
   { title: 'Production', url: '/production', icon: Factory },
-  { title: 'Expenses', url: '/expenses', icon: DollarSign },
   { title: 'Inventory', url: '/inventory', icon: Package },
 ];
 

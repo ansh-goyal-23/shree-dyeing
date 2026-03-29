@@ -18,7 +18,7 @@ const ItemSelect: React.FC<ItemSelectProps> = ({ value, onChange }) => {
   const createItem = useCreateExpenseItem();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [newItem, setNewItem] = useState({ item_name: '', category: '', unit: 'kg', item_type: 'Consumable' as const });
+  const [newItem, setNewItem] = useState<{ item_name: string; category: string; unit: string; item_type: 'Consumable' | 'Asset' }>({ item_name: '', category: '', unit: 'kg', item_type: 'Consumable' });
 
   const filtered = items.filter(i =>
     i.item_name.toLowerCase().includes(search.toLowerCase())
