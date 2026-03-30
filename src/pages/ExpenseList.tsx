@@ -7,13 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Trash2, ArrowUpDown } from 'lucide-react';
-import { useExpenses, useDeleteExpense } from '@/hooks/useExpenses';
+import { useExpenses, useDeleteExpense, useUpdateExpensePayment } from '@/hooks/useExpenses';
 import { toast } from 'sonner';
 
 const ExpenseList: React.FC = () => {
   const navigate = useNavigate();
   const { data: expenses = [], isLoading } = useExpenses();
   const deleteExpense = useDeleteExpense();
+  const updatePayment = useUpdateExpensePayment();
 
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -129,7 +130,19 @@ const ExpenseList: React.FC = () => {
                     <TableCell>{e.category_name || '-'}</TableCell>
                     <TableCell className="text-right font-mono">{e.total_amount.toFixed(2)}</TableCell>
                     <TableCell>
-                      <Badge variant={e.payment_status === 'Paid' ? 'default' : 'destructive'}>
+                      <Badge
+                        variant={e.payment_status === 'Paid' ? 'default' : 'destructive'}
+                        className="cursor-pointer select-none"
+                        onClick={async () => {
+                          const newStatus = e.payment_status === 'Paid' ? 'Unpaid' : 'Paid';
+                          try {
+                            await updatePayment.mutateAsync({ id: e.id, payment_status: newStatus });
+                            toast.success(`Marked as ${newStatus}`);
+                          } catch {
+                            toast.error('Failed to update payment status');
+                          }
+                        }}
+                      >
                         {e.payment_status}
                       </Badge>
                     </TableCell>
