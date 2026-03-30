@@ -20,6 +20,13 @@ export interface ExpenseItem {
   unit: string;
   item_type: 'Consumable' | 'Asset';
   is_active: boolean;
+  company_id?: string | null;
+  company_name?: string;
+}
+
+export interface Company {
+  id: string;
+  company_name: string;
 }
 
 export type ExpenseType = 'Purchase' | 'Direct Expense' | 'Asset';
