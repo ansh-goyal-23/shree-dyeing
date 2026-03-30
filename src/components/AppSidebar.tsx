@@ -50,6 +50,7 @@ const expenseItems = [
 
 const inventoryItems = [
   { title: 'Stock List', url: '/inventory', icon: Package },
+  { title: 'Opening Stock', url: '/inventory/opening-stock', icon: PlusCircle },
 ];
 
 const modules = [

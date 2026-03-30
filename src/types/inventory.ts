@@ -11,7 +11,7 @@ export interface InventoryStock {
 }
 
 export type TransactionType = 'IN' | 'OUT';
-export type TransactionSource = 'Purchase' | 'Adjustment' | 'Lot Usage';
+export type TransactionSource = 'Purchase' | 'Adjustment' | 'Lot Usage' | 'Opening Stock';
 
 export interface InventoryTransaction {
   id: string;
