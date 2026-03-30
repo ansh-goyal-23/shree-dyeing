@@ -267,24 +267,3 @@ export function useExpenseDocuments(expenseId: string) {
   });
 }
 
-export function useInventory() {
-  return useQuery({
-    queryKey: ['inventory'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('inventory')
-        .select('*, expense_items(item_name)')
-        .order('updated_at', { ascending: false });
-      if (error) throw error;
-      return (data || []).map((r: any): InventoryEntry => ({
-        id: r.id,
-        item_id: r.item_id,
-        item_name: r.expense_items?.item_name || '',
-        quantity: Number(r.quantity) || 0,
-        unit: r.unit || '',
-        item_type: r.item_type || 'Consumable',
-        updated_at: r.updated_at,
-      }));
-    },
-  });
-}
