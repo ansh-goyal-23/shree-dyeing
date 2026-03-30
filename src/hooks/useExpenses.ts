@@ -176,26 +176,43 @@ export function useCreateExpense() {
         }
       }
 
-      // Update inventory for Purchase / Asset
+      // Update inventory_stock + create inventory_transactions for Purchase / Asset
       if (payload.expense_type !== 'Direct Expense') {
         for (const li of line_items) {
           if (!li.item_id || !li.quantity) continue;
+
+          // Create transaction record
+          await supabase.from('inventory_transactions').insert({
+            item_id: li.item_id,
+            type: 'IN',
+            source: 'Purchase',
+            quantity: li.quantity,
+            reference_id: expense.id,
+            date: payload.date,
+            notes: `From expense bill`,
+          });
+
+          // Update stock level
           const { data: existing } = await supabase
-            .from('inventory')
+            .from('inventory_stock')
             .select('*')
             .eq('item_id', li.item_id)
             .single();
 
           if (existing) {
-            await supabase.from('inventory')
-              .update({ quantity: Number(existing.quantity) + li.quantity, updated_at: new Date().toISOString() })
+            await supabase.from('inventory_stock')
+              .update({
+                current_stock: Number(existing.current_stock) + li.quantity,
+                last_updated: new Date().toISOString(),
+              })
               .eq('id', existing.id);
           } else {
-            await supabase.from('inventory').insert({
+            await supabase.from('inventory_stock').insert({
               item_id: li.item_id,
-              quantity: li.quantity,
+              current_stock: li.quantity,
               unit: li.unit || '',
               item_type: payload.expense_type === 'Asset' ? 'Asset' : 'Consumable',
+              minimum_stock_level: 0,
             });
           }
         }
