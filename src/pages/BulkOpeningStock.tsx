@@ -95,13 +95,41 @@ const BulkOpeningStock: React.FC = () => {
 
     // Cache lookups
     const catCache = new Map<string, string>(); // key: "catName|expType" -> id
-    const itemCache = new Map<string, string>(); // key: "itemName|catId|expType" -> id
+    const itemCache = new Map<string, string>(); // key: "itemName|companyId|catId|expType" -> id
+    const companyCache = new Map<string, string>(); // key: "companyName lower" -> id
 
     for (let i = 0; i < updatedRows.length; i++) {
       const row = updatedRows[i];
       if (row.error) { row.status = 'error'; failed++; continue; }
 
       try {
+        // Step 0: Resolve company
+        let companyId: string | null = null;
+        if (row.company.trim()) {
+          const compKey = row.company.toLowerCase().trim();
+          if (companyCache.has(compKey)) {
+            companyId = companyCache.get(compKey)!;
+          } else {
+            const { data: existing } = await supabase
+              .from('company_master')
+              .select('id')
+              .ilike('company_name', row.company.trim())
+              .single();
+            if (existing) {
+              companyId = existing.id;
+            } else {
+              const { data: created, error: compErr } = await supabase
+                .from('company_master')
+                .insert({ company_name: row.company.trim() })
+                .select('id')
+                .single();
+              if (compErr) throw compErr;
+              companyId = created!.id;
+            }
+            companyCache.set(compKey, companyId);
+          }
+        }
+
         // Step 1: Resolve category
         const catKey = `${row.category.toLowerCase()}|${row.expense_type}`;
         let categoryId: string | null = null;
@@ -130,8 +158,8 @@ const BulkOpeningStock: React.FC = () => {
           }
         }
 
-        // Step 2: Resolve item
-        const itemKey = `${row.item_name.toLowerCase()}|${categoryId || ''}|${row.expense_type}`;
+        // Step 2: Resolve item (match by name + company + category + expense_type)
+        const itemKey = `${row.item_name.toLowerCase()}|${companyId || ''}|${categoryId || ''}|${row.expense_type}`;
         let itemId: string;
         if (itemCache.has(itemKey)) {
           itemId = itemCache.get(itemKey)!;
@@ -142,6 +170,8 @@ const BulkOpeningStock: React.FC = () => {
             .ilike('item_name', row.item_name)
             .eq('expense_type', row.expense_type);
           if (categoryId) q = q.eq('category_id', categoryId);
+          if (companyId) q = q.eq('company_id', companyId);
+          else q = q.is('company_id', null);
           const { data: existingItem } = await q.single();
 
           if (existingItem) {
@@ -156,6 +186,7 @@ const BulkOpeningStock: React.FC = () => {
                 unit: row.unit,
                 item_type: row.item_type,
                 is_active: true,
+                company_id: companyId,
               })
               .select('id')
               .single();
