@@ -70,7 +70,8 @@ const App = () => (
                       <Route path="/dispatch" element={<ChallanList />} />
                       <Route path="/dispatch/create" element={<CreateChallan />} />
                       <Route path="/dispatch/:id" element={<ChallanDetail />} />
-                      <Route path="/inventory" element={<PlaceholderModule />} />
+                      <Route path="/inventory" element={<InventoryList />} />
+                      <Route path="/inventory/:itemId" element={<InventoryDetail />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </Layout>
