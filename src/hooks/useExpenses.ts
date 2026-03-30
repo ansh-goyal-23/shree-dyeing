@@ -222,7 +222,8 @@ export function useCreateExpense() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['expenses'] });
-      qc.invalidateQueries({ queryKey: ['inventory'] });
+      qc.invalidateQueries({ queryKey: ['inventory_stock'] });
+      qc.invalidateQueries({ queryKey: ['inventory_transactions'] });
     },
   });
 }
