@@ -76,6 +76,7 @@ const App = () => (
                       <Route path="/item-master" element={<ItemMaster />} />
                       <Route path="/inventory" element={<InventoryList />} />
                       <Route path="/inventory/opening-stock" element={<OpeningStock />} />
+                      <Route path="/inventory/bulk-opening-stock" element={<BulkOpeningStock />} />
                       <Route path="/inventory/:itemId" element={<InventoryDetail />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
