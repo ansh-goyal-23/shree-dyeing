@@ -210,6 +210,17 @@ export function useCreateExpense() {
   });
 }
 
+export function useUpdateExpensePayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, payment_status }: { id: string; payment_status: string }) => {
+      const { error } = await supabase.from('expenses').update({ payment_status }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['expenses'] }),
+  });
+}
+
 export function useDeleteExpense() {
   const qc = useQueryClient();
   return useMutation({
