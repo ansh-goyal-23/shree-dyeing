@@ -48,9 +48,12 @@ const expenseItems = [
   { title: 'New Expense', url: '/expenses/create', icon: PlusCircle },
 ];
 
+const inventoryItems = [
+  { title: 'Stock List', url: '/inventory', icon: Package },
+];
+
 const modules = [
   { title: 'Production', url: '/production', icon: Factory },
-  { title: 'Inventory', url: '/inventory', icon: Package },
 ];
 
 export function AppSidebar() {
