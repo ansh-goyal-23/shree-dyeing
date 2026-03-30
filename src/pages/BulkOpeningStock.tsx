@@ -332,7 +332,7 @@ Paper Tubes,Packing,Purchase,piece,Consumable,1000`}
           <CardContent className="space-y-4">
             <div className="flex gap-4">
               <div className="flex items-center gap-2 text-sm">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <CheckCircle2 className="h-5 w-5 text-primary" />
                 <span className="font-medium">{results.success} successful</span>
               </div>
               {results.failed > 0 && (
