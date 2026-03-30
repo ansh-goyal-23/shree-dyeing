@@ -10,6 +10,7 @@ import {
   Database,
   ClipboardList,
   ShoppingCart,
+  Upload,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
@@ -52,6 +53,7 @@ const expenseItems = [
 const inventoryItems = [
   { title: 'Stock List', url: '/inventory', icon: Package },
   { title: 'Opening Stock', url: '/inventory/opening-stock', icon: PlusCircle },
+  { title: 'CSV Upload', url: '/inventory/bulk-opening-stock', icon: Upload },
 ];
 
 const modules = [
