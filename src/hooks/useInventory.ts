@@ -54,7 +54,61 @@ export function useInventoryTransactions(itemId?: string) {
   });
 }
 
-export function useAdjustStock() {
+export function useAddOpeningStock() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (items: { item_id: string; quantity: number; unit: string; notes: string }[]) => {
+      const today = new Date().toISOString().split('T')[0];
+
+      for (const item of items) {
+        // Create transaction
+        const { error: txErr } = await supabase.from('inventory_transactions').insert({
+          item_id: item.item_id,
+          type: 'IN',
+          source: 'Opening Stock',
+          quantity: item.quantity,
+          reference_id: '',
+          date: today,
+          notes: item.notes || 'Opening stock entry',
+        });
+        if (txErr) throw txErr;
+
+        // Upsert stock
+        const { data: existing } = await supabase
+          .from('inventory_stock')
+          .select('*')
+          .eq('item_id', item.item_id)
+          .single();
+
+        if (existing) {
+          const { error } = await supabase
+            .from('inventory_stock')
+            .update({
+              current_stock: Number(existing.current_stock) + item.quantity,
+              last_updated: new Date().toISOString(),
+            })
+            .eq('id', existing.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from('inventory_stock').insert({
+            item_id: item.item_id,
+            current_stock: item.quantity,
+            unit: item.unit,
+            item_type: 'Consumable',
+            minimum_stock_level: 0,
+          });
+          if (error) throw error;
+        }
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['inventory_stock'] });
+      qc.invalidateQueries({ queryKey: ['inventory_transactions'] });
+    },
+  });
+}
+
+
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: {
