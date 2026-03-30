@@ -152,7 +152,7 @@ export function useCreateExpenseItem() {
 export function useUpdateExpenseItem() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (item: { id: string; item_name: string; category_id: string | null; expense_type: string; unit: string; item_type: 'Consumable' | 'Asset'; is_active: boolean }) => {
+    mutationFn: async (item: { id: string; item_name: string; category_id: string | null; expense_type: string; unit: string; item_type: 'Consumable' | 'Asset'; is_active: boolean; company_id?: string | null }) => {
       const { id, ...rest } = item;
       const { data, error } = await supabase
         .from('expense_items')
