@@ -48,9 +48,10 @@ const ItemSelect: React.FC<ItemSelectProps> = ({ categoryId, expenseType, value,
       setNewItem({ item_name: '', unit: 'kg', item_type: 'Consumable' });
       setOpen(false);
       toast.success('Item added');
-    } catch (e) {
-      console.error(e);
-      toast.error('Failed to add item. Check if the expense_items table exists and has proper RLS policies.');
+    } catch (e: any) {
+      console.error('Add item error:', e);
+      const msg = e?.message || e?.toString() || 'Unknown error';
+      toast.error(`Failed to add item: ${msg}`);
     }
   };
 
