@@ -23,6 +23,7 @@ import ExpenseCreatePage from "@/pages/CreateExpense";
 import InventoryList from "@/pages/InventoryList";
 import InventoryDetail from "@/pages/InventoryDetail";
 import OpeningStock from "@/pages/OpeningStock";
+import ItemMaster from "@/pages/ItemMaster";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
