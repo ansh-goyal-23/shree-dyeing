@@ -272,7 +272,7 @@ const BulkOpeningStock: React.FC = () => {
               <FileUp className="mx-auto h-12 w-12 text-muted-foreground/50" />
               <div>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Upload a CSV with columns: <code className="text-xs bg-secondary px-1 py-0.5 rounded">item_name, category, expense_type, unit, item_type, quantity</code>
+                  Upload a CSV with columns: <code className="text-xs bg-secondary px-1 py-0.5 rounded">item_name, category, expense_type, unit, item_type, quantity, company</code>
                 </p>
                 <input ref={fileRef} type="file" accept=".csv" onChange={handleFile} className="hidden" />
                 <Button onClick={() => fileRef.current?.click()} variant="outline">
@@ -283,10 +283,10 @@ const BulkOpeningStock: React.FC = () => {
             <div className="bg-secondary/50 rounded-lg p-4">
               <p className="text-sm font-medium mb-2">Example CSV:</p>
               <pre className="text-xs text-muted-foreground whitespace-pre-wrap">
-{`item_name,category,expense_type,unit,item_type,quantity
-YC4G,Dyes,Purchase,gm,Consumable,5000
-Caustic,Chemicals,Purchase,kg,Consumable,25
-Paper Tubes,Packing,Purchase,piece,Consumable,1000`}
+{`item_name,category,expense_type,unit,item_type,quantity,company
+YC4G,Dyes,Purchase,gm,Consumable,5000,Atul Ltd
+Caustic,Chemicals,Purchase,kg,Consumable,25,BASF
+Paper Tubes,Packing,Purchase,piece,Consumable,1000,`}
               </pre>
             </div>
           </CardContent>
