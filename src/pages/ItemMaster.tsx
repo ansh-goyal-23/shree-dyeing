@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAllExpenseItems, useCreateExpenseItem, useUpdateExpenseItem, useExpenseCategories, useCreateExpenseCategory } from '@/hooks/useExpenses';
+import { useAllExpenseItems, useCreateExpenseItem, useUpdateExpenseItem, useExpenseCategories, useCreateExpenseCategory, useCompanies, useCreateCompany } from '@/hooks/useExpenses';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,6 +20,7 @@ const emptyForm = {
   unit: 'kg',
   item_type: 'Consumable' as 'Consumable' | 'Asset',
   is_active: true,
+  company_id: '' as string,
 };
 
 const ItemMaster: React.FC = () => {
@@ -38,6 +39,12 @@ const ItemMaster: React.FC = () => {
   const createCategory = useCreateExpenseCategory();
   const [catDialogOpen, setCatDialogOpen] = useState(false);
   const [newCatName, setNewCatName] = useState('');
+
+  // Company management
+  const { data: companies = [] } = useCompanies();
+  const createCompany = useCreateCompany();
+  const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
+  const [newCompanyName, setNewCompanyName] = useState('');
 
   const filtered = items.filter(item => {
     const matchSearch = item.item_name.toLowerCase().includes(search.toLowerCase());
@@ -59,6 +66,7 @@ const ItemMaster: React.FC = () => {
       unit: item.unit,
       item_type: item.item_type,
       is_active: item.is_active,
+      company_id: item.company_id || '',
     });
     setEditingItem(item);
     setDialogOpen(true);
@@ -73,6 +81,7 @@ const ItemMaster: React.FC = () => {
         expense_type: form.expense_type,
         unit: form.unit,
         item_type: form.item_type,
+        company_id: form.company_id || null,
       };
       if (editingItem) {
         await updateItem.mutateAsync({ ...payload, id: editingItem.id, is_active: form.is_active });
@@ -95,6 +104,19 @@ const ItemMaster: React.FC = () => {
       setNewCatName('');
       setCatDialogOpen(false);
       toast.success('Category added');
+    } catch (e: any) {
+      toast.error(`Failed: ${e?.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleAddCompany = async () => {
+    if (!newCompanyName.trim()) { toast.error('Company name is required'); return; }
+    try {
+      const created = await createCompany.mutateAsync({ company_name: newCompanyName.trim() });
+      setForm(f => ({ ...f, company_id: created.id }));
+      setNewCompanyName('');
+      setCompanyDialogOpen(false);
+      toast.success('Company added');
     } catch (e: any) {
       toast.error(`Failed: ${e?.message || 'Unknown error'}`);
     }
@@ -137,6 +159,7 @@ const ItemMaster: React.FC = () => {
             <thead>
               <tr className="bg-secondary/50">
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Item Name</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Company</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Category</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Expense Type</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Unit</th>
@@ -149,6 +172,7 @@ const ItemMaster: React.FC = () => {
               {filtered.map(item => (
                 <tr key={item.id} className="row-separator hover:bg-secondary/30 btn-transition">
                   <td className="px-4 py-3 font-medium">{item.item_name}</td>
+                  <td className="px-4 py-3">{item.company_name || '—'}</td>
                   <td className="px-4 py-3">{item.category_name || '—'}</td>
                   <td className="px-4 py-3">{item.expense_type || '—'}</td>
                   <td className="px-4 py-3">{item.unit}</td>
@@ -178,6 +202,23 @@ const ItemMaster: React.FC = () => {
             <div>
               <Label>Item Name *</Label>
               <Input autoFocus value={form.item_name} onChange={e => setForm(f => ({ ...f, item_name: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Company</Label>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Select value={form.company_id || '__none__'} onValueChange={v => setForm(f => ({ ...f, company_id: v === '__none__' ? '' : v }))}>
+                    <SelectTrigger><SelectValue placeholder="Select company..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">None</SelectItem>
+                      {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button type="button" variant="outline" size="icon" onClick={() => setCompanyDialogOpen(true)}>
+                  <PlusCircle className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             <div>
               <Label>Expense Type</Label>
@@ -252,6 +293,22 @@ const ItemMaster: React.FC = () => {
           </div>
           <DialogFooter>
             <Button onClick={handleAddCategory} disabled={createCategory.isPending}>Add Category</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Company Dialog */}
+      <Dialog open={companyDialogOpen} onOpenChange={setCompanyDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Add Company</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Company Name *</Label>
+              <Input autoFocus value={newCompanyName} onChange={e => setNewCompanyName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleAddCompany(); }} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleAddCompany} disabled={createCompany.isPending}>Add Company</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

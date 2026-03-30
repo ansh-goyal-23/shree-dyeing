@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { Expense, ExpenseItem, ExpenseDocument, InventoryEntry, Supplier, ExpenseCategory, ExpenseLineItem } from '@/types/expense';
+import type { Expense, ExpenseItem, ExpenseDocument, InventoryEntry, Supplier, ExpenseCategory, ExpenseLineItem, Company } from '@/types/expense';
 
 // ── Suppliers ──
 export function useSuppliers() {
@@ -55,12 +55,39 @@ export function useCreateExpenseCategory() {
   });
 }
 
+// ── Companies ──
+export function useCompanies() {
+  return useQuery({
+    queryKey: ['companies'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('company_master')
+        .select('*')
+        .order('company_name');
+      if (error) throw error;
+      return (data || []) as Company[];
+    },
+  });
+}
+
+export function useCreateCompany() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (c: { company_name: string }) => {
+      const { data, error } = await supabase.from('company_master').insert(c).select().single();
+      if (error) throw error;
+      return data as Company;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['companies'] }),
+  });
+}
+
 // ── Items ──
 export function useExpenseItems(categoryId?: string, expenseType?: string) {
   return useQuery({
     queryKey: ['expense_items', categoryId, expenseType],
     queryFn: async () => {
-      let q = supabase.from('expense_items').select('*, expense_categories(category_name)').eq('is_active', true).order('item_name');
+      let q = supabase.from('expense_items').select('*, expense_categories(category_name), company_master(company_name)').eq('is_active', true).order('item_name');
       if (categoryId) q = q.eq('category_id', categoryId);
       if (expenseType) q = q.eq('expense_type', expenseType);
       const { data, error } = await q;
@@ -74,6 +101,8 @@ export function useExpenseItems(categoryId?: string, expenseType?: string) {
         unit: r.unit,
         item_type: r.item_type,
         is_active: r.is_active,
+        company_id: r.company_id,
+        company_name: r.company_master?.company_name || '',
       }));
     },
   });
@@ -85,7 +114,7 @@ export function useAllExpenseItems() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('expense_items')
-        .select('*, expense_categories(category_name)')
+        .select('*, expense_categories(category_name), company_master(company_name)')
         .order('item_name');
       if (error) throw error;
       return (data || []).map((r: any): ExpenseItem => ({
@@ -97,6 +126,8 @@ export function useAllExpenseItems() {
         unit: r.unit,
         item_type: r.item_type,
         is_active: r.is_active,
+        company_id: r.company_id,
+        company_name: r.company_master?.company_name || '',
       }));
     },
   });
@@ -105,7 +136,7 @@ export function useAllExpenseItems() {
 export function useCreateExpenseItem() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (item: { item_name: string; category_id: string | null; expense_type: string; unit: string; item_type: 'Consumable' | 'Asset' }) => {
+    mutationFn: async (item: { item_name: string; category_id: string | null; expense_type: string; unit: string; item_type: 'Consumable' | 'Asset'; company_id?: string | null }) => {
       const { data, error } = await supabase
         .from('expense_items')
         .insert({ ...item, is_active: true })
@@ -121,7 +152,7 @@ export function useCreateExpenseItem() {
 export function useUpdateExpenseItem() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (item: { id: string; item_name: string; category_id: string | null; expense_type: string; unit: string; item_type: 'Consumable' | 'Asset'; is_active: boolean }) => {
+    mutationFn: async (item: { id: string; item_name: string; category_id: string | null; expense_type: string; unit: string; item_type: 'Consumable' | 'Asset'; is_active: boolean; company_id?: string | null }) => {
       const { id, ...rest } = item;
       const { data, error } = await supabase
         .from('expense_items')
