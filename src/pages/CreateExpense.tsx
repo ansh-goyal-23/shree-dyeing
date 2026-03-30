@@ -129,9 +129,10 @@ const ExpenseCreatePage: React.FC = () => {
       });
       toast.success('Expense saved');
       navigate('/expenses');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to create expense:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to save');
+      const msg = err?.message || err?.error_description || JSON.stringify(err);
+      toast.error(`Failed to save: ${msg}`);
     }
   };
 
