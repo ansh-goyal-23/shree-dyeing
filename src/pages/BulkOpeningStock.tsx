@@ -15,6 +15,7 @@ interface CsvRow {
   unit: string;
   item_type: string;
   quantity: number;
+  company: string;
   error?: string;
   status?: 'pending' | 'success' | 'error';
 }
@@ -28,6 +29,8 @@ function parseCsv(text: string): CsvRow[] {
   const missing = reqCols.filter(c => !headers.includes(c));
   if (missing.length > 0) throw new Error(`Missing columns: ${missing.join(', ')}`);
 
+  const hasCompany = headers.includes('company');
+
   return lines.slice(1).filter(l => l.trim()).map((line, idx) => {
     const values = line.split(',').map(v => v.trim());
     const get = (col: string) => values[headers.indexOf(col)] || '';
@@ -39,6 +42,7 @@ function parseCsv(text: string): CsvRow[] {
       unit: get('unit'),
       item_type: get('item_type') || 'Consumable',
       quantity: isNaN(qty) ? 0 : qty,
+      company: hasCompany ? get('company') : '',
       status: 'pending',
     };
     // Validate
