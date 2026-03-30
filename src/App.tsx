@@ -20,6 +20,8 @@ import IntakeDetail from "@/pages/IntakeDetail";
 import CreateDirectOrder from "@/pages/CreateDirectOrder";
 import ExpenseList from "@/pages/ExpenseList";
 import ExpenseCreatePage from "@/pages/CreateExpense";
+import InventoryList from "@/pages/InventoryList";
+import InventoryDetail from "@/pages/InventoryDetail";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
