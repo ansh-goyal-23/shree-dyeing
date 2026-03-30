@@ -314,6 +314,7 @@ Paper Tubes,Packing,Purchase,piece,Consumable,1000,`}
                   <TableRow>
                     <TableHead>#</TableHead>
                     <TableHead>Item Name</TableHead>
+                    <TableHead>Company</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Expense Type</TableHead>
                     <TableHead>Unit</TableHead>
@@ -327,6 +328,7 @@ Paper Tubes,Packing,Purchase,piece,Consumable,1000,`}
                     <TableRow key={idx} className={row.error ? 'bg-destructive/10' : ''}>
                       <TableCell className="text-muted-foreground">{idx + 1}</TableCell>
                       <TableCell className="font-medium">{row.item_name || '—'}</TableCell>
+                      <TableCell>{row.company || '—'}</TableCell>
                       <TableCell>{row.category || '—'}</TableCell>
                       <TableCell>{row.expense_type}</TableCell>
                       <TableCell>{row.unit || '—'}</TableCell>
