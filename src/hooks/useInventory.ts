@@ -109,6 +109,7 @@ export function useAddOpeningStock() {
 }
 
 
+export function useAdjustStock() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: {
