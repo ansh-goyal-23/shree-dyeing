@@ -46,6 +46,7 @@ const dispatchItems = [
 const expenseItems = [
   { title: 'All Expenses', url: '/expenses', icon: DollarSign },
   { title: 'New Expense', url: '/expenses/create', icon: PlusCircle },
+  { title: 'Item Master', url: '/item-master', icon: Database },
 ];
 
 const inventoryItems = [

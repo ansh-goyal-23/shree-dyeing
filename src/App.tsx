@@ -23,6 +23,7 @@ import ExpenseCreatePage from "@/pages/CreateExpense";
 import InventoryList from "@/pages/InventoryList";
 import InventoryDetail from "@/pages/InventoryDetail";
 import OpeningStock from "@/pages/OpeningStock";
+import ItemMaster from "@/pages/ItemMaster";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -71,6 +72,7 @@ const App = () => (
                       <Route path="/dispatch" element={<ChallanList />} />
                       <Route path="/dispatch/create" element={<CreateChallan />} />
                       <Route path="/dispatch/:id" element={<ChallanDetail />} />
+                      <Route path="/item-master" element={<ItemMaster />} />
                       <Route path="/inventory" element={<InventoryList />} />
                       <Route path="/inventory/opening-stock" element={<OpeningStock />} />
                       <Route path="/inventory/:itemId" element={<InventoryDetail />} />

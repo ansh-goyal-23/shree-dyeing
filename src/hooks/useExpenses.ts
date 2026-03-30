@@ -79,6 +79,29 @@ export function useExpenseItems(categoryId?: string, expenseType?: string) {
   });
 }
 
+export function useAllExpenseItems() {
+  return useQuery({
+    queryKey: ['expense_items', 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('expense_items')
+        .select('*, expense_categories(category_name)')
+        .order('item_name');
+      if (error) throw error;
+      return (data || []).map((r: any): ExpenseItem => ({
+        id: r.id,
+        item_name: r.item_name,
+        category_id: r.category_id,
+        category_name: r.expense_categories?.category_name || '',
+        expense_type: r.expense_type || '',
+        unit: r.unit,
+        item_type: r.item_type,
+        is_active: r.is_active,
+      }));
+    },
+  });
+}
+
 export function useCreateExpenseItem() {
   const qc = useQueryClient();
   return useMutation({
@@ -86,6 +109,24 @@ export function useCreateExpenseItem() {
       const { data, error } = await supabase
         .from('expense_items')
         .insert({ ...item, is_active: true })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as ExpenseItem;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['expense_items'] }),
+  });
+}
+
+export function useUpdateExpenseItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (item: { id: string; item_name: string; category_id: string | null; expense_type: string; unit: string; item_type: 'Consumable' | 'Asset'; is_active: boolean }) => {
+      const { id, ...rest } = item;
+      const { data, error } = await supabase
+        .from('expense_items')
+        .update(rest)
+        .eq('id', id)
         .select()
         .single();
       if (error) throw error;
