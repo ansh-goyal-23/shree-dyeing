@@ -20,7 +20,7 @@ const MasterData: React.FC = () => {
     is_active: true,
   });
 
-  const filtered = masterItems.filter(m => filter === 'all' || m.type === filter);
+  const filtered = masterItems.filter(m => filter === 'all' || m.type === filter).sort((a, b) => a.name.localeCompare(b.name));
 
   const resetForm = () => {
     setForm({ name: '', type: 'dye', shade_family: '', company: '', unit: 'gm', is_active: true });

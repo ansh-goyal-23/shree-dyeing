@@ -9,9 +9,9 @@ import DecimalInput from '@/components/DecimalInput';
 
 const CreateLot: React.FC = () => {
   const { addLot, lots, getDyesForLot, getChemicalsForLot, updateRecipeDyes, updateRecipeChemicals } = useApp();
-  const companyNames = useMemo(() => lots.map(l => l.yarn_company_name), [lots]);
-  const colorNames = useMemo(() => lots.map(l => l.color_name).filter(Boolean) as string[], [lots]);
-  const denierValues = useMemo(() => lots.map(l => l.denier).filter(Boolean) as string[], [lots]);
+  const companyNames = useMemo(() => [...lots.map(l => l.yarn_company_name)].sort((a, b) => a.localeCompare(b)), [lots]);
+  const colorNames = useMemo(() => ([...lots.map(l => l.color_name).filter(Boolean)] as string[]).sort((a, b) => a.localeCompare(b)), [lots]);
+  const denierValues = useMemo(() => ([...lots.map(l => l.denier).filter(Boolean)] as string[]).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [lots]);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -33,13 +33,16 @@ const CreateLot: React.FC = () => {
 
   // Build shade dropdown options: "lot_no (color_name)"
   const shadeOptions = useMemo(() => {
-    return lots.map(l => ({
-      label: `${l.lot_no} (${l.color_name || 'No Color'})`,
-      lot_no: l.lot_no,
-      yarn_company_name: l.yarn_company_name,
-      color_name: l.color_name,
-      denier: l.denier,
-    }));
+    return lots
+      .filter(l => l.is_approved)
+      .map(l => ({
+        label: `${l.lot_no} (${l.color_name || 'No Color'})`,
+        lot_no: l.lot_no,
+        yarn_company_name: l.yarn_company_name,
+        color_name: l.color_name,
+        denier: l.denier,
+      }))
+      .sort((a, b) => a.lot_no.localeCompare(b.lot_no, undefined, { numeric: true }));
   }, [lots]);
 
   const netWeight = useMemo(
