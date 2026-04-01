@@ -54,6 +54,7 @@ export interface Expense {
   subtotal: number;
   gst_percent: number;
   gst_amount: number;
+  freight: number;
   total_amount: number;
   linked_lot_no: string;
   payment_status: PaymentStatus;

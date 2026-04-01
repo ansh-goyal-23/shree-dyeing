@@ -53,6 +53,7 @@ const ExpenseCreatePage: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [gstPercent, setGstPercent] = useState<number>(0);
+  const [freight, setFreight] = useState<number>(0);
 
   // For Direct Expense: single total amount, no line items
   const [directTotal, setDirectTotal] = useState<number>(0);
