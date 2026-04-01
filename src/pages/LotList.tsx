@@ -13,7 +13,7 @@ const LotList: React.FC = () => {
       l.shade_number.toLowerCase().includes(q) ||
       l.yarn_company_name.toLowerCase().includes(q) ||
       l.color_name.toLowerCase().includes(q);
-  }).sort((a, b) => a.lot_no.localeCompare(b.lot_no, undefined, { numeric: true }));
+  }).sort((a, b) => b.lot_no.localeCompare(a.lot_no, undefined, { numeric: true }));
 
   return (
     <div className="space-y-4">
