@@ -75,8 +75,9 @@ const ExpenseCreatePage: React.FC = () => {
   const subtotal = isPurchaseType
     ? lineItems.reduce((s, li) => s + li.amount, 0)
     : directTotal;
-  const gstAmount = Math.round(subtotal * (gstPercent / 100) * 100) / 100;
-  const totalAmount = Math.round((subtotal + gstAmount + freight) * 100) / 100;
+  const taxableTotal = Math.round((subtotal + freight) * 100) / 100;
+  const gstAmount = Math.round(taxableTotal * (gstPercent / 100) * 100) / 100;
+  const totalAmount = Math.round((taxableTotal + gstAmount) * 100) / 100;
 
   const handleItemSelect = (key: string, itemId: string, item?: ExpenseItem) => {
     updateLine(key, {
@@ -288,10 +289,23 @@ const ExpenseCreatePage: React.FC = () => {
         {/* Totals + GST */}
         <Card className="mb-4">
           <CardContent className="pt-6">
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 items-end">
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4 items-end">
               <div>
                 <Label>Subtotal</Label>
                 <div className="text-lg font-mono font-semibold">₹{subtotal.toFixed(2)}</div>
+              </div>
+              <div>
+                <Label>Freight / Cartage</Label>
+                <DecimalInput
+                  value={freight}
+                  onValueChange={setFreight}
+                  step="0.01"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <Label>Taxable Total</Label>
+                <div className="text-lg font-mono font-semibold">₹{taxableTotal.toFixed(2)}</div>
               </div>
               <div>
                 <Label>GST %</Label>
@@ -305,15 +319,6 @@ const ExpenseCreatePage: React.FC = () => {
               <div>
                 <Label>GST Amount</Label>
                 <div className="text-lg font-mono">₹{gstAmount.toFixed(2)}</div>
-              </div>
-              <div>
-                <Label>Freight / Cartage</Label>
-                <DecimalInput
-                  value={freight}
-                  onValueChange={setFreight}
-                  step="0.01"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                />
               </div>
               <div>
                 <Label>Total</Label>
