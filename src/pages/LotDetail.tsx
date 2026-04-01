@@ -6,22 +6,29 @@ import ProcessStepForm from '@/components/ProcessStepForm';
 import ProcessStepList from '@/components/ProcessStepList';
 import LotPhotos from '@/components/LotPhotos';
 import { useOrdersForLot } from '@/hooks/useSampling';
-import { CheckCircle2, Clock, Plus, ArrowLeft, ShoppingCart, Trash2 } from 'lucide-react';
+import { CheckCircle2, Clock, Plus, ArrowLeft, ShoppingCart, Trash2, Pencil, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const LotDetail: React.FC = () => {
   const { lotNo } = useParams<{ lotNo: string }>();
   const navigate = useNavigate();
   const {
-    getLot, deleteLot, approveLot, unapproveLot, masterItems,
+    getLot, deleteLot, approveLot, unapproveLot, updateLot, masterItems,
     getLotsReferencingSource, addProcessStep, updateProcessStep, deleteProcessStep,
     getProcessStepsForLot, stepDyes, stepChemicals,
   } = useApp();
 
   const lot = getLot(lotNo || '');
   const [showStepForm, setShowStepForm] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editData, setEditData] = useState({
+    date: '', yarn_company_name: '', color_name: '', denier: '',
+    number_of_chesses: 0, gross_weight: 0,
+  });
 
   if (!lot) {
     return (
@@ -31,6 +38,32 @@ const LotDetail: React.FC = () => {
       </div>
     );
   }
+
+  const startEditing = () => {
+    setEditData({
+      date: lot.date, yarn_company_name: lot.yarn_company_name,
+      color_name: lot.color_name, denier: lot.denier,
+      number_of_chesses: lot.number_of_chesses, gross_weight: lot.gross_weight,
+    });
+    setEditing(true);
+  };
+
+  const handleSaveEdit = async () => {
+    const success = await updateLot(lot.lot_no, {
+      date: editData.date,
+      yarn_company_name: editData.yarn_company_name,
+      color_name: editData.color_name,
+      denier: editData.denier,
+      number_of_chesses: editData.number_of_chesses,
+      gross_weight: editData.gross_weight,
+    });
+    if (success) {
+      toast.success('Lot details updated.');
+      setEditing(false);
+    } else {
+      toast.error('Failed to update lot.');
+    }
+  };
 
   const referencingLots = getLotsReferencingSource(lot.lot_no);
   const processSteps = getProcessStepsForLot(lot.lot_no);
@@ -124,19 +157,73 @@ const LotDetail: React.FC = () => {
 
       {/* Lot Info */}
       <div className="card-industrial p-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div><span className="text-muted-foreground">Date</span><p className="font-data font-medium mt-0.5">{lot.date}</p></div>
-          <div><span className="text-muted-foreground">Yarn Company</span><p className="font-medium mt-0.5">{lot.yarn_company_name}</p></div>
-          <div><span className="text-muted-foreground">Color</span><p className="font-medium mt-0.5">{lot.color_name || '—'}</p></div>
-          <div><span className="text-muted-foreground">Denier</span><p className="font-medium mt-0.5">{lot.denier || '—'}</p></div>
-          <div><span className="text-muted-foreground">Chesses</span><p className="font-data font-medium mt-0.5">{lot.number_of_chesses}</p></div>
-          <div><span className="text-muted-foreground">Gross Weight</span><p className="font-data font-medium mt-0.5">{lot.gross_weight.toFixed(3)} kg</p></div>
-          <div><span className="text-muted-foreground">Net Weight</span><p className="font-data font-semibold mt-0.5">{lot.net_weight.toFixed(3)} kg</p></div>
-          <div>
-            <span className="text-muted-foreground">Shade Number</span>
-            <p className="font-data font-medium mt-0.5">{lot.shade_number}</p>
-          </div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Lot Details</h2>
+          {!editing ? (
+            <Button variant="outline" size="sm" onClick={startEditing} className="gap-1.5">
+              <Pencil className="w-3.5 h-3.5" /> Edit
+            </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setEditing(false)} className="gap-1.5">
+                <X className="w-3.5 h-3.5" /> Cancel
+              </Button>
+              <Button size="sm" onClick={handleSaveEdit} className="gap-1.5">
+                <Save className="w-3.5 h-3.5" /> Save
+              </Button>
+            </div>
+          )}
         </div>
+        {editing ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <label className="text-muted-foreground text-xs">Date</label>
+              <Input type="date" value={editData.date} onChange={e => setEditData(p => ({ ...p, date: e.target.value }))} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-muted-foreground text-xs">Yarn Company</label>
+              <Input value={editData.yarn_company_name} onChange={e => setEditData(p => ({ ...p, yarn_company_name: e.target.value }))} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-muted-foreground text-xs">Color</label>
+              <Input value={editData.color_name} onChange={e => setEditData(p => ({ ...p, color_name: e.target.value }))} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-muted-foreground text-xs">Denier</label>
+              <Input value={editData.denier} onChange={e => setEditData(p => ({ ...p, denier: e.target.value }))} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-muted-foreground text-xs">Chesses</label>
+              <Input type="number" value={editData.number_of_chesses} onChange={e => setEditData(p => ({ ...p, number_of_chesses: Number(e.target.value) || 0 }))} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-muted-foreground text-xs">Gross Weight (kg)</label>
+              <Input type="number" step="0.001" value={editData.gross_weight} onChange={e => setEditData(p => ({ ...p, gross_weight: Number(e.target.value) || 0 }))} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-muted-foreground text-xs">Net Weight</label>
+              <p className="font-data font-semibold mt-2 text-muted-foreground italic">Auto-calculated on save</p>
+            </div>
+            <div>
+              <label className="text-muted-foreground text-xs">Shade Number</label>
+              <p className="font-data font-medium mt-2">{lot.shade_number}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div><span className="text-muted-foreground">Date</span><p className="font-data font-medium mt-0.5">{lot.date}</p></div>
+            <div><span className="text-muted-foreground">Yarn Company</span><p className="font-medium mt-0.5">{lot.yarn_company_name}</p></div>
+            <div><span className="text-muted-foreground">Color</span><p className="font-medium mt-0.5">{lot.color_name || '—'}</p></div>
+            <div><span className="text-muted-foreground">Denier</span><p className="font-medium mt-0.5">{lot.denier || '—'}</p></div>
+            <div><span className="text-muted-foreground">Chesses</span><p className="font-data font-medium mt-0.5">{lot.number_of_chesses}</p></div>
+            <div><span className="text-muted-foreground">Gross Weight</span><p className="font-data font-medium mt-0.5">{lot.gross_weight.toFixed(3)} kg</p></div>
+            <div><span className="text-muted-foreground">Net Weight</span><p className="font-data font-semibold mt-0.5">{lot.net_weight.toFixed(3)} kg</p></div>
+            <div>
+              <span className="text-muted-foreground">Shade Number</span>
+              <p className="font-data font-medium mt-0.5">{lot.shade_number}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Process Step Form */}

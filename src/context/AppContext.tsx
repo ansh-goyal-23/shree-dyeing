@@ -17,6 +17,7 @@ interface AppState {
 
 interface AppContextType extends AppState {
   addLot: (lot: Omit<Lot, 'net_weight' | 'is_approved'>) => Promise<boolean>;
+  updateLot: (lotNo: string, data: Partial<Omit<Lot, 'lot_no' | 'net_weight' | 'is_approved'>>) => Promise<boolean>;
   deleteLot: (lotNo: string) => Promise<boolean>;
   approveLot: (lotNo: string) => Promise<void>;
   unapproveLot: (lotNo: string) => Promise<void>;
@@ -126,6 +127,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   }, [fetchAll]);
 
+  const updateLot = useCallback(async (lotNo: string, data: Partial<Omit<Lot, 'lot_no' | 'net_weight' | 'is_approved'>>): Promise<boolean> => {
+    const lot = state.lots.find(l => l.lot_no === lotNo);
+    if (!lot) return false;
+    const grossWeight = data.gross_weight ?? lot.gross_weight;
+    const chesses = data.number_of_chesses ?? lot.number_of_chesses;
+    const net_weight = calculateNetWeight(grossWeight, chesses);
+    const { error } = await supabase.from('lots').update({ ...data, net_weight }).eq('lot_no', lotNo);
+    if (error) return false;
+    await fetchAll();
+    return true;
+  }, [state.lots, fetchAll]);
+
   const approveLot = useCallback(async (lotNo: string) => {
     await supabase.from('lots').update({ is_approved: true }).eq('lot_no', lotNo);
     await fetchAll();
@@ -234,7 +247,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      ...state, addLot, deleteLot, approveLot, unapproveLot, updateRecipeDyes, updateRecipeChemicals,
+      ...state, addLot, updateLot, deleteLot, approveLot, unapproveLot, updateRecipeDyes, updateRecipeChemicals,
       addMasterItem, updateMasterItem, addProcessStep, updateProcessStep, deleteProcessStep, getLot, getDyesForLot,
       getChemicalsForLot, getApprovedLots, getLotsReferencingSource,
       getProcessStepsForLot, getStepDyes, getStepChemicals,
