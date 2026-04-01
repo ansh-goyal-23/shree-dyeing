@@ -188,6 +188,7 @@ export function useExpenses() {
         subtotal: Number(r.subtotal) || 0,
         gst_percent: Number(r.gst_percent) || 0,
         gst_amount: Number(r.gst_amount) || 0,
+        freight: Number(r.freight) || 0,
         total_amount: Number(r.total_amount) || 0,
         linked_lot_no: r.linked_lot_no || '',
         payment_status: r.payment_status || 'Unpaid',
@@ -209,6 +210,7 @@ export function useCreateExpense() {
       subtotal: number;
       gst_percent: number;
       gst_amount: number;
+      freight: number;
       total_amount: number;
       linked_lot_no: string;
       payment_status: string;

@@ -53,6 +53,7 @@ const ExpenseCreatePage: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [gstPercent, setGstPercent] = useState<number>(0);
+  const [freight, setFreight] = useState<number>(0);
 
   // For Direct Expense: single total amount, no line items
   const [directTotal, setDirectTotal] = useState<number>(0);
@@ -75,7 +76,7 @@ const ExpenseCreatePage: React.FC = () => {
     ? lineItems.reduce((s, li) => s + li.amount, 0)
     : directTotal;
   const gstAmount = Math.round(subtotal * (gstPercent / 100) * 100) / 100;
-  const totalAmount = Math.round((subtotal + gstAmount) * 100) / 100;
+  const totalAmount = Math.round((subtotal + gstAmount + freight) * 100) / 100;
 
   const handleItemSelect = (key: string, itemId: string, item?: ExpenseItem) => {
     updateLine(key, {
@@ -111,6 +112,7 @@ const ExpenseCreatePage: React.FC = () => {
         subtotal,
         gst_percent: gstPercent,
         gst_amount: gstAmount,
+        freight,
         total_amount: totalAmount,
         linked_lot_no: linkedLotNo,
         payment_status: paymentStatus,
@@ -286,7 +288,7 @@ const ExpenseCreatePage: React.FC = () => {
         {/* Totals + GST */}
         <Card className="mb-4">
           <CardContent className="pt-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 items-end">
               <div>
                 <Label>Subtotal</Label>
                 <div className="text-lg font-mono font-semibold">₹{subtotal.toFixed(2)}</div>
@@ -303,6 +305,15 @@ const ExpenseCreatePage: React.FC = () => {
               <div>
                 <Label>GST Amount</Label>
                 <div className="text-lg font-mono">₹{gstAmount.toFixed(2)}</div>
+              </div>
+              <div>
+                <Label>Freight / Cartage</Label>
+                <DecimalInput
+                  value={freight}
+                  onValueChange={setFreight}
+                  step="0.01"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
               </div>
               <div>
                 <Label>Total</Label>
