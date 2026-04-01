@@ -88,8 +88,8 @@ export function useExpenseItems(categoryId?: string, expenseType?: string) {
     queryKey: ['expense_items', categoryId, expenseType],
     queryFn: async () => {
       let q = supabase.from('expense_items').select('*, expense_categories(category_name), company_master(company_name)').eq('is_active', true).order('item_name');
-      if (categoryId) q = q.eq('category_id', categoryId);
-      if (expenseType) q = q.eq('expense_type', expenseType);
+      if (categoryId && categoryId.length > 0) q = q.eq('category_id', categoryId);
+      if (expenseType && expenseType.length > 0) q = q.eq('expense_type', expenseType);
       const { data, error } = await q;
       if (error) throw error;
       return (data || []).map((r: any): ExpenseItem => ({
