@@ -112,6 +112,7 @@ const ExpenseCreatePage: React.FC = () => {
         subtotal,
         gst_percent: gstPercent,
         gst_amount: gstAmount,
+        freight,
         total_amount: totalAmount,
         linked_lot_no: linkedLotNo,
         payment_status: paymentStatus,
