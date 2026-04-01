@@ -76,7 +76,7 @@ const ExpenseCreatePage: React.FC = () => {
     ? lineItems.reduce((s, li) => s + li.amount, 0)
     : directTotal;
   const gstAmount = Math.round(subtotal * (gstPercent / 100) * 100) / 100;
-  const totalAmount = Math.round((subtotal + gstAmount) * 100) / 100;
+  const totalAmount = Math.round((subtotal + gstAmount + freight) * 100) / 100;
 
   const handleItemSelect = (key: string, itemId: string, item?: ExpenseItem) => {
     updateLine(key, {
