@@ -83,27 +83,59 @@ export function useCreateCompany() {
 }
 
 // ── Items ──
+const buildCompanyNameMap = async (rows: Array<{ company_id?: string | null }>) => {
+  const companyIds = Array.from(
+    new Set(rows.map(r => r.company_id).filter((id): id is string => Boolean(id)))
+  );
+
+  if (companyIds.length === 0) return new Map<string, string>();
+
+  const { data, error } = await supabase
+    .from('company_master')
+    .select('id, company_name')
+    .in('id', companyIds);
+
+  if (error) {
+    console.warn('Failed to load company names for expense items:', error);
+    return new Map<string, string>();
+  }
+
+  return new Map((data || []).map(c => [c.id, c.company_name]));
+};
+
+const mapExpenseItemRow = (r: any, companyNameMap: Map<string, string>): ExpenseItem => ({
+  id: r.id,
+  item_name: r.item_name,
+  category_id: r.category_id,
+  category_name: r.expense_categories?.category_name || '',
+  expense_type: r.expense_type || '',
+  unit: r.unit,
+  item_type: r.item_type,
+  is_active: r.is_active,
+  company_id: r.company_id,
+  company_name: (r.company_id && companyNameMap.get(r.company_id)) || '',
+});
+
 export function useExpenseItems(categoryId?: string, expenseType?: string) {
   return useQuery({
     queryKey: ['expense_items', categoryId, expenseType],
     queryFn: async () => {
-      let q = supabase.from('expense_items').select('*, expense_categories(category_name), company_master(company_name)').eq('is_active', true).order('item_name');
+      let q = supabase
+        .from('expense_items')
+        .select('*, expense_categories(category_name)')
+        .eq('is_active', true)
+        .order('item_name');
+
       if (categoryId && categoryId.length > 0) q = q.eq('category_id', categoryId);
       if (expenseType && expenseType.length > 0) q = q.eq('expense_type', expenseType);
+
       const { data, error } = await q;
       if (error) throw error;
-      return (data || []).map((r: any): ExpenseItem => ({
-        id: r.id,
-        item_name: r.item_name,
-        category_id: r.category_id,
-        category_name: r.expense_categories?.category_name || '',
-        expense_type: r.expense_type || '',
-        unit: r.unit,
-        item_type: r.item_type,
-        is_active: r.is_active,
-        company_id: r.company_id,
-        company_name: r.company_master?.company_name || '',
-      }));
+
+      const rows = data || [];
+      const companyNameMap = await buildCompanyNameMap(rows);
+
+      return rows.map((r: any): ExpenseItem => mapExpenseItemRow(r, companyNameMap));
     },
   });
 }
@@ -114,21 +146,14 @@ export function useAllExpenseItems() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('expense_items')
-        .select('*, expense_categories(category_name), company_master(company_name)')
+        .select('*, expense_categories(category_name)')
         .order('item_name');
       if (error) throw error;
-      return (data || []).map((r: any): ExpenseItem => ({
-        id: r.id,
-        item_name: r.item_name,
-        category_id: r.category_id,
-        category_name: r.expense_categories?.category_name || '',
-        expense_type: r.expense_type || '',
-        unit: r.unit,
-        item_type: r.item_type,
-        is_active: r.is_active,
-        company_id: r.company_id,
-        company_name: r.company_master?.company_name || '',
-      }));
+
+      const rows = data || [];
+      const companyNameMap = await buildCompanyNameMap(rows);
+
+      return rows.map((r: any): ExpenseItem => mapExpenseItemRow(r, companyNameMap));
     },
   });
 }
