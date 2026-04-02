@@ -72,14 +72,9 @@ const LotDetail: React.FC = () => {
   const referencingLots = getLotsReferencingSource(lot.lot_no);
   const processSteps = getProcessStepsForLot(lot.lot_no);
 
-  const handleApprove = async () => {
-    await approveLot(lot.lot_no);
-    toast.success(`Lot ${lot.lot_no} approved.`);
-  };
-
-  const handleUnapprove = async () => {
-    await unapproveLot(lot.lot_no);
-    toast.info(`Lot ${lot.lot_no} un-approved.`);
+  const handleStatusChange = async (status: LotStatus) => {
+    await updateLotStatus(lot.lot_no, status);
+    toast.success(`Lot ${lot.lot_no} status changed to ${status}.`);
   };
 
   const handleStepSubmit = async (data: Parameters<typeof addProcessStep>[1]) => {
