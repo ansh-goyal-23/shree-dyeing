@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import RecipeEditor from '@/components/RecipeEditor';
+import { calculateNetWeight, calculateDyeGrams } from '@/lib/calculations';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ProcessStepForm from '@/components/ProcessStepForm';
 import ProcessStepList from '@/components/ProcessStepList';
 import LotPhotos from '@/components/LotPhotos';
@@ -19,7 +21,7 @@ const LotDetail: React.FC = () => {
   const {
     getLot, deleteLot, approveLot, unapproveLot, updateLot, masterItems,
     getLotsReferencingSource, addProcessStep, updateProcessStep, deleteProcessStep,
-    getProcessStepsForLot, stepDyes, stepChemicals,
+    getProcessStepsForLot, stepDyes, stepChemicals, getDyesForLot, getChemicalsForLot,
   } = useApp();
 
   const lot = getLot(lotNo || '');
@@ -235,6 +237,62 @@ const LotDetail: React.FC = () => {
           onCancel={() => setShowStepForm(false)}
         />
       )}
+
+      {/* Reference Recipe from Source Lot */}
+      {lot.shade_number && lot.shade_number !== lot.lot_no && (() => {
+        const sourceLot = getLot(lot.shade_number);
+        if (!sourceLot) return null;
+        const sourceDyes = getDyesForLot(sourceLot.lot_no);
+        const sourceChemicals = getChemicalsForLot(sourceLot.lot_no);
+        const sourceNetWeight = calculateNetWeight(sourceLot.gross_weight, sourceLot.number_of_chesses);
+        if (sourceDyes.length === 0 && sourceChemicals.length === 0) return null;
+        return (
+          <Card className="border-dashed bg-muted/40">
+            <CardHeader className="pb-3 pt-4 px-4">
+              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Reference Recipe (Source Lot {sourceLot.lot_no})
+              </CardTitle>
+              <div className="flex gap-4 text-xs text-muted-foreground mt-1 flex-wrap">
+                <span>Net Weight: <strong className="font-data text-foreground">{sourceNetWeight.toFixed(3)} kg</strong></span>
+                <span>Chesses: <strong className="font-data text-foreground">{sourceLot.number_of_chesses}</strong></span>
+                <span>Color: <strong className="text-foreground">{sourceLot.color_name}</strong></span>
+              </div>
+            </CardHeader>
+            <CardContent className="px-4 pb-4 space-y-3">
+              {sourceDyes.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Dyes</p>
+                  <div className="grid grid-cols-[1fr_80px_100px] gap-2 text-xs font-medium text-muted-foreground px-1 mb-1">
+                    <span>Dye</span><span>%</span><span>Grams</span>
+                  </div>
+                  {sourceDyes.map(d => (
+                    <div key={d.id} className="grid grid-cols-[1fr_80px_100px] gap-2 text-sm items-center px-1 py-0.5">
+                      <span>{masterItems.find(m => m.id === d.dye_id)?.name || '—'}</span>
+                      <span className="font-data">{d.percentage}</span>
+                      <span className="font-data">{calculateDyeGrams(d.percentage, sourceNetWeight).toFixed(3)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {sourceChemicals.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Chemicals</p>
+                  <div className="grid grid-cols-[1fr_80px_80px] gap-2 text-xs font-medium text-muted-foreground px-1 mb-1">
+                    <span>Chemical</span><span>Qty</span><span>Unit</span>
+                  </div>
+                  {sourceChemicals.map(c => (
+                    <div key={c.id} className="grid grid-cols-[1fr_80px_80px] gap-2 text-sm items-center px-1 py-0.5">
+                      <span>{masterItems.find(m => m.id === c.chemical_id)?.name || '—'}</span>
+                      <span className="font-data">{c.qty}</span>
+                      <span className="text-muted-foreground">{masterItems.find(m => m.id === c.chemical_id)?.unit || '—'}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Base Recipe */}
       <div className="card-industrial p-4">
