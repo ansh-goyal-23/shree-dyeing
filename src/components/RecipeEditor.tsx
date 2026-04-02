@@ -1,8 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import { calculateDyeGrams } from '@/lib/calculations';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Percent, Undo2 } from 'lucide-react';
 import DecimalInput from '@/components/DecimalInput';
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import type { RecipeDye, RecipeChemical } from '@/types';
 
 const DEFAULT_CHEMICAL_NAMES = ['BUF', 'CDFT', 'CWS'];
