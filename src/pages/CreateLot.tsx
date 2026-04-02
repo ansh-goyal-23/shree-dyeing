@@ -6,9 +6,10 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import LotFieldAutocomplete from '@/components/LotFieldAutocomplete';
 import DecimalInput from '@/components/DecimalInput';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const CreateLot: React.FC = () => {
-  const { addLot, lots, getDyesForLot, getChemicalsForLot, updateRecipeDyes, updateRecipeChemicals } = useApp();
+  const { addLot, lots, getDyesForLot, getChemicalsForLot, updateRecipeDyes, updateRecipeChemicals, masterItems } = useApp();
   const companyNames = useMemo(() => [...lots.map(l => l.yarn_company_name)].sort((a, b) => a.localeCompare(b)), [lots]);
   const colorNames = useMemo(() => ([...lots.map(l => l.color_name).filter(Boolean)] as string[]).sort((a, b) => a.localeCompare(b)), [lots]);
   const denierValues = useMemo(() => ([...lots.map(l => l.denier).filter(Boolean)] as string[]).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [lots]);
@@ -245,6 +246,62 @@ const CreateLot: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Reference Recipe Panel */}
+        {form.shade_number.trim() && form.shade_number.trim() !== form.lot_no.trim() && (() => {
+          const sourceLot = lots.find(l => l.lot_no === form.shade_number.trim());
+          if (!sourceLot) return null;
+          const sourceDyes = getDyesForLot(sourceLot.lot_no);
+          const sourceChemicals = getChemicalsForLot(sourceLot.lot_no);
+          const sourceNetWeight = calculateNetWeight(sourceLot.gross_weight, sourceLot.number_of_chesses);
+          if (sourceDyes.length === 0 && sourceChemicals.length === 0) return null;
+          return (
+            <Card className="border-dashed bg-muted/40">
+              <CardHeader className="pb-3 pt-4 px-4">
+                <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Reference Recipe (Original Lot {sourceLot.lot_no})
+                </CardTitle>
+                <div className="flex gap-4 text-xs text-muted-foreground mt-1">
+                  <span>Net Weight: <strong className="font-data text-foreground">{sourceNetWeight.toFixed(3)} kg</strong></span>
+                  <span>Chesses: <strong className="font-data text-foreground">{sourceLot.number_of_chesses}</strong></span>
+                  <span>Color: <strong className="text-foreground">{sourceLot.color_name}</strong></span>
+                </div>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 space-y-3">
+                {sourceDyes.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Dyes</p>
+                    <div className="grid grid-cols-[1fr_80px_100px] gap-2 text-xs font-medium text-muted-foreground px-1 mb-1">
+                      <span>Dye</span><span>%</span><span>Grams</span>
+                    </div>
+                    {sourceDyes.map(d => (
+                      <div key={d.id} className="grid grid-cols-[1fr_80px_100px] gap-2 text-sm items-center px-1 py-0.5">
+                        <span>{masterItems.find(m => m.id === d.dye_id)?.name || '—'}</span>
+                        <span className="font-data">{d.percentage}</span>
+                        <span className="font-data">{calculateDyeGrams(d.percentage, sourceNetWeight).toFixed(3)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {sourceChemicals.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Chemicals</p>
+                    <div className="grid grid-cols-[1fr_80px_80px] gap-2 text-xs font-medium text-muted-foreground px-1 mb-1">
+                      <span>Chemical</span><span>Qty</span><span>Unit</span>
+                    </div>
+                    {sourceChemicals.map(c => (
+                      <div key={c.id} className="grid grid-cols-[1fr_80px_80px] gap-2 text-sm items-center px-1 py-0.5">
+                        <span>{masterItems.find(m => m.id === c.chemical_id)?.name || '—'}</span>
+                        <span className="font-data">{c.qty}</span>
+                        <span className="text-muted-foreground">{masterItems.find(m => m.id === c.chemical_id)?.unit || '—'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         <div className="flex justify-end gap-3 pt-2">
           <button
