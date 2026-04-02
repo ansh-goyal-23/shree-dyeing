@@ -1,6 +1,7 @@
 export interface MasterItem {
   id: string;
   name: string;
+  short_name: string;
   type: 'dye' | 'chemical';
   shade_family: string;
   company: string;

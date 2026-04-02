@@ -13,6 +13,7 @@ const MasterData: React.FC = () => {
 
   const [form, setForm] = useState({
     name: '',
+    short_name: '',
     type: 'dye' as 'dye' | 'chemical',
     shade_family: '',
     company: '',
@@ -20,10 +21,15 @@ const MasterData: React.FC = () => {
     is_active: true,
   });
 
-  const filtered = masterItems.filter(m => filter === 'all' || m.type === filter).sort((a, b) => a.name.localeCompare(b.name));
+  const filtered = masterItems.filter(m => filter === 'all' || m.type === filter).sort((a, b) => {
+    // Sort dyes by short_name, others by name
+    const aKey = a.type === 'dye' && a.short_name ? a.short_name : a.name;
+    const bKey = b.type === 'dye' && b.short_name ? b.short_name : b.name;
+    return aKey.localeCompare(bKey);
+  });
 
   const resetForm = () => {
-    setForm({ name: '', type: 'dye', shade_family: '', company: '', unit: 'gm', is_active: true });
+    setForm({ name: '', short_name: '', type: 'dye', shade_family: '', company: '', unit: 'gm', is_active: true });
     setEditItem(null);
     setShowForm(false);
   };
@@ -32,18 +38,25 @@ const MasterData: React.FC = () => {
     e.preventDefault();
     if (!form.name.trim()) { toast.error('Name is required.'); return; }
 
+    if (form.type === 'dye' && !form.short_name.trim()) { toast.error('Short name is required for dyes.'); return; }
+    // Check uniqueness of short_name among dyes
+    if (form.type === 'dye' && form.short_name.trim()) {
+      const duplicate = masterItems.find(m => m.type === 'dye' && m.short_name.toLowerCase() === form.short_name.trim().toLowerCase() && m.id !== editItem?.id);
+      if (duplicate) { toast.error(`Short name "${form.short_name}" already exists for dye "${duplicate.name}".`); return; }
+    }
+
     if (editItem) {
-      await updateMasterItem({ ...editItem, ...form, name: form.name.trim() });
+      await updateMasterItem({ ...editItem, ...form, name: form.name.trim(), short_name: form.short_name.trim() });
       toast.success(`${form.name} updated.`);
     } else {
-      await addMasterItem({ ...form, name: form.name.trim() });
+      await addMasterItem({ ...form, name: form.name.trim(), short_name: form.short_name.trim() });
       toast.success(`${form.name} added.`);
     }
     resetForm();
   };
 
   const startEdit = (item: MasterItem) => {
-    setForm({ name: item.name, type: item.type, shade_family: item.shade_family, company: item.company, unit: item.unit, is_active: item.is_active });
+    setForm({ name: item.name, short_name: item.short_name, type: item.type, shade_family: item.shade_family, company: item.company, unit: item.unit, is_active: item.is_active });
     setEditItem(item);
     setShowForm(true);
   };
@@ -64,10 +77,14 @@ const MasterData: React.FC = () => {
       {showForm && (
         <form onSubmit={handleSubmit} className="card-industrial p-4 space-y-4">
           <h2 className="text-sm font-semibold">{editItem ? 'Edit Item' : 'Add New Item'}</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Name *</label>
               <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="input-industrial w-full" required />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Short Name {form.type === 'dye' ? '*' : ''}</label>
+              <input type="text" value={form.short_name} onChange={e => setForm(f => ({ ...f, short_name: e.target.value }))} className="input-industrial w-full" placeholder="e.g. YC4G" required={form.type === 'dye'} />
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Type</label>
@@ -127,7 +144,8 @@ const MasterData: React.FC = () => {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-secondary/50">
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Name</th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Short Name</th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Full Name</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Type</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Unit</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Shade Family</th>
@@ -138,11 +156,12 @@ const MasterData: React.FC = () => {
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">No items found.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">No items found.</td></tr>
             ) : (
               filtered.map(item => (
                 <tr key={item.id} className="row-separator hover:bg-secondary/30 btn-transition">
-                  <td className="px-4 py-3 font-medium">{item.name}</td>
+                  <td className="px-4 py-3 font-semibold">{item.short_name || '—'}</td>
+                  <td className="px-4 py-3">{item.name}</td>
                   <td className="px-4 py-3 capitalize">{item.type}</td>
                   <td className="px-4 py-3">{item.unit}</td>
                   <td className="px-4 py-3">{item.shade_family || '—'}</td>

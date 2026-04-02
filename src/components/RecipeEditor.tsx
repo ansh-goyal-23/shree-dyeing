@@ -24,8 +24,8 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
 
   const dyes = getDyesForLot(lotNo);
   const chemicals = getChemicalsForLot(lotNo);
-  const dyeItems = masterItems.filter(m => m.type === 'dye' && m.is_active);
-  const chemicalItems = masterItems.filter(m => m.type === 'chemical' && m.is_active);
+  const dyeItems = masterItems.filter(m => m.type === 'dye' && m.is_active).sort((a, b) => (a.short_name || a.name).localeCompare(b.short_name || b.name));
+  const chemicalItems = masterItems.filter(m => m.type === 'chemical' && m.is_active).sort((a, b) => a.name.localeCompare(b.name));
 
   // Build default chemicals list based on master items
   const defaultChemicals = useMemo(() => {
@@ -140,7 +140,11 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
     setDirty(false);
   };
 
-  const getDyeName = (id: string) => masterItems.find(m => m.id === id)?.name || '';
+  const getDyeDisplayName = (id: string) => {
+    const item = masterItems.find(m => m.id === id);
+    if (!item) return '';
+    return item.short_name ? `${item.short_name} (${item.name})` : item.name;
+  };
 
   return (
     <div className="space-y-6">
@@ -190,11 +194,11 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
             {localDyes.map((dye, idx) => (
               <div key={dye.id} className="grid grid-cols-[1fr_100px_120px_40px] gap-2 items-center">
                 {readOnly ? (
-                  <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed text-sm">{getDyeName(dye.dye_id)}</span>
+                  <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed text-sm">{getDyeDisplayName(dye.dye_id)}</span>
                 ) : (
                   <select value={dye.dye_id} onChange={e => updateDye(idx, 'dye_id', e.target.value)} className="input-industrial text-sm">
                     <option value="">Select dye...</option>
-                    {dyeItems.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    {dyeItems.map(d => <option key={d.id} value={d.id}>{d.short_name ? `${d.short_name} (${d.name})` : d.name}</option>)}
                   </select>
                 )}
                 {readOnly ? (

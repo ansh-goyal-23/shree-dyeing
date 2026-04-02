@@ -180,12 +180,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [fetchAll]);
 
   const addMasterItem = useCallback(async (item: Omit<MasterItem, 'id'>) => {
-    await supabase.from('master_items').insert({ name: item.name, type: item.type, shade_family: item.shade_family, company: item.company, unit: item.unit, is_active: item.is_active });
+    await supabase.from('master_items').insert({ name: item.name, short_name: item.short_name || '', type: item.type, shade_family: item.shade_family, company: item.company, unit: item.unit, is_active: item.is_active });
     await fetchAll();
   }, [fetchAll]);
 
   const updateMasterItem = useCallback(async (item: MasterItem) => {
-    await supabase.from('master_items').update({ name: item.name, type: item.type, shade_family: item.shade_family, company: item.company, unit: item.unit, is_active: item.is_active }).eq('id', item.id);
+    await supabase.from('master_items').update({ name: item.name, short_name: item.short_name || '', type: item.type, shade_family: item.shade_family, company: item.company, unit: item.unit, is_active: item.is_active }).eq('id', item.id);
     await fetchAll();
   }, [fetchAll]);
 
@@ -299,7 +299,7 @@ const mapChemical = (row: any): RecipeChemical => ({
 });
 
 const mapMasterItem = (row: any): MasterItem => ({
-  id: row.id, name: row.name, type: row.type, shade_family: row.shade_family || '',
+  id: row.id, name: row.name, short_name: row.short_name || '', type: row.type, shade_family: row.shade_family || '',
   company: row.company || '', unit: row.unit || '', is_active: row.is_active ?? true,
 });
 

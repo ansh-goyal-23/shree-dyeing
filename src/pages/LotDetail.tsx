@@ -258,7 +258,7 @@ const LotDetail: React.FC = () => {
                   </div>
                   {sourceDyes.map(d => (
                     <div key={d.id} className="grid grid-cols-[1fr_80px_100px] gap-2 text-sm items-center px-1 py-0.5">
-                      <span>{masterItems.find(m => m.id === d.dye_id)?.name || '—'}</span>
+                      <span>{(() => { const item = masterItems.find(m => m.id === d.dye_id); return item ? (item.short_name ? `${item.short_name} (${item.name})` : item.name) : '—'; })()}</span>
                       <span className="font-data">{d.percentage}</span>
                       <span className="font-data">{calculateDyeGrams(d.percentage, sourceNetWeight).toFixed(3)}</span>
                     </div>

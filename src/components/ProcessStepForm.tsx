@@ -32,8 +32,8 @@ const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, onSubmit, on
   const [chemicals, setChemicals] = useState<{ chemical_id: string; qty: number }[]>(editingData?.chemicals || []);
   const [submitting, setSubmitting] = useState(false);
 
-  const dyeItems = masterItems.filter(m => m.type === 'dye' && m.is_active);
-  const chemicalItems = masterItems.filter(m => m.type === 'chemical' && m.is_active);
+  const dyeItems = masterItems.filter(m => m.type === 'dye' && m.is_active).sort((a, b) => (a.short_name || a.name).localeCompare(b.short_name || b.name));
+  const chemicalItems = masterItems.filter(m => m.type === 'chemical' && m.is_active).sort((a, b) => a.name.localeCompare(b.name));
 
   const showDyes = stepType === 'Color Addition' || stepType === 'Leveling';
   const showChemicals = stepType === 'RC' || stepType === 'Leveling';
@@ -133,7 +133,7 @@ const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, onSubmit, on
                 <div key={idx} className="grid grid-cols-[1fr_100px_120px_40px] gap-2 items-center">
                   <select value={dye.dye_id} onChange={e => updateDye(idx, 'dye_id', e.target.value)} className="input-industrial text-sm">
                     <option value="">Select dye...</option>
-                    {dyeItems.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    {dyeItems.map(d => <option key={d.id} value={d.id}>{d.short_name ? `${d.short_name} (${d.name})` : d.name}</option>)}
                   </select>
                   <DecimalInput step="0.001" min={0} value={dye.percentage} onValueChange={v => updateDye(idx, 'percentage', v)} className="input-industrial font-data text-sm" />
                   <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed font-data font-semibold text-sm">{calculateDyeGrams(dye.percentage, netWeight).toFixed(3)}</span>
