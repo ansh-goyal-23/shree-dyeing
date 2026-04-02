@@ -13,6 +13,7 @@ const MasterData: React.FC = () => {
 
   const [form, setForm] = useState({
     name: '',
+    short_name: '',
     type: 'dye' as 'dye' | 'chemical',
     shade_family: '',
     company: '',
