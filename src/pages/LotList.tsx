@@ -63,7 +63,7 @@ const LotList: React.FC = () => {
             <tr className="bg-secondary/50">
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Lot No</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Date</th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Company</th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Denier</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Color</th>
               <th className="text-right px-4 py-3 font-medium text-muted-foreground">Net Wt (kg)</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Shade No</th>
