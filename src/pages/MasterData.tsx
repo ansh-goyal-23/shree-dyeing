@@ -65,10 +65,14 @@ const MasterData: React.FC = () => {
       {showForm && (
         <form onSubmit={handleSubmit} className="card-industrial p-4 space-y-4">
           <h2 className="text-sm font-semibold">{editItem ? 'Edit Item' : 'Add New Item'}</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Name *</label>
               <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="input-industrial w-full" required />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Short Name {form.type === 'dye' ? '*' : ''}</label>
+              <input type="text" value={form.short_name} onChange={e => setForm(f => ({ ...f, short_name: e.target.value }))} className="input-industrial w-full" placeholder="e.g. YC4G" required={form.type === 'dye'} />
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Type</label>
