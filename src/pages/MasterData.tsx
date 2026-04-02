@@ -38,11 +38,18 @@ const MasterData: React.FC = () => {
     e.preventDefault();
     if (!form.name.trim()) { toast.error('Name is required.'); return; }
 
+    if (form.type === 'dye' && !form.short_name.trim()) { toast.error('Short name is required for dyes.'); return; }
+    // Check uniqueness of short_name among dyes
+    if (form.type === 'dye' && form.short_name.trim()) {
+      const duplicate = masterItems.find(m => m.type === 'dye' && m.short_name.toLowerCase() === form.short_name.trim().toLowerCase() && m.id !== editItem?.id);
+      if (duplicate) { toast.error(`Short name "${form.short_name}" already exists for dye "${duplicate.name}".`); return; }
+    }
+
     if (editItem) {
-      await updateMasterItem({ ...editItem, ...form, name: form.name.trim() });
+      await updateMasterItem({ ...editItem, ...form, name: form.name.trim(), short_name: form.short_name.trim() });
       toast.success(`${form.name} updated.`);
     } else {
-      await addMasterItem({ ...form, name: form.name.trim() });
+      await addMasterItem({ ...form, name: form.name.trim(), short_name: form.short_name.trim() });
       toast.success(`${form.name} added.`);
     }
     resetForm();
