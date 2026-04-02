@@ -21,7 +21,7 @@ const LotDetail: React.FC = () => {
   const {
     getLot, deleteLot, approveLot, unapproveLot, updateLot, masterItems,
     getLotsReferencingSource, addProcessStep, updateProcessStep, deleteProcessStep,
-    getProcessStepsForLot, stepDyes, stepChemicals,
+    getProcessStepsForLot, stepDyes, stepChemicals, getDyesForLot, getChemicalsForLot,
   } = useApp();
 
   const lot = getLot(lotNo || '');
