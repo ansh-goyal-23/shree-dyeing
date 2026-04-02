@@ -180,12 +180,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [fetchAll]);
 
   const addMasterItem = useCallback(async (item: Omit<MasterItem, 'id'>) => {
-    await supabase.from('master_items').insert({ name: item.name, type: item.type, shade_family: item.shade_family, company: item.company, unit: item.unit, is_active: item.is_active });
+    await supabase.from('master_items').insert({ name: item.name, short_name: item.short_name || '', type: item.type, shade_family: item.shade_family, company: item.company, unit: item.unit, is_active: item.is_active });
     await fetchAll();
   }, [fetchAll]);
 
   const updateMasterItem = useCallback(async (item: MasterItem) => {
-    await supabase.from('master_items').update({ name: item.name, type: item.type, shade_family: item.shade_family, company: item.company, unit: item.unit, is_active: item.is_active }).eq('id', item.id);
+    await supabase.from('master_items').update({ name: item.name, short_name: item.short_name || '', type: item.type, shade_family: item.shade_family, company: item.company, unit: item.unit, is_active: item.is_active }).eq('id', item.id);
     await fetchAll();
   }, [fetchAll]);
 
