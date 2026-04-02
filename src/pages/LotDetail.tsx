@@ -100,36 +100,13 @@ const LotDetail: React.FC = () => {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
             <span className="font-mono text-2xl font-bold">{lot.lot_no}</span>
-            {(() => {
-              const STATUS_CONFIG: Record<LotStatus, { icon: React.ElementType; className: string }> = {
-                'Approved': { icon: CheckCircle2, className: 'bg-approved/10 text-approved' },
-                'Rejected': { icon: XCircle, className: 'bg-destructive/10 text-destructive' },
-                'Production': { icon: Factory, className: 'bg-primary/10 text-primary' },
-                'In Approval': { icon: Clock, className: 'bg-correction/10 text-correction' },
-              };
-              const config = STATUS_CONFIG[lot.status] || STATUS_CONFIG['In Approval'];
-              const Icon = config.icon;
-              return (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded cursor-pointer hover:opacity-80 btn-transition ${config.className}`}>
-                      <Icon className="w-3 h-3" /> {lot.status} <ChevronDown className="w-3 h-3 ml-0.5" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    {(['Approved', 'Rejected', 'Production', 'In Approval'] as LotStatus[]).map(s => {
-                      const sc = STATUS_CONFIG[s];
-                      const SIcon = sc.icon;
-                      return (
-                        <DropdownMenuItem key={s} onClick={() => handleStatusChange(s)} className={lot.status === s ? 'font-semibold' : ''}>
-                          <SIcon className={`w-3.5 h-3.5 mr-2 ${sc.className.split(' ').pop()}`} /> {s}
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              );
-            })()}
+            <Badge
+              variant={STATUS_VARIANT[lot.status] || 'outline'}
+              className="cursor-pointer select-none"
+              onClick={handleToggleStatus}
+            >
+              {lot.status}
+            </Badge>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={() => setShowStepForm(true)} className="px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring inline-flex items-center gap-2">
