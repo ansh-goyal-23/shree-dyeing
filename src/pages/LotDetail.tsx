@@ -21,7 +21,7 @@ const LotDetail: React.FC = () => {
   const { lotNo } = useParams<{ lotNo: string }>();
   const navigate = useNavigate();
   const {
-    getLot, deleteLot, approveLot, unapproveLot, updateLot, masterItems,
+    getLot, deleteLot, updateLotStatus, approveLot, unapproveLot, updateLot, masterItems,
     getLotsReferencingSource, addProcessStep, updateProcessStep, deleteProcessStep,
     getProcessStepsForLot, stepDyes, stepChemicals, getDyesForLot, getChemicalsForLot,
   } = useApp();
