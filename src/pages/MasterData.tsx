@@ -24,7 +24,7 @@ const MasterData: React.FC = () => {
   const filtered = masterItems.filter(m => filter === 'all' || m.type === filter).sort((a, b) => a.name.localeCompare(b.name));
 
   const resetForm = () => {
-    setForm({ name: '', type: 'dye', shade_family: '', company: '', unit: 'gm', is_active: true });
+    setForm({ name: '', short_name: '', type: 'dye', shade_family: '', company: '', unit: 'gm', is_active: true });
     setEditItem(null);
     setShowForm(false);
   };
