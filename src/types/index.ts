@@ -18,6 +18,7 @@ export interface Lot {
   gross_weight: number;
   net_weight: number;
   is_approved: boolean;
+  status: LotStatus;
   shade_number: string;
   source_lot_no: string | null;
 }
