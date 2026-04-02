@@ -91,14 +91,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const addLot = useCallback(async (lotData: Omit<Lot, 'net_weight' | 'is_approved'>): Promise<boolean> => {
+  const addLot = useCallback(async (lotData: Omit<Lot, 'net_weight' | 'is_approved' | 'status'>): Promise<boolean> => {
     const net_weight = calculateNetWeight(lotData.gross_weight, lotData.number_of_chesses);
     const shade_number = lotData.shade_number?.trim() || lotData.lot_no;
+    const isProduction = shade_number !== lotData.lot_no;
+    const status = isProduction ? 'Production' : 'In Approval';
     const { error: lotErr } = await supabase.from('lots').insert({
       lot_no: lotData.lot_no, date: lotData.date, yarn_company_name: lotData.yarn_company_name,
       color_name: lotData.color_name, denier: lotData.denier, number_of_chesses: lotData.number_of_chesses,
       gross_weight: lotData.gross_weight, net_weight, is_approved: false,
-      shade_number, source_lot_no: lotData.source_lot_no || null,
+      shade_number, source_lot_no: lotData.source_lot_no || null, status,
     });
     if (lotErr) return false;
     await fetchAll();
