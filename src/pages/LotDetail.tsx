@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import RecipeEditor from '@/components/RecipeEditor';
+import { calculateNetWeight, calculateDyeGrams } from '@/lib/calculations';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ProcessStepForm from '@/components/ProcessStepForm';
 import ProcessStepList from '@/components/ProcessStepList';
 import LotPhotos from '@/components/LotPhotos';
