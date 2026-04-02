@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import type { Lot, RecipeDye, RecipeChemical, MasterItem, ProcessStep, StepDye, StepChemical, ProcessStepType } from '@/types';
+import type { Lot, LotStatus, RecipeDye, RecipeChemical, MasterItem, ProcessStep, StepDye, StepChemical, ProcessStepType } from '@/types';
 import { calculateNetWeight } from '@/lib/calculations';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
