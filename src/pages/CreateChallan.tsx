@@ -163,13 +163,26 @@ const CreateChallan: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium text-foreground">Prepared By</label>
-              <input type="text" value={form.prepared_by_name} onChange={e => setForm(p => ({ ...p, prepared_by_name: e.target.value }))}
-                className="input-industrial w-full mt-1" placeholder="Signing authority name" />
+              <div className="mt-1">
+                <FooterAutocomplete
+                  value={form.prepared_by_name}
+                  onChange={v => setForm(p => ({ ...p, prepared_by_name: v }))}
+                  options={preparedByOptions}
+                  placeholder="Signing authority name"
+                />
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium text-foreground">Receiver Name</label>
-              <input type="text" value={form.receiver_name} onChange={e => setForm(p => ({ ...p, receiver_name: e.target.value }))}
-                className="input-industrial w-full mt-1" placeholder="Receiver name" />
+              <div className="mt-1">
+                <FooterAutocomplete
+                  value={form.receiver_name}
+                  onChange={v => setForm(p => ({ ...p, receiver_name: v }))}
+                  options={receiverNames}
+                  placeholder="Receiver name"
+                  onSelect={handleReceiverSelect}
+                />
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium text-foreground">Receiver Contact</label>
