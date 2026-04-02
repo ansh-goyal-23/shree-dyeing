@@ -256,7 +256,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      ...state, addLot, updateLot, deleteLot, approveLot, unapproveLot, updateRecipeDyes, updateRecipeChemicals,
+      ...state, addLot, updateLot, deleteLot, updateLotStatus, approveLot, unapproveLot, updateRecipeDyes, updateRecipeChemicals,
       addMasterItem, updateMasterItem, addProcessStep, updateProcessStep, deleteProcessStep, getLot, getDyesForLot,
       getChemicalsForLot, getApprovedLots, getLotsReferencingSource,
       getProcessStepsForLot, getStepDyes, getStepChemicals,
