@@ -140,7 +140,11 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
     setDirty(false);
   };
 
-  const getDyeName = (id: string) => masterItems.find(m => m.id === id)?.name || '';
+  const getDyeDisplayName = (id: string) => {
+    const item = masterItems.find(m => m.id === id);
+    if (!item) return '';
+    return item.short_name ? `${item.short_name} (${item.name})` : item.name;
+  };
 
   return (
     <div className="space-y-6">
