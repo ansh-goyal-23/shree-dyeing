@@ -299,7 +299,7 @@ const mapChemical = (row: any): RecipeChemical => ({
 });
 
 const mapMasterItem = (row: any): MasterItem => ({
-  id: row.id, name: row.name, type: row.type, shade_family: row.shade_family || '',
+  id: row.id, name: row.name, short_name: row.short_name || '', type: row.type, shade_family: row.shade_family || '',
   company: row.company || '', unit: row.unit || '', is_active: row.is_active ?? true,
 });
 
