@@ -32,8 +32,8 @@ const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, onSubmit, on
   const [chemicals, setChemicals] = useState<{ chemical_id: string; qty: number }[]>(editingData?.chemicals || []);
   const [submitting, setSubmitting] = useState(false);
 
-  const dyeItems = masterItems.filter(m => m.type === 'dye' && m.is_active);
-  const chemicalItems = masterItems.filter(m => m.type === 'chemical' && m.is_active);
+  const dyeItems = masterItems.filter(m => m.type === 'dye' && m.is_active).sort((a, b) => (a.short_name || a.name).localeCompare(b.short_name || b.name));
+  const chemicalItems = masterItems.filter(m => m.type === 'chemical' && m.is_active).sort((a, b) => a.name.localeCompare(b.name));
 
   const showDyes = stepType === 'Color Addition' || stepType === 'Leveling';
   const showChemicals = stepType === 'RC' || stepType === 'Leveling';
