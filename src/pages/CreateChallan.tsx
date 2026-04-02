@@ -19,6 +19,18 @@ const CreateChallan: React.FC = () => {
   const navigate = useNavigate();
   const createChallan = useCreateChallan();
   const { lots } = useApp();
+  const { data: footerOptions } = useChallanFooterOptions();
+
+  const preparedByOptions = footerOptions?.preparedByOptions || [];
+  const receiverOptions = footerOptions?.receiverOptions || [];
+  const receiverNames = useMemo(() => receiverOptions.map(r => r.name), [receiverOptions]);
+
+  const handleReceiverSelect = (name: string) => {
+    const match = receiverOptions.find(r => r.name === name);
+    if (match) {
+      setForm(p => ({ ...p, receiver_name: name, receiver_contact_number: match.contact }));
+    }
+  };
 
   const [form, setForm] = useState({
     challan_number: '',
