@@ -142,13 +142,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   }, [state.lots, fetchAll]);
 
+  const updateLotStatus = useCallback(async (lotNo: string, status: LotStatus) => {
+    const isApproved = status === 'Approved';
+    await supabase.from('lots').update({ status, is_approved: isApproved }).eq('lot_no', lotNo);
+    await fetchAll();
+  }, [fetchAll]);
+
   const approveLot = useCallback(async (lotNo: string) => {
-    await supabase.from('lots').update({ is_approved: true }).eq('lot_no', lotNo);
+    await supabase.from('lots').update({ is_approved: true, status: 'Approved' }).eq('lot_no', lotNo);
     await fetchAll();
   }, [fetchAll]);
 
   const unapproveLot = useCallback(async (lotNo: string) => {
-    await supabase.from('lots').update({ is_approved: false }).eq('lot_no', lotNo);
+    await supabase.from('lots').update({ is_approved: false, status: 'In Approval' }).eq('lot_no', lotNo);
     await fetchAll();
   }, [fetchAll]);
 
