@@ -194,11 +194,11 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
             {localDyes.map((dye, idx) => (
               <div key={dye.id} className="grid grid-cols-[1fr_100px_120px_40px] gap-2 items-center">
                 {readOnly ? (
-                  <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed text-sm">{getDyeName(dye.dye_id)}</span>
+                  <span className="input-industrial flex items-center bg-secondary/50 cursor-not-allowed text-sm">{getDyeDisplayName(dye.dye_id)}</span>
                 ) : (
                   <select value={dye.dye_id} onChange={e => updateDye(idx, 'dye_id', e.target.value)} className="input-industrial text-sm">
                     <option value="">Select dye...</option>
-                    {dyeItems.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    {dyeItems.map(d => <option key={d.id} value={d.id}>{d.short_name ? `${d.short_name} (${d.name})` : d.name}</option>)}
                   </select>
                 )}
                 {readOnly ? (
