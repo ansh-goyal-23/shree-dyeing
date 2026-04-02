@@ -24,8 +24,8 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
 
   const dyes = getDyesForLot(lotNo);
   const chemicals = getChemicalsForLot(lotNo);
-  const dyeItems = masterItems.filter(m => m.type === 'dye' && m.is_active);
-  const chemicalItems = masterItems.filter(m => m.type === 'chemical' && m.is_active);
+  const dyeItems = masterItems.filter(m => m.type === 'dye' && m.is_active).sort((a, b) => (a.short_name || a.name).localeCompare(b.short_name || b.name));
+  const chemicalItems = masterItems.filter(m => m.type === 'chemical' && m.is_active).sort((a, b) => a.name.localeCompare(b.name));
 
   // Build default chemicals list based on master items
   const defaultChemicals = useMemo(() => {
