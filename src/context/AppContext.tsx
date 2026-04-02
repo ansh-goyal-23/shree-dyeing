@@ -278,6 +278,7 @@ const mapLot = (row: any): Lot => ({
   color_name: row.color_name || '', denier: row.denier || '',
   number_of_chesses: Number(row.number_of_chesses) || 0, gross_weight: Number(row.gross_weight) || 0,
   net_weight: Number(row.net_weight) || 0, is_approved: row.is_approved || false,
+  status: row.status || (row.is_approved ? 'Approved' : 'In Approval'),
   shade_number: row.shade_number || row.lot_no, source_lot_no: row.source_lot_no || null,
 });
 
