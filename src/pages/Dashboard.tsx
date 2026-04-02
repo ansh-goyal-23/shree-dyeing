@@ -5,15 +5,16 @@ import { PlusCircle, CheckCircle2, Clock, Database, ArrowRight } from 'lucide-re
 
 const Dashboard: React.FC = () => {
   const { lots, masterItems } = useApp();
-  const approvedCount = lots.filter(l => l.is_approved).length;
-  const draftCount = lots.filter(l => !l.is_approved).length;
+  const approvedCount = lots.filter(l => l.status === 'Approved').length;
+  const productionCount = lots.filter(l => l.status === 'Production').length;
+  const inApprovalCount = lots.filter(l => l.status === 'In Approval').length;
   const recentLots = [...lots].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8);
 
   const stats = [
     { label: 'Total Lots', value: lots.length, icon: Database, color: 'text-foreground' },
     { label: 'Approved', value: approvedCount, icon: CheckCircle2, color: 'text-approved' },
-    { label: 'Draft', value: draftCount, icon: Clock, color: 'text-correction' },
-    { label: 'Master Items', value: masterItems.length, icon: Database, color: 'text-muted-foreground' },
+    { label: 'Production', value: productionCount, icon: Database, color: 'text-primary' },
+    { label: 'In Approval', value: inApprovalCount, icon: Clock, color: 'text-correction' },
   ];
 
   return (
