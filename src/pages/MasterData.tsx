@@ -44,7 +44,7 @@ const MasterData: React.FC = () => {
   };
 
   const startEdit = (item: MasterItem) => {
-    setForm({ name: item.name, type: item.type, shade_family: item.shade_family, company: item.company, unit: item.unit, is_active: item.is_active });
+    setForm({ name: item.name, short_name: item.short_name, type: item.type, shade_family: item.shade_family, company: item.company, unit: item.unit, is_active: item.is_active });
     setEditItem(item);
     setShowForm(true);
   };
