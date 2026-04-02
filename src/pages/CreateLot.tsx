@@ -35,7 +35,7 @@ const CreateLot: React.FC = () => {
   // Build shade dropdown options: "lot_no (color_name)"
   const shadeOptions = useMemo(() => {
     return lots
-      .filter(l => l.is_approved)
+      .filter(l => l.status === 'Approved')
       .map(l => ({
         label: `${l.lot_no} (${l.color_name || 'No Color'})`,
         lot_no: l.lot_no,

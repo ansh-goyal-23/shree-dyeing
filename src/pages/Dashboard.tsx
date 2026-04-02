@@ -71,13 +71,13 @@ const Dashboard: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="font-data text-sm">{lot.net_weight} kg</span>
-                  {lot.is_approved ? (
+                  {lot.status === 'Approved' ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-approved/10 text-approved rounded">
                       <CheckCircle2 className="w-3 h-3" /> Approved
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-correction/10 text-correction rounded">
-                      <Clock className="w-3 h-3" /> Draft
+                      <Clock className="w-3 h-3" /> {lot.status}
                     </span>
                   )}
                 </div>
