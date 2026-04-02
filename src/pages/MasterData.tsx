@@ -21,7 +21,12 @@ const MasterData: React.FC = () => {
     is_active: true,
   });
 
-  const filtered = masterItems.filter(m => filter === 'all' || m.type === filter).sort((a, b) => a.name.localeCompare(b.name));
+  const filtered = masterItems.filter(m => filter === 'all' || m.type === filter).sort((a, b) => {
+    // Sort dyes by short_name, others by name
+    const aKey = a.type === 'dye' && a.short_name ? a.short_name : a.name;
+    const bKey = b.type === 'dye' && b.short_name ? b.short_name : b.name;
+    return aKey.localeCompare(bKey);
+  });
 
   const resetForm = () => {
     setForm({ name: '', short_name: '', type: 'dye', shade_family: '', company: '', unit: 'gm', is_active: true });
