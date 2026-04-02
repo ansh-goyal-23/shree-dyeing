@@ -71,9 +71,15 @@ const LotDetail: React.FC = () => {
   const referencingLots = getLotsReferencingSource(lot.lot_no);
   const processSteps = getProcessStepsForLot(lot.lot_no);
 
-  const handleStatusChange = async (status: LotStatus) => {
-    await updateLotStatus(lot.lot_no, status);
-    toast.success(`Lot ${lot.lot_no} status changed to ${status}.`);
+  const STATUS_CYCLE: LotStatus[] = ['In Approval', 'Approved', 'Production', 'Rejected'];
+  const STATUS_VARIANT: Record<LotStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+    'Approved': 'default', 'Production': 'secondary', 'In Approval': 'outline', 'Rejected': 'destructive',
+  };
+  const handleToggleStatus = async () => {
+    const idx = STATUS_CYCLE.indexOf(lot.status);
+    const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+    await updateLotStatus(lot.lot_no, next);
+    toast.success(`Lot ${lot.lot_no} → ${next}`);
   };
 
   const handleStepSubmit = async (data: Parameters<typeof addProcessStep>[1]) => {
