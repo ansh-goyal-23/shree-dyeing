@@ -39,7 +39,11 @@ const ProcessStepList: React.FC<Props> = ({ steps, stepDyes, stepChemicals, mast
 
   const getDyesForStep = (stepId: string) => stepDyes.filter(d => d.step_id === stepId);
   const getChemsForStep = (stepId: string) => stepChemicals.filter(c => c.step_id === stepId);
-  const getName = (id: string) => masterItems.find(m => m.id === id)?.name || '—';
+  const getName = (id: string) => {
+    const item = masterItems.find(m => m.id === id);
+    if (!item) return '—';
+    return item.type === 'dye' && item.short_name ? `${item.short_name} (${item.name})` : item.name;
+  };
   const getUnit = (id: string) => masterItems.find(m => m.id === id)?.unit || '—';
 
   return (
