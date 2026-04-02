@@ -149,9 +149,35 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Dyes</h3>
           {!readOnly && (
-            <button onClick={addDye} className="inline-flex items-center gap-1 text-sm text-primary hover:underline btn-transition">
-              <Plus className="w-3 h-3" /> Add Dye
-            </button>
+            <div className="flex items-center gap-2">
+              {prevDyes && (
+                <Button variant="outline" size="sm" onClick={undoReduction} className="gap-1 text-xs">
+                  <Undo2 className="w-3 h-3" /> Undo
+                </Button>
+              )}
+              {localDyes.length > 0 && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-1 text-xs">
+                      <Percent className="w-3 h-3" /> Reduce 10%
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Reduce dye percentages?</AlertDialogTitle>
+                      <AlertDialogDescription>Apply 10% reduction to all dye percentages? This can be undone.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={applyReduction}>Yes, Apply</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+              <button onClick={addDye} className="inline-flex items-center gap-1 text-sm text-primary hover:underline btn-transition">
+                <Plus className="w-3 h-3" /> Add Dye
+              </button>
+            </div>
           )}
         </div>
         {localDyes.length === 0 ? (
