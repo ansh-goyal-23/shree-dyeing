@@ -8,7 +8,7 @@ import ProcessStepForm from '@/components/ProcessStepForm';
 import ProcessStepList from '@/components/ProcessStepList';
 import LotPhotos from '@/components/LotPhotos';
 import { useOrdersForLot } from '@/hooks/useSampling';
-import { CheckCircle2, Clock, Plus, ArrowLeft, ShoppingCart, Trash2, Pencil, Save, X } from 'lucide-react';
+import { Search, CheckCircle2, Clock, Plus, ArrowLeft, ShoppingCart, Trash2, Pencil, Save, X, XCircle, Factory, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
