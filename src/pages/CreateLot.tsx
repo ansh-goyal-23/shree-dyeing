@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import LotFieldAutocomplete from '@/components/LotFieldAutocomplete';
 import DecimalInput from '@/components/DecimalInput';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
 
 const CreateLot: React.FC = () => {
   const { addLot, lots, getDyesForLot, getChemicalsForLot, updateRecipeDyes, updateRecipeChemicals, masterItems } = useApp();
