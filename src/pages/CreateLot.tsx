@@ -247,7 +247,7 @@ const CreateLot: React.FC = () => {
           </div>
         </div>
 
-
+        <div className="flex justify-end gap-3 pt-2">
           <button
             type="button"
             onClick={() => navigate('/shade-management/lots')}
