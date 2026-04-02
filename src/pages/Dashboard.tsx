@@ -5,15 +5,16 @@ import { PlusCircle, CheckCircle2, Clock, Database, ArrowRight } from 'lucide-re
 
 const Dashboard: React.FC = () => {
   const { lots, masterItems } = useApp();
-  const approvedCount = lots.filter(l => l.is_approved).length;
-  const draftCount = lots.filter(l => !l.is_approved).length;
+  const approvedCount = lots.filter(l => l.status === 'Approved').length;
+  const productionCount = lots.filter(l => l.status === 'Production').length;
+  const inApprovalCount = lots.filter(l => l.status === 'In Approval').length;
   const recentLots = [...lots].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8);
 
   const stats = [
     { label: 'Total Lots', value: lots.length, icon: Database, color: 'text-foreground' },
     { label: 'Approved', value: approvedCount, icon: CheckCircle2, color: 'text-approved' },
-    { label: 'Draft', value: draftCount, icon: Clock, color: 'text-correction' },
-    { label: 'Master Items', value: masterItems.length, icon: Database, color: 'text-muted-foreground' },
+    { label: 'Production', value: productionCount, icon: Database, color: 'text-primary' },
+    { label: 'In Approval', value: inApprovalCount, icon: Clock, color: 'text-correction' },
   ];
 
   return (
@@ -70,13 +71,13 @@ const Dashboard: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="font-data text-sm">{lot.net_weight} kg</span>
-                  {lot.is_approved ? (
+                  {lot.status === 'Approved' ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-approved/10 text-approved rounded">
                       <CheckCircle2 className="w-3 h-3" /> Approved
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-correction/10 text-correction rounded">
-                      <Clock className="w-3 h-3" /> Draft
+                      <Clock className="w-3 h-3" /> {lot.status}
                     </span>
                   )}
                 </div>

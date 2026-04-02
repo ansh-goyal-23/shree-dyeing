@@ -8,7 +8,9 @@ import ProcessStepForm from '@/components/ProcessStepForm';
 import ProcessStepList from '@/components/ProcessStepList';
 import LotPhotos from '@/components/LotPhotos';
 import { useOrdersForLot } from '@/hooks/useSampling';
-import { CheckCircle2, Clock, Plus, ArrowLeft, ShoppingCart, Trash2, Pencil, Save, X } from 'lucide-react';
+import type { LotStatus } from '@/types';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Search, CheckCircle2, Clock, Plus, ArrowLeft, ShoppingCart, Trash2, Pencil, Save, X, XCircle, Factory, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,7 +21,7 @@ const LotDetail: React.FC = () => {
   const { lotNo } = useParams<{ lotNo: string }>();
   const navigate = useNavigate();
   const {
-    getLot, deleteLot, approveLot, unapproveLot, updateLot, masterItems,
+    getLot, deleteLot, updateLotStatus, approveLot, unapproveLot, updateLot, masterItems,
     getLotsReferencingSource, addProcessStep, updateProcessStep, deleteProcessStep,
     getProcessStepsForLot, stepDyes, stepChemicals, getDyesForLot, getChemicalsForLot,
   } = useApp();
@@ -70,14 +72,9 @@ const LotDetail: React.FC = () => {
   const referencingLots = getLotsReferencingSource(lot.lot_no);
   const processSteps = getProcessStepsForLot(lot.lot_no);
 
-  const handleApprove = async () => {
-    await approveLot(lot.lot_no);
-    toast.success(`Lot ${lot.lot_no} approved.`);
-  };
-
-  const handleUnapprove = async () => {
-    await unapproveLot(lot.lot_no);
-    toast.info(`Lot ${lot.lot_no} un-approved.`);
+  const handleStatusChange = async (status: LotStatus) => {
+    await updateLotStatus(lot.lot_no, status);
+    toast.success(`Lot ${lot.lot_no} status changed to ${status}.`);
   };
 
   const handleStepSubmit = async (data: Parameters<typeof addProcessStep>[1]) => {
@@ -98,26 +95,38 @@ const LotDetail: React.FC = () => {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
             <span className="font-mono text-2xl font-bold">{lot.lot_no}</span>
-            {lot.is_approved ? (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-approved/10 text-approved rounded">
-                <CheckCircle2 className="w-3 h-3" /> Approved
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-correction/10 text-correction rounded">
-                <Clock className="w-3 h-3" /> Draft
-              </span>
-            )}
+            {(() => {
+              const STATUS_CONFIG: Record<LotStatus, { icon: React.ElementType; className: string }> = {
+                'Approved': { icon: CheckCircle2, className: 'bg-approved/10 text-approved' },
+                'Rejected': { icon: XCircle, className: 'bg-destructive/10 text-destructive' },
+                'Production': { icon: Factory, className: 'bg-primary/10 text-primary' },
+                'In Approval': { icon: Clock, className: 'bg-correction/10 text-correction' },
+              };
+              const config = STATUS_CONFIG[lot.status] || STATUS_CONFIG['In Approval'];
+              const Icon = config.icon;
+              return (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded cursor-pointer hover:opacity-80 btn-transition ${config.className}`}>
+                      <Icon className="w-3 h-3" /> {lot.status} <ChevronDown className="w-3 h-3 ml-0.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {(['Approved', 'Rejected', 'Production', 'In Approval'] as LotStatus[]).map(s => {
+                      const sc = STATUS_CONFIG[s];
+                      const SIcon = sc.icon;
+                      return (
+                        <DropdownMenuItem key={s} onClick={() => handleStatusChange(s)} className={lot.status === s ? 'font-semibold' : ''}>
+                          <SIcon className={`w-3.5 h-3.5 mr-2 ${sc.className.split(' ').pop()}`} /> {s}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              );
+            })()}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {lot.is_approved ? (
-              <button onClick={handleUnapprove} className="px-4 h-11 border border-correction text-correction rounded-md text-sm font-medium btn-transition hover:bg-correction/10 focus-ring">
-                Un-approve
-              </button>
-            ) : (
-              <button onClick={handleApprove} className="px-4 h-11 bg-approved text-approved-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 focus-ring">
-                Mark as Approved
-              </button>
-            )}
             <button onClick={() => setShowStepForm(true)} className="px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring inline-flex items-center gap-2">
               <Plus className="w-4 h-4" /> Add Process Step
             </button>

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import type { Lot, RecipeDye, RecipeChemical, MasterItem, ProcessStep, StepDye, StepChemical, ProcessStepType } from '@/types';
+import type { Lot, LotStatus, RecipeDye, RecipeChemical, MasterItem, ProcessStep, StepDye, StepChemical, ProcessStepType } from '@/types';
 import { calculateNetWeight } from '@/lib/calculations';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
@@ -16,9 +16,10 @@ interface AppState {
 }
 
 interface AppContextType extends AppState {
-  addLot: (lot: Omit<Lot, 'net_weight' | 'is_approved'>) => Promise<boolean>;
-  updateLot: (lotNo: string, data: Partial<Omit<Lot, 'lot_no' | 'net_weight' | 'is_approved'>>) => Promise<boolean>;
+  addLot: (lot: Omit<Lot, 'net_weight' | 'is_approved' | 'status'>) => Promise<boolean>;
+  updateLot: (lotNo: string, data: Partial<Omit<Lot, 'lot_no' | 'net_weight' | 'is_approved' | 'status'>>) => Promise<boolean>;
   deleteLot: (lotNo: string) => Promise<boolean>;
+  updateLotStatus: (lotNo: string, status: LotStatus) => Promise<void>;
   approveLot: (lotNo: string) => Promise<void>;
   unapproveLot: (lotNo: string) => Promise<void>;
   updateRecipeDyes: (lotNo: string, dyes: RecipeDye[]) => Promise<void>;
@@ -90,14 +91,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const addLot = useCallback(async (lotData: Omit<Lot, 'net_weight' | 'is_approved'>): Promise<boolean> => {
+  const addLot = useCallback(async (lotData: Omit<Lot, 'net_weight' | 'is_approved' | 'status'>): Promise<boolean> => {
     const net_weight = calculateNetWeight(lotData.gross_weight, lotData.number_of_chesses);
     const shade_number = lotData.shade_number?.trim() || lotData.lot_no;
+    const isProduction = shade_number !== lotData.lot_no;
+    const status = isProduction ? 'Production' : 'In Approval';
     const { error: lotErr } = await supabase.from('lots').insert({
       lot_no: lotData.lot_no, date: lotData.date, yarn_company_name: lotData.yarn_company_name,
       color_name: lotData.color_name, denier: lotData.denier, number_of_chesses: lotData.number_of_chesses,
       gross_weight: lotData.gross_weight, net_weight, is_approved: false,
-      shade_number, source_lot_no: lotData.source_lot_no || null,
+      shade_number, source_lot_no: lotData.source_lot_no || null, status,
     });
     if (lotErr) return false;
     await fetchAll();
@@ -127,7 +130,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   }, [fetchAll]);
 
-  const updateLot = useCallback(async (lotNo: string, data: Partial<Omit<Lot, 'lot_no' | 'net_weight' | 'is_approved'>>): Promise<boolean> => {
+  const updateLot = useCallback(async (lotNo: string, data: Partial<Omit<Lot, 'lot_no' | 'net_weight' | 'is_approved' | 'status'>>): Promise<boolean> => {
     const lot = state.lots.find(l => l.lot_no === lotNo);
     if (!lot) return false;
     const grossWeight = data.gross_weight ?? lot.gross_weight;
@@ -139,13 +142,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   }, [state.lots, fetchAll]);
 
+  const updateLotStatus = useCallback(async (lotNo: string, status: LotStatus) => {
+    const isApproved = status === 'Approved';
+    await supabase.from('lots').update({ status, is_approved: isApproved }).eq('lot_no', lotNo);
+    await fetchAll();
+  }, [fetchAll]);
+
   const approveLot = useCallback(async (lotNo: string) => {
-    await supabase.from('lots').update({ is_approved: true }).eq('lot_no', lotNo);
+    await supabase.from('lots').update({ is_approved: true, status: 'Approved' }).eq('lot_no', lotNo);
     await fetchAll();
   }, [fetchAll]);
 
   const unapproveLot = useCallback(async (lotNo: string) => {
-    await supabase.from('lots').update({ is_approved: false }).eq('lot_no', lotNo);
+    await supabase.from('lots').update({ is_approved: false, status: 'In Approval' }).eq('lot_no', lotNo);
     await fetchAll();
   }, [fetchAll]);
 
@@ -239,7 +248,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const getLot = useCallback((lotNo: string) => state.lots.find(l => l.lot_no === lotNo), [state.lots]);
   const getDyesForLot = useCallback((lotNo: string) => state.recipeDyes.filter(d => d.lot_no === lotNo), [state.recipeDyes]);
   const getChemicalsForLot = useCallback((lotNo: string) => state.recipeChemicals.filter(c => c.lot_no === lotNo), [state.recipeChemicals]);
-  const getApprovedLots = useCallback(() => state.lots.filter(l => l.is_approved), [state.lots]);
+  const getApprovedLots = useCallback(() => state.lots.filter(l => l.status === 'Approved'), [state.lots]);
   const getLotsReferencingSource = useCallback((lotNo: string) => state.lots.filter(l => l.source_lot_no === lotNo), [state.lots]);
   const getProcessStepsForLot = useCallback((lotNo: string) => state.processSteps.filter(s => s.lot_no === lotNo).sort((a, b) => a.step_number - b.step_number), [state.processSteps]);
   const getStepDyes = useCallback((stepId: string) => state.stepDyes.filter(d => d.step_id === stepId), [state.stepDyes]);
@@ -247,7 +256,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      ...state, addLot, updateLot, deleteLot, approveLot, unapproveLot, updateRecipeDyes, updateRecipeChemicals,
+      ...state, addLot, updateLot, deleteLot, updateLotStatus, approveLot, unapproveLot, updateRecipeDyes, updateRecipeChemicals,
       addMasterItem, updateMasterItem, addProcessStep, updateProcessStep, deleteProcessStep, getLot, getDyesForLot,
       getChemicalsForLot, getApprovedLots, getLotsReferencingSource,
       getProcessStepsForLot, getStepDyes, getStepChemicals,
@@ -269,6 +278,7 @@ const mapLot = (row: any): Lot => ({
   color_name: row.color_name || '', denier: row.denier || '',
   number_of_chesses: Number(row.number_of_chesses) || 0, gross_weight: Number(row.gross_weight) || 0,
   net_weight: Number(row.net_weight) || 0, is_approved: row.is_approved || false,
+  status: row.status || (row.is_approved ? 'Approved' : 'In Approval'),
   shade_number: row.shade_number || row.lot_no, source_lot_no: row.source_lot_no || null,
 });
 
