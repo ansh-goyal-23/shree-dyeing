@@ -144,7 +144,8 @@ const MasterData: React.FC = () => {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-secondary/50">
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Name</th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Short Name</th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Full Name</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Type</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Unit</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Shade Family</th>
@@ -155,11 +156,12 @@ const MasterData: React.FC = () => {
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">No items found.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">No items found.</td></tr>
             ) : (
               filtered.map(item => (
                 <tr key={item.id} className="row-separator hover:bg-secondary/30 btn-transition">
-                  <td className="px-4 py-3 font-medium">{item.name}</td>
+                  <td className="px-4 py-3 font-semibold">{item.short_name || '—'}</td>
+                  <td className="px-4 py-3">{item.name}</td>
                   <td className="px-4 py-3 capitalize">{item.type}</td>
                   <td className="px-4 py-3">{item.unit}</td>
                   <td className="px-4 py-3">{item.shade_family || '—'}</td>
