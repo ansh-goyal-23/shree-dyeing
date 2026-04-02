@@ -39,6 +39,8 @@ export interface RecipeChemical {
   ph_value: number | null;
 }
 
+export type LotStatus = 'Approved' | 'Rejected' | 'Production' | 'In Approval';
+
 export type ProcessStepType = 'Color Addition' | 'RC' | 'Leveling';
 
 export interface ProcessStep {
