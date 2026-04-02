@@ -248,7 +248,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const getLot = useCallback((lotNo: string) => state.lots.find(l => l.lot_no === lotNo), [state.lots]);
   const getDyesForLot = useCallback((lotNo: string) => state.recipeDyes.filter(d => d.lot_no === lotNo), [state.recipeDyes]);
   const getChemicalsForLot = useCallback((lotNo: string) => state.recipeChemicals.filter(c => c.lot_no === lotNo), [state.recipeChemicals]);
-  const getApprovedLots = useCallback(() => state.lots.filter(l => l.is_approved), [state.lots]);
+  const getApprovedLots = useCallback(() => state.lots.filter(l => l.status === 'Approved'), [state.lots]);
   const getLotsReferencingSource = useCallback((lotNo: string) => state.lots.filter(l => l.source_lot_no === lotNo), [state.lots]);
   const getProcessStepsForLot = useCallback((lotNo: string) => state.processSteps.filter(s => s.lot_no === lotNo).sort((a, b) => a.step_number - b.step_number), [state.processSteps]);
   const getStepDyes = useCallback((stepId: string) => state.stepDyes.filter(d => d.step_id === stepId), [state.stepDyes]);
