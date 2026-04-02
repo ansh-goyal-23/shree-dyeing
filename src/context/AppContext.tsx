@@ -130,7 +130,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   }, [fetchAll]);
 
-  const updateLot = useCallback(async (lotNo: string, data: Partial<Omit<Lot, 'lot_no' | 'net_weight' | 'is_approved'>>): Promise<boolean> => {
+  const updateLot = useCallback(async (lotNo: string, data: Partial<Omit<Lot, 'lot_no' | 'net_weight' | 'is_approved' | 'status'>>): Promise<boolean> => {
     const lot = state.lots.find(l => l.lot_no === lotNo);
     if (!lot) return false;
     const grossWeight = data.gross_weight ?? lot.gross_weight;
