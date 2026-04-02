@@ -51,6 +51,24 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
   const [localDyes, setLocalDyes] = useState<RecipeDye[]>(dyes);
   const [localChemicals, setLocalChemicals] = useState<RecipeChemical[]>(initialChemicals);
   const [dirty, setDirty] = useState(false);
+  const [prevDyes, setPrevDyes] = useState<RecipeDye[] | null>(null);
+
+  const applyReduction = () => {
+    setPrevDyes([...localDyes]);
+    setLocalDyes(prev => prev.map(dye => {
+      const newPct = parseFloat((dye.percentage * 0.90).toFixed(6));
+      return { ...dye, percentage: newPct, qty_grams: calculateDyeGrams(newPct, netWeight) };
+    }));
+    setDirty(true);
+  };
+
+  const undoReduction = () => {
+    if (prevDyes) {
+      setLocalDyes(prevDyes);
+      setPrevDyes(null);
+      setDirty(true);
+    }
+  };
 
   const isBufChemical = (chemicalId: string) => {
     const item = masterItems.find(m => m.id === chemicalId);
