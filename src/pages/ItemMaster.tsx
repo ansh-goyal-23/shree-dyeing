@@ -103,6 +103,7 @@ const ItemMaster: React.FC = () => {
       setForm(f => ({ ...f, category_id: created.id }));
       setNewCatName('');
       setCatDialogOpen(false);
+      setDialogOpen(true);
       toast.success('Category added');
     } catch (e: any) {
       toast.error(`Failed: ${e?.message || 'Unknown error'}`);
