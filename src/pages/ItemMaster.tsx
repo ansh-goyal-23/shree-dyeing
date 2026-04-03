@@ -243,7 +243,7 @@ const ItemMaster: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button type="button" variant="outline" size="icon" onClick={() => setCatDialogOpen(true)}>
+                <Button type="button" variant="outline" size="icon" onClick={() => { setDialogOpen(false); setCatDialogOpen(true); }}>
                   <PlusCircle className="h-4 w-4" />
                 </Button>
               </div>
