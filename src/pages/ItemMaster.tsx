@@ -116,6 +116,7 @@ const ItemMaster: React.FC = () => {
       setForm(f => ({ ...f, company_id: created.id }));
       setNewCompanyName('');
       setCompanyDialogOpen(false);
+      setDialogOpen(true);
       toast.success('Company added');
     } catch (e: any) {
       toast.error(`Failed: ${e?.message || 'Unknown error'}`);
