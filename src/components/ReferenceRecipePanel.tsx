@@ -8,7 +8,7 @@ interface ReferenceRecipePanelProps {
 
 const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotNo }) => {
   const { lots, getDyesForLot, masterItems } = useApp();
-  const [selectedLot, setSelectedLot] = useState('');
+  const [selectedLot, setSelectedLot] = useState(defaultLotNo || '');
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const wrapperRef = React.useRef<HTMLDivElement>(null);
