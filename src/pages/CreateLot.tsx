@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import LotFieldAutocomplete from '@/components/LotFieldAutocomplete';
 import DecimalInput from '@/components/DecimalInput';
+import ReferenceRecipePanel from '@/components/ReferenceRecipePanel';
 
 
 const CreateLot: React.FC = () => {
@@ -138,6 +139,8 @@ const CreateLot: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Create Lot</h1>
+
+      <ReferenceRecipePanel />
 
       <form onSubmit={handleSubmit} className="card-industrial p-6 space-y-5">
         {/* Row 1: Lot No + Shade Number */}
