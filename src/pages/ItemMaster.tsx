@@ -283,7 +283,7 @@ const ItemMaster: React.FC = () => {
       </Dialog>
 
       {/* Add Category Dialog */}
-      <Dialog open={catDialogOpen} onOpenChange={setCatDialogOpen}>
+      <Dialog open={catDialogOpen} onOpenChange={v => { setCatDialogOpen(v); if (!v) setDialogOpen(true); }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Add Category</DialogTitle></DialogHeader>
           <div className="space-y-3">
