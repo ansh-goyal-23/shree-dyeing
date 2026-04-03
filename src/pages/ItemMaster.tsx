@@ -300,7 +300,7 @@ const ItemMaster: React.FC = () => {
       </Dialog>
 
       {/* Add Company Dialog */}
-      <Dialog open={companyDialogOpen} onOpenChange={setCompanyDialogOpen}>
+      <Dialog open={companyDialogOpen} onOpenChange={v => { setCompanyDialogOpen(v); if (!v) setDialogOpen(true); }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Add Company</DialogTitle></DialogHeader>
           <div className="space-y-3">
