@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import LotFieldAutocomplete from '@/components/LotFieldAutocomplete';
 import DecimalInput from '@/components/DecimalInput';
+import ReferenceRecipePanel from '@/components/ReferenceRecipePanel';
 
 
 const CreateLot: React.FC = () => {
