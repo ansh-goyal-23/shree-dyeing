@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ProcessStepForm from '@/components/ProcessStepForm';
 import ProcessStepList from '@/components/ProcessStepList';
 import LotPhotos from '@/components/LotPhotos';
+import ReferenceRecipePanel from '@/components/ReferenceRecipePanel';
 import { useOrdersForLot } from '@/hooks/useSampling';
 import type { LotStatus } from '@/types';
 import { Search, CheckCircle2, Clock, Plus, ArrowLeft, ShoppingCart, Trash2, Pencil, Save, X } from 'lucide-react';
