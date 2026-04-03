@@ -2,7 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { calculateNetWeight } from '@/lib/calculations';
 
-const ReferenceRecipePanel: React.FC = () => {
+interface ReferenceRecipePanelProps {
+  defaultLotNo?: string;
+}
+
+const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotNo }) => {
   const { lots, getDyesForLot, masterItems } = useApp();
   const [selectedLot, setSelectedLot] = useState('');
   const [search, setSearch] = useState('');
