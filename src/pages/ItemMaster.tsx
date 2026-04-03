@@ -103,6 +103,7 @@ const ItemMaster: React.FC = () => {
       setForm(f => ({ ...f, category_id: created.id }));
       setNewCatName('');
       setCatDialogOpen(false);
+      setDialogOpen(true);
       toast.success('Category added');
     } catch (e: any) {
       toast.error(`Failed: ${e?.message || 'Unknown error'}`);
@@ -116,6 +117,7 @@ const ItemMaster: React.FC = () => {
       setForm(f => ({ ...f, company_id: created.id }));
       setNewCompanyName('');
       setCompanyDialogOpen(false);
+      setDialogOpen(true);
       toast.success('Company added');
     } catch (e: any) {
       toast.error(`Failed: ${e?.message || 'Unknown error'}`);
@@ -215,7 +217,7 @@ const ItemMaster: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button type="button" variant="outline" size="icon" onClick={() => setCompanyDialogOpen(true)}>
+                <Button type="button" variant="outline" size="icon" onClick={() => { setDialogOpen(false); setCompanyDialogOpen(true); }}>
                   <PlusCircle className="h-4 w-4" />
                 </Button>
               </div>
@@ -241,7 +243,7 @@ const ItemMaster: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button type="button" variant="outline" size="icon" onClick={() => setCatDialogOpen(true)}>
+                <Button type="button" variant="outline" size="icon" onClick={() => { setDialogOpen(false); setCatDialogOpen(true); }}>
                   <PlusCircle className="h-4 w-4" />
                 </Button>
               </div>
@@ -281,7 +283,7 @@ const ItemMaster: React.FC = () => {
       </Dialog>
 
       {/* Add Category Dialog */}
-      <Dialog open={catDialogOpen} onOpenChange={setCatDialogOpen}>
+      <Dialog open={catDialogOpen} onOpenChange={v => { setCatDialogOpen(v); if (!v) setDialogOpen(true); }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Add Category</DialogTitle></DialogHeader>
           <div className="space-y-3">
@@ -298,7 +300,7 @@ const ItemMaster: React.FC = () => {
       </Dialog>
 
       {/* Add Company Dialog */}
-      <Dialog open={companyDialogOpen} onOpenChange={setCompanyDialogOpen}>
+      <Dialog open={companyDialogOpen} onOpenChange={v => { setCompanyDialogOpen(v); if (!v) setDialogOpen(true); }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Add Company</DialogTitle></DialogHeader>
           <div className="space-y-3">
