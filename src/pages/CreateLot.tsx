@@ -140,6 +140,8 @@ const CreateLot: React.FC = () => {
     <div className="max-w-2xl mx-auto space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Create Lot</h1>
 
+      <ReferenceRecipePanel />
+
       <form onSubmit={handleSubmit} className="card-industrial p-6 space-y-5">
         {/* Row 1: Lot No + Shade Number */}
         <div className="grid grid-cols-2 gap-4">
