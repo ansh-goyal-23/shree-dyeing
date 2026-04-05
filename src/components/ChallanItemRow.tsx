@@ -8,6 +8,7 @@ export interface ItemData {
   lot_no: string;
   shade_number: string;
   color_name: string;
+  denier: string;
   packaging_type: PackagingType;
   gross_weight: number;
   num_of_units: number;
@@ -40,6 +41,7 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, onCh
       lot_no: lotNo,
       shade_number: lot?.shade_number || '',
       color_name: lot?.color_name || '',
+      denier: lot?.denier || '',
     };
     onChange(index, updated);
   };
@@ -81,6 +83,7 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, onCh
       </td>
       <td className="p-2 text-sm text-muted-foreground">{item.shade_number}</td>
       <td className="p-2 text-sm text-muted-foreground">{item.color_name}</td>
+      <td className="p-2 text-sm text-muted-foreground">{item.denier}</td>
       <td className="p-2">
         <select value={item.packaging_type} onChange={e => handlePackagingChange(e.target.value as PackagingType)} className="input-industrial w-full text-sm">
           <option value="paper_tube">Paper Tube</option>
