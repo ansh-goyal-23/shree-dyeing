@@ -21,7 +21,6 @@ const CreateChallan: React.FC = () => {
   const createChallan = useCreateChallan();
   const { lots } = useApp();
   const { data: footerOptions } = useChallanFooterOptions();
-  const { data: clientRates = [] } = useClientRates(form.client_id || undefined);
 
   const preparedByOptions = footerOptions?.preparedByOptions || [];
   const receiverOptions = footerOptions?.receiverOptions || [];
