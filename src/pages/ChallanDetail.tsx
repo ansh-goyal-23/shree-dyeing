@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { PlusCircle, Loader2, Pencil, Trash2, ArrowLeft, Download, Share2 } from 'lucide-react';
 
 const emptyItem = (): ItemData => ({
-  lot_no: '', shade_number: '', color_name: '', packaging_type: 'paper_tube',
+  lot_no: '', shade_number: '', color_name: '', denier: '', packaging_type: 'paper_tube',
   gross_weight: 0, num_of_units: 0, net_weight: 0, rate: 0, amount: 0,
 });
 
@@ -53,6 +53,7 @@ const ChallanDetail: React.FC = () => {
     if (challanItems.length > 0) {
       setItems(challanItems.map(i => ({
         lot_no: i.lot_no, shade_number: i.shade_number, color_name: i.color_name,
+        denier: (i as any).denier || '',
         packaging_type: i.packaging_type, gross_weight: i.gross_weight,
         num_of_units: i.num_of_units, net_weight: i.net_weight, rate: i.rate, amount: i.amount,
       })));
