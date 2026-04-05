@@ -7,6 +7,7 @@ import ChallanItemRow from '@/components/ChallanItemRow';
 import type { ItemData } from '@/components/ChallanItemRow';
 import { toast } from 'sonner';
 import { useChallanFooterOptions } from '@/hooks/useChallanFooterOptions';
+import { useClientRates } from '@/hooks/useClientRates';
 import FooterAutocomplete from '@/components/FooterAutocomplete';
 import { PlusCircle, Loader2 } from 'lucide-react';
 
@@ -20,6 +21,7 @@ const CreateChallan: React.FC = () => {
   const createChallan = useCreateChallan();
   const { lots } = useApp();
   const { data: footerOptions } = useChallanFooterOptions();
+  const { data: clientRates = [] } = useClientRates(form.client_id || undefined);
 
   const preparedByOptions = footerOptions?.preparedByOptions || [];
   const receiverOptions = footerOptions?.receiverOptions || [];
@@ -143,7 +145,7 @@ const CreateChallan: React.FC = () => {
             </thead>
             <tbody>
               {items.map((item, i) => (
-                <ChallanItemRow key={i} index={i} item={item} lots={lots} onChange={updateItem} onRemove={removeItem} />
+                <ChallanItemRow key={i} index={i} item={item} lots={lots} clientId={form.client_id} clientRates={clientRates} onChange={updateItem} onRemove={removeItem} />
               ))}
             </tbody>
             <tfoot>

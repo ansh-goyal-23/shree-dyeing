@@ -6,6 +6,7 @@ import ClientSelect from '@/components/ClientSelect';
 import ChallanItemRow from '@/components/ChallanItemRow';
 import type { ItemData } from '@/components/ChallanItemRow';
 import { downloadChallanPdf, shareChallanPdf } from '@/lib/challanPdf';
+import { useClientRates } from '@/hooks/useClientRates';
 import { toast } from 'sonner';
 import { PlusCircle, Loader2, Pencil, Trash2, ArrowLeft, Download, Share2 } from 'lucide-react';
 
@@ -27,6 +28,8 @@ const ChallanDetail: React.FC = () => {
   const updateChallan = useUpdateChallan();
   const deleteChallan = useDeleteChallan();
   const { lots } = useApp();
+  const clientId = challan?.client_id || '';
+  const { data: clientRates = [] } = useClientRates(clientId || undefined);
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -220,7 +223,7 @@ const ChallanDetail: React.FC = () => {
           <tbody>
             {editing ? (
               items.map((item, i) => (
-                <ChallanItemRow key={i} index={i} item={item} lots={lots} onChange={updateItem} onRemove={removeItem} />
+                <ChallanItemRow key={i} index={i} item={item} lots={lots} clientId={clientId} clientRates={clientRates} onChange={updateItem} onRemove={removeItem} />
               ))
             ) : (
               (challanItems.length === 0 ? (
