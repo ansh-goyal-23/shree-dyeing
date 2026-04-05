@@ -206,8 +206,9 @@ const ChallanDetail: React.FC = () => {
             <tr className="border-b border-border text-left text-muted-foreground">
               <th className="p-2 font-medium">Lot No</th>
               <th className="p-2 font-medium">Shade #</th>
-              <th className="p-2 font-medium">Color</th>
-              <th className="p-2 font-medium">Packaging</th>
+               <th className="p-2 font-medium">Color</th>
+               <th className="p-2 font-medium">Denier</th>
+               <th className="p-2 font-medium">Packaging</th>
               <th className="p-2 font-medium">Gross Wt (kg)</th>
               <th className="p-2 font-medium">Units</th>
               <th className="p-2 font-medium">Net Wt (kg)</th>
@@ -223,7 +224,7 @@ const ChallanDetail: React.FC = () => {
               ))
             ) : (
               (challanItems.length === 0 ? (
-                <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">No items.</td></tr>
+                <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">No items.</td></tr>
               ) : challanItems.map(item => (
                 <tr key={item.id} className="border-b border-border">
                   <td className="p-2 font-medium">
@@ -231,6 +232,7 @@ const ChallanDetail: React.FC = () => {
                   </td>
                   <td className="p-2">{item.shade_number}</td>
                   <td className="p-2">{item.color_name}</td>
+                  <td className="p-2">{(item as any).denier || lots.find(l => l.lot_no === item.lot_no)?.denier || ''}</td>
                   <td className="p-2">{PACKAGING_LABEL[item.packaging_type] || item.packaging_type}</td>
                   <td className="p-2">{item.gross_weight.toFixed(3)}</td>
                   <td className="p-2">{item.num_of_units}</td>
@@ -243,7 +245,7 @@ const ChallanDetail: React.FC = () => {
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-border font-semibold">
-              <td colSpan={6} className="p-3 text-right">Totals:</td>
+              <td colSpan={7} className="p-3 text-right">Totals:</td>
               <td className="p-3">{totalNetWeight.toFixed(3)} kg</td>
               <td className="p-3"></td>
               <td className="p-3">₹{totalAmount.toFixed(2)}</td>
