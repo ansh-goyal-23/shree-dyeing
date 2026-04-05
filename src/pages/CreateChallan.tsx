@@ -43,6 +43,7 @@ const CreateChallan: React.FC = () => {
     receiver_contact_number: '',
   });
   const [items, setItems] = useState<ItemData[]>([emptyItem()]);
+  const { data: clientRates = [] } = useClientRates(form.client_id || undefined);
 
   const updateItem = (index: number, updated: ItemData) => {
     setItems(prev => prev.map((it, i) => i === index ? updated : it));
