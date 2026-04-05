@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react';
 import DecimalInput from '@/components/DecimalInput';
 import type { Lot } from '@/types';
 import type { PackagingType } from '@/types/challan';
+import { lookupRate, type ClientRate } from '@/hooks/useClientRates';
 
 export interface ItemData {
   lot_no: string;
@@ -21,6 +22,8 @@ interface ChallanItemRowProps {
   index: number;
   item: ItemData;
   lots: Lot[];
+  clientId: string;
+  clientRates: ClientRate[];
   onChange: (index: number, updated: ItemData) => void;
   onRemove: (index: number) => void;
 }
@@ -33,15 +36,27 @@ const DEDUCTION: Record<PackagingType, number> = {
 const calcNet = (gross: number, units: number, type: PackagingType) =>
   parseFloat((gross - DEDUCTION[type] * units).toFixed(3));
 
-const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, onChange, onRemove }) => {
+const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, clientId, clientRates, onChange, onRemove }) => {
   const handleLotChange = (lotNo: string) => {
     const lot = lots.find(l => l.lot_no === lotNo);
+    const denier = lot?.denier || '';
+    const lotStatus = lot?.status || '';
+
+    // Auto-lookup rate
+    let autoRate = item.rate;
+    if (clientId && denier) {
+      const found = lookupRate(clientRates, clientId, denier, lotStatus);
+      if (found !== null) autoRate = found;
+    }
+
     const updated: ItemData = {
       ...item,
       lot_no: lotNo,
       shade_number: lot?.shade_number || '',
       color_name: lot?.color_name || '',
-      denier: lot?.denier || '',
+      denier,
+      rate: autoRate,
+      amount: parseFloat((item.net_weight * autoRate).toFixed(2)),
     };
     onChange(index, updated);
   };

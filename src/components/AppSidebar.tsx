@@ -11,6 +11,7 @@ import {
   ClipboardList,
   ShoppingCart,
   Upload,
+  IndianRupee,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
@@ -42,6 +43,7 @@ const samplingItems = [
 const dispatchItems = [
   { title: 'All Challans', url: '/dispatch', icon: Truck },
   { title: 'New Challan', url: '/dispatch/create', icon: PlusCircle },
+  { title: 'Client Rates', url: '/dispatch/client-rates', icon: IndianRupee },
 ];
 
 const expenseItems = [

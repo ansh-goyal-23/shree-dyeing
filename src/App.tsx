@@ -13,6 +13,7 @@ import MasterData from "@/pages/MasterData";
 import PlaceholderModule from "@/pages/PlaceholderModule";
 import ChallanList from "@/pages/ChallanList";
 import CreateChallan from "@/pages/CreateChallan";
+import ClientRateMaster from "@/pages/ClientRateMaster";
 import ChallanDetail from "@/pages/ChallanDetail";
 import IntakeList from "@/pages/IntakeList";
 import CreateIntake from "@/pages/CreateIntake";
@@ -72,6 +73,7 @@ const App = () => (
                       <Route path="/expenses/create" element={<ExpenseCreatePage />} />
                       <Route path="/dispatch" element={<ChallanList />} />
                       <Route path="/dispatch/create" element={<CreateChallan />} />
+                      <Route path="/dispatch/client-rates" element={<ClientRateMaster />} />
                       <Route path="/dispatch/:id" element={<ChallanDetail />} />
                       <Route path="/item-master" element={<ItemMaster />} />
                       <Route path="/inventory" element={<InventoryList />} />
