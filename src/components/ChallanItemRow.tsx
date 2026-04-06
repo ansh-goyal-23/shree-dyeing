@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Trash2 } from 'lucide-react';
 import DecimalInput from '@/components/DecimalInput';
 import type { Lot } from '@/types';
@@ -30,6 +30,52 @@ interface ChallanItemRowProps {
   onChange: (index: number, updated: ItemData) => void;
   onRemove: (index: number) => void;
 }
+
+const LotSearchDropdown: React.FC<{ value: string; lots: Lot[]; onChange: (v: string) => void }> = ({ value, lots, onChange }) => {
+  const [search, setSearch] = useState(value);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setSearch(value); }, [value]);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const sorted = useMemo(() =>
+    [...lots].sort((a, b) => {
+      const na = parseFloat(a.lot_no) || 0, nb = parseFloat(b.lot_no) || 0;
+      return nb - na;
+    }), [lots]);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return sorted;
+    const q = search.toLowerCase().trim();
+    return sorted.filter(l => l.lot_no.toLowerCase().includes(q));
+  }, [sorted, search]);
+
+  return (
+    <div ref={ref} className="relative">
+      <input type="text" value={search}
+        onChange={e => { setSearch(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        className="input-industrial w-full text-sm" placeholder="Search lot..." />
+      {open && filtered.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-40 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+          {filtered.map(l => (
+            <button key={l.lot_no} type="button" onMouseDown={e => e.preventDefault()}
+              onClick={() => { onChange(l.lot_no); setSearch(l.lot_no); setOpen(false); }}
+              className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground btn-transition">
+              {l.lot_no}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const DEDUCTION: Record<PackagingType, number> = {
   paper_tube: 0.12,
@@ -106,10 +152,7 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, clie
   return (
     <tr className="border-b border-border hover:bg-secondary/30">
       <td className="p-2">
-        <select value={item.lot_no} onChange={e => handleLotChange(e.target.value)} className="input-industrial w-full text-sm">
-          <option value="">Select lot...</option>
-          {lots.map(l => <option key={l.lot_no} value={l.lot_no}>{l.lot_no}</option>)}
-        </select>
+        <LotSearchDropdown value={item.lot_no} lots={lots} onChange={handleLotChange} />
       </td>
       <td className="p-2 text-sm text-muted-foreground">{item.shade_number}</td>
       <td className="p-2 text-sm text-muted-foreground">{item.color_name}</td>
