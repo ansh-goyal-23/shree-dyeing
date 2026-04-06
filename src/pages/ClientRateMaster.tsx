@@ -5,6 +5,12 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Check } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 
+const YARN_TYPE_OPTIONS = [
+  '150D', '75D', '100D', '200D', '250D', '300D',
+  '75/2 HB', '150/2 HB', '100/2 HB',
+  '75/36', '150/48', '100/36',
+];
+
 const ClientRateMaster: React.FC = () => {
   const { data: clients = [] } = useClients();
   const { data: rates = [], isLoading } = useAllClientRates();
@@ -99,9 +105,14 @@ const ClientRateMaster: React.FC = () => {
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Yarn Type *</label>
-              <input type="text" value={form.yarn_type}
-                onChange={e => setForm(f => ({ ...f, yarn_type: e.target.value }))}
-                className="input-industrial w-full" placeholder="e.g. 150D, 75/2 HB" />
+              <div className="relative">
+                <input type="text" list="yarn-type-list" value={form.yarn_type}
+                  onChange={e => setForm(f => ({ ...f, yarn_type: e.target.value }))}
+                  className="input-industrial w-full" placeholder="Select or type yarn type" />
+                <datalist id="yarn-type-list">
+                  {YARN_TYPE_OPTIONS.map(yt => <option key={yt} value={yt} />)}
+                </datalist>
+              </div>
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Sampling Rate (₹/kg)</label>
