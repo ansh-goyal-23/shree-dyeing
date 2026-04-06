@@ -13,7 +13,7 @@ import { PlusCircle, Loader2 } from 'lucide-react';
 
 const emptyItem = (): ItemData => ({
   lot_no: '', shade_number: '', color_name: '', denier: '', packaging_type: 'paper_tube',
-  gross_weight: 0, num_of_units: 0, net_weight: 0, rate: 0, amount: 0,
+  gross_weight: 0, num_of_units: 0, net_weight: 0, rate: 0, amount: 0, lot_type: 'Production',
 });
 
 const CreateChallan: React.FC = () => {
@@ -134,6 +134,7 @@ const CreateChallan: React.FC = () => {
                 <th className="p-2 font-medium">Shade #</th>
                 <th className="p-2 font-medium">Color</th>
                 <th className="p-2 font-medium">Denier</th>
+                <th className="p-2 font-medium">Type</th>
                 <th className="p-2 font-medium">Packaging</th>
                 <th className="p-2 font-medium">Gross Wt (kg)</th>
                 <th className="p-2 font-medium">Units</th>
@@ -150,7 +151,7 @@ const CreateChallan: React.FC = () => {
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-border font-semibold">
-                <td colSpan={7} className="p-3 text-right">Totals:</td>
+                <td colSpan={8} className="p-3 text-right">Totals:</td>
                 <td className="p-3">{totalNetWeight.toFixed(3)} kg</td>
                 <td className="p-3"></td>
                 <td className="p-3">₹{totalAmount.toFixed(2)}</td>
