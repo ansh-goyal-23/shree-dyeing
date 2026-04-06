@@ -5,6 +5,8 @@ import type { Lot } from '@/types';
 import type { PackagingType } from '@/types/challan';
 import { lookupRate, type ClientRate } from '@/hooks/useClientRates';
 
+export type LotType = 'Production' | 'Sampling';
+
 export interface ItemData {
   lot_no: string;
   shade_number: string;
@@ -16,6 +18,7 @@ export interface ItemData {
   net_weight: number;
   rate: number;
   amount: number;
+  lot_type: LotType;
 }
 
 interface ChallanItemRowProps {
@@ -37,17 +40,18 @@ const calcNet = (gross: number, units: number, type: PackagingType) =>
   parseFloat((gross - DEDUCTION[type] * units).toFixed(3));
 
 const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, clientId, clientRates, onChange, onRemove }) => {
+  const resolveRate = (denier: string, lotType: LotType, currentRate: number) => {
+    if (clientId && denier) {
+      const found = lookupRate(clientRates, clientId, denier, lotType);
+      if (found !== null) return found;
+    }
+    return currentRate;
+  };
+
   const handleLotChange = (lotNo: string) => {
     const lot = lots.find(l => l.lot_no === lotNo);
     const denier = lot?.denier || '';
-    const lotStatus = lot?.status || '';
-
-    // Auto-lookup rate
-    let autoRate = item.rate;
-    if (clientId && denier) {
-      const found = lookupRate(clientRates, clientId, denier, lotStatus);
-      if (found !== null) autoRate = found;
-    }
+    const autoRate = resolveRate(denier, item.lot_type, item.rate);
 
     const updated: ItemData = {
       ...item,
@@ -55,6 +59,17 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, clie
       shade_number: lot?.shade_number || '',
       color_name: lot?.color_name || '',
       denier,
+      rate: autoRate,
+      amount: parseFloat((item.net_weight * autoRate).toFixed(2)),
+    };
+    onChange(index, updated);
+  };
+
+  const handleLotTypeChange = (lotType: LotType) => {
+    const autoRate = resolveRate(item.denier, lotType, item.rate);
+    const updated: ItemData = {
+      ...item,
+      lot_type: lotType,
       rate: autoRate,
       amount: parseFloat((item.net_weight * autoRate).toFixed(2)),
     };
@@ -99,6 +114,12 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, clie
       <td className="p-2 text-sm text-muted-foreground">{item.shade_number}</td>
       <td className="p-2 text-sm text-muted-foreground">{item.color_name}</td>
       <td className="p-2 text-sm text-muted-foreground">{item.denier}</td>
+      <td className="p-2">
+        <select value={item.lot_type} onChange={e => handleLotTypeChange(e.target.value as LotType)} className="input-industrial w-full text-sm">
+          <option value="Production">Production</option>
+          <option value="Sampling">Sampling</option>
+        </select>
+      </td>
       <td className="p-2">
         <select value={item.packaging_type} onChange={e => handlePackagingChange(e.target.value as PackagingType)} className="input-industrial w-full text-sm">
           <option value="paper_tube">Paper Tube</option>
