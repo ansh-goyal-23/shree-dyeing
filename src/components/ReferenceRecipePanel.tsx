@@ -7,7 +7,7 @@ interface ReferenceRecipePanelProps {
 }
 
 const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotNo }) => {
-  const { lots, getDyesForLot, masterItems } = useApp();
+  const { lots, getDyesForLot, masterItems, getProcessStepsForLot, getStepDyes, getStepChemicals } = useApp();
   const [selectedLot, setSelectedLot] = useState(defaultLotNo || '');
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
@@ -39,6 +39,28 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
       return { label: shortName ? `${shortName} (${name})` : name, percentage: d.percentage };
     }).sort((a, b) => a.label.localeCompare(b.label)),
     [dyes, masterItems]
+  );
+
+  // Process steps for the selected lot
+  const processSteps = useMemo(() => selectedLot ? getProcessStepsForLot(selectedLot) : [], [selectedLot, getProcessStepsForLot]);
+
+  const stepsDisplay = useMemo(() =>
+    processSteps.map(step => {
+      const stepDyes = getStepDyes(step.id).map(d => {
+        const item = masterItems.find(m => m.id === d.dye_id);
+        const shortName = item?.short_name || '';
+        const name = item?.name || d.dye_id;
+        return { label: shortName ? `${shortName} (${name})` : name, percentage: d.percentage, qty_grams: d.qty_grams };
+      }).sort((a, b) => a.label.localeCompare(b.label));
+
+      const stepChemicals = getStepChemicals(step.id).map(c => {
+        const item = masterItems.find(m => m.id === c.chemical_id);
+        return { label: item?.name || c.chemical_id, qty: c.qty };
+      }).sort((a, b) => a.label.localeCompare(b.label));
+
+      return { ...step, dyes: stepDyes, chemicals: stepChemicals };
+    }),
+    [processSteps, getStepDyes, getStepChemicals, masterItems]
   );
 
   React.useEffect(() => {
@@ -87,7 +109,7 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
         )}
       </div>
 
-      {/* Lot details + dyes */}
+      {/* Lot details + dyes + process steps */}
       {lot && (
         <div className="space-y-3 pt-1">
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm">
@@ -98,27 +120,91 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
             <div><span className="text-muted-foreground">Chesses:</span> <span className="font-medium font-data">{lot.number_of_chesses}</span></div>
           </div>
 
-          {dyeDisplay.length > 0 ? (
-            <div className="rounded border bg-background">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-muted-foreground">
-                    <th className="text-left px-3 py-1.5 font-medium">Dye</th>
-                    <th className="text-right px-3 py-1.5 font-medium">%</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dyeDisplay.map((d, i) => (
-                    <tr key={i} className="border-b last:border-0">
-                      <td className="px-3 py-1.5">{d.label}</td>
-                      <td className="px-3 py-1.5 text-right font-data">{d.percentage}</td>
+          {/* Base Recipe */}
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground mb-1">Base Recipe (Initial Dyeing)</p>
+            {dyeDisplay.length > 0 ? (
+              <div className="rounded border bg-background">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-muted-foreground">
+                      <th className="text-left px-3 py-1.5 font-medium">Dye</th>
+                      <th className="text-right px-3 py-1.5 font-medium">%</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {dyeDisplay.map((d, i) => (
+                      <tr key={i} className="border-b last:border-0">
+                        <td className="px-3 py-1.5">{d.label}</td>
+                        <td className="px-3 py-1.5 text-right font-data">{d.percentage}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">No dyes in base recipe.</p>
+            )}
+          </div>
+
+          {/* Process Steps */}
+          {stepsDisplay.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground">Process Steps</p>
+              {stepsDisplay.map((step, idx) => (
+                <div key={step.id} className="rounded border bg-background p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="font-medium">Step {step.step_number}:</span>
+                    <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-secondary text-secondary-foreground">
+                      {step.step_type}
+                    </span>
+                    {step.description && (
+                      <span className="text-muted-foreground text-xs">— {step.description}</span>
+                    )}
+                  </div>
+
+                  {step.dyes.length > 0 && (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-muted-foreground">
+                          <th className="text-left px-3 py-1 font-medium text-xs">Dye</th>
+                          <th className="text-right px-3 py-1 font-medium text-xs">%</th>
+                          <th className="text-right px-3 py-1 font-medium text-xs">Grams</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {step.dyes.map((d, i) => (
+                          <tr key={i} className="border-b last:border-0">
+                            <td className="px-3 py-1 text-xs">{d.label}</td>
+                            <td className="px-3 py-1 text-right font-data text-xs">{d.percentage}</td>
+                            <td className="px-3 py-1 text-right font-data text-xs">{d.qty_grams}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+
+                  {step.chemicals.length > 0 && (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-muted-foreground">
+                          <th className="text-left px-3 py-1 font-medium text-xs">Chemical</th>
+                          <th className="text-right px-3 py-1 font-medium text-xs">Qty</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {step.chemicals.map((c, i) => (
+                          <tr key={i} className="border-b last:border-0">
+                            <td className="px-3 py-1 text-xs">{c.label}</td>
+                            <td className="px-3 py-1 text-right font-data text-xs">{c.qty}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              ))}
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground italic">No dyes in this lot's recipe.</p>
           )}
         </div>
       )}
