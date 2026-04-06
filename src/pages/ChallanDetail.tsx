@@ -12,7 +12,7 @@ import { PlusCircle, Loader2, Pencil, Trash2, ArrowLeft, Download, Share2 } from
 
 const emptyItem = (): ItemData => ({
   lot_no: '', shade_number: '', color_name: '', denier: '', packaging_type: 'paper_tube',
-  gross_weight: 0, num_of_units: 0, net_weight: 0, rate: 0, amount: 0,
+  gross_weight: 0, num_of_units: 0, net_weight: 0, rate: 0, amount: 0, lot_type: 'Production',
 });
 
 const PACKAGING_LABEL: Record<string, string> = {
@@ -59,6 +59,7 @@ const ChallanDetail: React.FC = () => {
         denier: (i as any).denier || '',
         packaging_type: i.packaging_type, gross_weight: i.gross_weight,
         num_of_units: i.num_of_units, net_weight: i.net_weight, rate: i.rate, amount: i.amount,
+        lot_type: ((i as any).lot_type as 'Production' | 'Sampling') || 'Production',
       })));
     }
   }, [challanItems]);
