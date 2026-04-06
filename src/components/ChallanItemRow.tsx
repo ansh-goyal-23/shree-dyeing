@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Trash2 } from 'lucide-react';
 import DecimalInput from '@/components/DecimalInput';
 import type { Lot } from '@/types';
@@ -106,10 +106,7 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, clie
   return (
     <tr className="border-b border-border hover:bg-secondary/30">
       <td className="p-2">
-        <select value={item.lot_no} onChange={e => handleLotChange(e.target.value)} className="input-industrial w-full text-sm">
-          <option value="">Select lot...</option>
-          {lots.map(l => <option key={l.lot_no} value={l.lot_no}>{l.lot_no}</option>)}
-        </select>
+        <LotSearchDropdown value={item.lot_no} lots={lots} onChange={handleLotChange} />
       </td>
       <td className="p-2 text-sm text-muted-foreground">{item.shade_number}</td>
       <td className="p-2 text-sm text-muted-foreground">{item.color_name}</td>
