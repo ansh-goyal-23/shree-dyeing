@@ -112,7 +112,7 @@ const ClientRateMaster: React.FC = () => {
                   onChange={e => setForm(f => ({ ...f, yarn_type: e.target.value }))}
                   className="input-industrial w-full" placeholder="Select or type yarn type" />
                 <datalist id="yarn-type-list">
-                  {YARN_TYPE_OPTIONS.map(yt => <option key={yt} value={yt} />)}
+                  {yarnTypeOptions.map(yt => <option key={yt} value={yt} />)}
                 </datalist>
               </div>
             </div>
