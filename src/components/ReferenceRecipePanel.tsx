@@ -13,20 +13,20 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
   const [open, setOpen] = useState(false);
   const wrapperRef = React.useRef<HTMLDivElement>(null);
 
-  const approvedLots = useMemo(() =>
-    lots.filter(l => l.status === 'Approved').sort((a, b) =>
+  const allLots = useMemo(() =>
+    [...lots].sort((a, b) =>
       b.lot_no.localeCompare(a.lot_no, undefined, { numeric: true })
     ), [lots]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return approvedLots;
+    if (!search.trim()) return allLots;
     const q = search.toLowerCase();
-    return approvedLots.filter(l =>
+    return allLots.filter(l =>
       l.lot_no.toLowerCase().includes(q) ||
       (l.color_name || '').toLowerCase().includes(q) ||
       (l.shade_number || '').toLowerCase().includes(q)
     );
-  }, [approvedLots, search]);
+  }, [allLots, search]);
 
   const lot = useMemo(() => lots.find(l => l.lot_no === selectedLot), [lots, selectedLot]);
   const dyes = useMemo(() => selectedLot ? getDyesForLot(selectedLot) : [], [selectedLot, getDyesForLot]);
