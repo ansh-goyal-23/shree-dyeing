@@ -26,7 +26,7 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
       (l.color_name || '').toLowerCase().includes(q) ||
       (l.shade_number || '').toLowerCase().includes(q)
     );
-  }, [approvedLots, search]);
+  }, [allLots, search]);
 
   const lot = useMemo(() => lots.find(l => l.lot_no === selectedLot), [lots, selectedLot]);
   const dyes = useMemo(() => selectedLot ? getDyesForLot(selectedLot) : [], [selectedLot, getDyesForLot]);
