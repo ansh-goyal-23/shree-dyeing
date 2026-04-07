@@ -38,7 +38,7 @@ const MasterData: React.FC = () => {
     e.preventDefault();
     if (!form.name.trim()) { toast.error('Name is required.'); return; }
 
-    if (form.type === 'dye' && !form.short_name.trim()) { toast.error('Short name is required for dyes.'); return; }
+    // short_name is optional for all types
     // Check uniqueness of short_name among dyes
     if (form.type === 'dye' && form.short_name.trim()) {
       const duplicate = masterItems.find(m => m.type === 'dye' && m.short_name.toLowerCase() === form.short_name.trim().toLowerCase() && m.id !== editItem?.id);
@@ -83,8 +83,8 @@ const MasterData: React.FC = () => {
               <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="input-industrial w-full" required />
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Short Name {form.type === 'dye' ? '*' : ''}</label>
-              <input type="text" value={form.short_name} onChange={e => setForm(f => ({ ...f, short_name: e.target.value }))} className="input-industrial w-full" placeholder="e.g. YC4G" required={form.type === 'dye'} />
+              <label className="text-sm font-medium">Short Name</label>
+              <input type="text" value={form.short_name} onChange={e => setForm(f => ({ ...f, short_name: e.target.value }))} className="input-industrial w-full" placeholder="e.g. YC4G" />
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Type</label>
