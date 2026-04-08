@@ -62,6 +62,15 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
     setDirty(true);
   };
 
+  const applyReverse = () => {
+    setPrevDyes([...localDyes]);
+    setLocalDyes(prev => prev.map(dye => {
+      const newPct = parseFloat((dye.percentage / 0.90).toFixed(6));
+      return { ...dye, percentage: newPct, qty_grams: calculateDyeGrams(newPct, netWeight) };
+    }));
+    setDirty(true);
+  };
+
   const undoReduction = () => {
     if (prevDyes) {
       setLocalDyes(prevDyes);
@@ -160,23 +169,42 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
                 </Button>
               )}
               {localDyes.length > 0 && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-1 text-xs">
-                      <Percent className="w-3 h-3" /> Reduce 10%
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Reduce dye percentages?</AlertDialogTitle>
-                      <AlertDialogDescription>Apply 10% reduction to all dye percentages? This can be undone.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={applyReduction}>Yes, Apply</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-1 text-xs">
+                        <Percent className="w-3 h-3" /> Reverse 10% (÷0.9)
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Reverse 10% reduction?</AlertDialogTitle>
+                        <AlertDialogDescription>Divide all dye percentages by 0.9 to recover values before a 10% reduction? This can be undone.</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={applyReverse}>Yes, Apply</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-1 text-xs">
+                        <Percent className="w-3 h-3" /> Reduce 10%
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Reduce dye percentages?</AlertDialogTitle>
+                        <AlertDialogDescription>Apply 10% reduction to all dye percentages? This can be undone.</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={applyReduction}>Yes, Apply</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
               )}
               <button onClick={addDye} className="inline-flex items-center gap-1 text-sm text-primary hover:underline btn-transition">
                 <Plus className="w-3 h-3" /> Add Dye
