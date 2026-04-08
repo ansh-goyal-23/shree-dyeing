@@ -56,7 +56,7 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
   const applyReduction = () => {
     setPrevDyes([...localDyes]);
     setLocalDyes(prev => prev.map(dye => {
-      const newPct = parseFloat((dye.percentage * 0.90).toFixed(6));
+      const newPct = parseFloat((dye.percentage * 0.90).toFixed(3));
       return { ...dye, percentage: newPct, qty_grams: calculateDyeGrams(newPct, netWeight) };
     }));
     setDirty(true);
@@ -65,7 +65,7 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
   const applyReverse = () => {
     setPrevDyes([...localDyes]);
     setLocalDyes(prev => prev.map(dye => {
-      const newPct = parseFloat((dye.percentage / 0.90).toFixed(6));
+      const newPct = parseFloat((dye.percentage / 0.90).toFixed(3));
       return { ...dye, percentage: newPct, qty_grams: calculateDyeGrams(newPct, netWeight) };
     }));
     setDirty(true);
