@@ -53,6 +53,22 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
   const [dirty, setDirty] = useState(false);
   const [prevDyes, setPrevDyes] = useState<RecipeDye[] | null>(null);
 
+  // Sync local state when context data changes (e.g. after async load)
+  const prevDyesRef = React.useRef(dyes);
+  const prevChemsRef = React.useRef(chemicals);
+  React.useEffect(() => {
+    if (dyes !== prevDyesRef.current) {
+      prevDyesRef.current = dyes;
+      if (!dirty) setLocalDyes(dyes);
+    }
+  }, [dyes, dirty]);
+  React.useEffect(() => {
+    if (chemicals !== prevChemsRef.current) {
+      prevChemsRef.current = chemicals;
+      if (!dirty) setLocalChemicals(chemicals.length > 0 ? chemicals : defaultChemicals);
+    }
+  }, [chemicals, defaultChemicals, dirty]);
+
   const applyReduction = () => {
     setPrevDyes([...localDyes]);
     setLocalDyes(prev => prev.map(dye => {
