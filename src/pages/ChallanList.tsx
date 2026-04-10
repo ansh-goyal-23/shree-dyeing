@@ -63,6 +63,17 @@ const ChallanList: React.FC = () => {
     return list;
   }, [challans, search, clientFilter, sortBy, allItems]);
 
+  const totals = useMemo(() => {
+    let totalNetWeight = 0;
+    let totalAmount = 0;
+    filtered.forEach(c => {
+      const items = allItems.filter((i: any) => i.challan_id === c.id);
+      totalNetWeight += items.reduce((s: number, i: any) => s + (Number(i.net_weight) || 0), 0);
+      totalAmount += items.reduce((s: number, i: any) => s + (Number(i.amount) || 0), 0);
+    });
+    return { totalNetWeight, totalAmount };
+  }, [filtered, allItems]);
+
   const getItemsSummary = (challanId: string) => {
     const items = allItems.filter((i: any) => i.challan_id === challanId);
     const totalItems = items.length;
