@@ -10,7 +10,7 @@ const ChallanList: React.FC = () => {
   const { data: challans = [], isLoading } = useChallans();
   const [search, setSearch] = useState('');
   const [clientFilter, setClientFilter] = useState('');
-  const [sortBy, setSortBy] = useState<'date' | 'client' | 'challan'>('date');
+  const [sortBy, setSortBy] = useState<'date' | 'client' | 'challan'>('challan');
 
   // Fetch all items for summary
   const { data: allItems = [] } = useQuery({
@@ -57,11 +57,22 @@ const ChallanList: React.FC = () => {
     list = [...list].sort((a, b) => {
       if (sortBy === 'date') return new Date(b.date).getTime() - new Date(a.date).getTime();
       if (sortBy === 'client') return a.client_name.localeCompare(b.client_name);
-      return a.challan_number.localeCompare(b.challan_number);
+      return b.challan_number.localeCompare(a.challan_number, undefined, { numeric: true });
     });
 
     return list;
   }, [challans, search, clientFilter, sortBy, allItems]);
+
+  const totals = useMemo(() => {
+    let totalNetWeight = 0;
+    let totalAmount = 0;
+    filtered.forEach(c => {
+      const items = allItems.filter((i: any) => i.challan_id === c.id);
+      totalNetWeight += items.reduce((s: number, i: any) => s + (Number(i.net_weight) || 0), 0);
+      totalAmount += items.reduce((s: number, i: any) => s + (Number(i.amount) || 0), 0);
+    });
+    return { totalNetWeight, totalAmount };
+  }, [filtered, allItems]);
 
   const getItemsSummary = (challanId: string) => {
     const items = allItems.filter((i: any) => i.challan_id === challanId);
@@ -135,6 +146,13 @@ const ChallanList: React.FC = () => {
                   </tr>
                 );
               })}
+              {filtered.length > 0 && (
+                <tr className="bg-muted/50 font-semibold">
+                  <td className="p-3" colSpan={4}>Total ({filtered.length} challans)</td>
+                  <td className="p-3 text-right">{totals.totalNetWeight.toFixed(3)} kg</td>
+                  <td className="p-3 text-right">₹{totals.totalAmount.toFixed(2)}</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
