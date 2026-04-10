@@ -10,7 +10,7 @@ const ChallanList: React.FC = () => {
   const { data: challans = [], isLoading } = useChallans();
   const [search, setSearch] = useState('');
   const [clientFilter, setClientFilter] = useState('');
-  const [sortBy, setSortBy] = useState<'date' | 'client' | 'challan'>('date');
+  const [sortBy, setSortBy] = useState<'date' | 'client' | 'challan'>('challan');
 
   // Fetch all items for summary
   const { data: allItems = [] } = useQuery({
