@@ -57,7 +57,7 @@ const ChallanList: React.FC = () => {
     list = [...list].sort((a, b) => {
       if (sortBy === 'date') return new Date(b.date).getTime() - new Date(a.date).getTime();
       if (sortBy === 'client') return a.client_name.localeCompare(b.client_name);
-      return a.challan_number.localeCompare(b.challan_number);
+      return b.challan_number.localeCompare(a.challan_number, undefined, { numeric: true });
     });
 
     return list;
