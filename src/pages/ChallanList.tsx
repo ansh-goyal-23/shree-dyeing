@@ -146,6 +146,13 @@ const ChallanList: React.FC = () => {
                   </tr>
                 );
               })}
+              {filtered.length > 0 && (
+                <tr className="bg-muted/50 font-semibold">
+                  <td className="p-3" colSpan={4}>Total ({filtered.length} challans)</td>
+                  <td className="p-3 text-right">{totals.totalNetWeight.toFixed(3)} kg</td>
+                  <td className="p-3 text-right">₹{totals.totalAmount.toFixed(2)}</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
