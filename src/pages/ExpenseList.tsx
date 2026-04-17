@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Trash2, ArrowUpDown } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowUpDown, Eye } from 'lucide-react';
 import { useExpenses, useDeleteExpense, useUpdateExpensePayment } from '@/hooks/useExpenses';
 import { toast } from 'sonner';
+import ExpenseDetailDialog from '@/components/ExpenseDetailDialog';
 
 const ExpenseList: React.FC = () => {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ const ExpenseList: React.FC = () => {
   const [filterPayment, setFilterPayment] = useState('all');
   const [sortField, setSortField] = useState<'date' | 'total_amount'>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     let result = expenses;
@@ -114,7 +116,7 @@ const ExpenseList: React.FC = () => {
                   </TableHead>
                   <TableHead>Payment</TableHead>
                   <TableHead>Lot</TableHead>
-                  <TableHead className="w-12"></TableHead>
+                  <TableHead className="w-24"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -148,9 +150,14 @@ const ExpenseList: React.FC = () => {
                     </TableCell>
                     <TableCell>{e.linked_lot_no || '-'}</TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(e.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => setDetailId(e.id)} title="View details">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(e.id)} title="Delete">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -164,6 +171,12 @@ const ExpenseList: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      <ExpenseDetailDialog
+        expenseId={detailId}
+        open={!!detailId}
+        onOpenChange={(o) => !o && setDetailId(null)}
+      />
     </div>
   );
 };
