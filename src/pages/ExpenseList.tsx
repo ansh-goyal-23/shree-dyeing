@@ -22,6 +22,7 @@ const ExpenseList: React.FC = () => {
   const [filterPayment, setFilterPayment] = useState('all');
   const [sortField, setSortField] = useState<'date' | 'total_amount'>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     let result = expenses;
