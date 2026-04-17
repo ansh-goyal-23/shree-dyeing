@@ -351,6 +351,62 @@ export function useDeleteExpense() {
   });
 }
 
+export function useExpenseDetail(expenseId: string | null) {
+  return useQuery({
+    queryKey: ['expense_detail', expenseId],
+    queryFn: async () => {
+      if (!expenseId) return null;
+      const [expenseRes, lineItemsRes, docsRes] = await Promise.all([
+        supabase
+          .from('expenses')
+          .select('*, suppliers(supplier_name), expense_categories(category_name)')
+          .eq('id', expenseId)
+          .single(),
+        supabase
+          .from('expense_line_items')
+          .select('*')
+          .eq('expense_id', expenseId),
+        supabase
+          .from('expense_documents')
+          .select('*')
+          .eq('expense_id', expenseId),
+      ]);
+      if (expenseRes.error) throw expenseRes.error;
+      const r: any = expenseRes.data;
+      const expense: Expense = {
+        id: r.id,
+        date: r.date,
+        expense_type: r.expense_type,
+        category_id: r.category_id,
+        category_name: r.expense_categories?.category_name || '',
+        supplier_id: r.supplier_id,
+        supplier_name: r.suppliers?.supplier_name || '',
+        subtotal: Number(r.subtotal) || 0,
+        gst_percent: Number(r.gst_percent) || 0,
+        gst_amount: Number(r.gst_amount) || 0,
+        freight: Number(r.freight) || 0,
+        total_amount: Number(r.total_amount) || 0,
+        linked_lot_no: r.linked_lot_no || '',
+        payment_status: r.payment_status || 'Unpaid',
+        notes: r.notes || '',
+        created_at: r.created_at,
+        line_items: (lineItemsRes.data || []).map((li: any): ExpenseLineItem => ({
+          id: li.id,
+          expense_id: li.expense_id,
+          item_id: li.item_id,
+          item_name: li.item_name,
+          quantity: Number(li.quantity) || 0,
+          unit: li.unit || '',
+          rate: Number(li.rate) || 0,
+          amount: Number(li.amount) || 0,
+        })),
+      };
+      return { expense, documents: (docsRes.data || []) as ExpenseDocument[] };
+    },
+    enabled: !!expenseId,
+  });
+}
+
 export function useExpenseDocuments(expenseId: string) {
   return useQuery({
     queryKey: ['expense_documents', expenseId],
