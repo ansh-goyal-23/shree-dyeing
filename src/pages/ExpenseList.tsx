@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Trash2, ArrowUpDown } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowUpDown, Eye } from 'lucide-react';
 import { useExpenses, useDeleteExpense, useUpdateExpensePayment } from '@/hooks/useExpenses';
 import { toast } from 'sonner';
+import ExpenseDetailDialog from '@/components/ExpenseDetailDialog';
 
 const ExpenseList: React.FC = () => {
   const navigate = useNavigate();
