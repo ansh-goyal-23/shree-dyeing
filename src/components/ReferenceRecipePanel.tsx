@@ -17,7 +17,7 @@ interface ReferenceRecipePanelProps {
 }
 
 const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotNo, targetLotNo, targetNetWeight }) => {
-  const { lots, getDyesForLot, masterItems, getProcessStepsForLot, getStepDyes, getStepChemicals, updateRecipeDyes } = useApp();
+  const { lots, getDyesForLot, getChemicalsForLot, masterItems, getProcessStepsForLot, getStepDyes, getStepChemicals, updateRecipeDyes, updateRecipeChemicals } = useApp();
   const [selectedLot, setSelectedLot] = useState(defaultLotNo || '');
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
@@ -41,6 +41,7 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
 
   const lot = useMemo(() => lots.find(l => l.lot_no === selectedLot), [lots, selectedLot]);
   const dyes = useMemo(() => selectedLot ? getDyesForLot(selectedLot) : [], [selectedLot, getDyesForLot]);
+  const refChemicals = useMemo(() => selectedLot ? getChemicalsForLot(selectedLot) : [], [selectedLot, getChemicalsForLot]);
 
   const dyeDisplay = useMemo(() =>
     dyes.map(d => {
@@ -89,7 +90,17 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
     () => (targetLotNo ? getDyesForLot(targetLotNo) : []),
     [targetLotNo, getDyesForLot]
   );
-  const canCopy = !!targetLotNo && targetLotNo !== selectedLot && dyes.length > 0;
+  const targetExistingChemicals = useMemo(
+    () => (targetLotNo ? getChemicalsForLot(targetLotNo) : []),
+    [targetLotNo, getChemicalsForLot]
+  );
+  // A target's chemicals are considered "empty" if every chemical qty is 0
+  // (the editor pre-fills BUF/CDFT/CWS rows with qty=0 by default).
+  const targetChemicalsAreEmpty = useMemo(
+    () => targetExistingChemicals.every(c => !c.qty || c.qty === 0),
+    [targetExistingChemicals]
+  );
+  const canCopy = !!targetLotNo && targetLotNo !== selectedLot && (dyes.length > 0 || refChemicals.length > 0);
 
   const cloneDyesToTarget = async () => {
     if (!targetLotNo || dyes.length === 0) return;
@@ -104,21 +115,39 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
     await updateRecipeDyes(targetLotNo, cloned);
   };
 
+  const cloneChemicalsToTarget = async () => {
+    if (!targetLotNo || refChemicals.length === 0) return;
+    const cloned = refChemicals.map(c => ({
+      id: crypto.randomUUID(),
+      lot_no: targetLotNo,
+      chemical_id: c.chemical_id,
+      qty: c.qty,
+      ph_value: c.ph_value ?? null,
+    }));
+    await updateRecipeChemicals(targetLotNo, cloned);
+  };
+
   // Auto-copy: when target lot's base recipe is empty and a reference is
-  // selected, clone its dyes once. Tracked per (target, reference) pair so
-  // it does not re-fire if the user clears the recipe intentionally.
+  // selected, clone its dyes and chemicals once. Tracked per (target, reference)
+  // pair so it does not re-fire if the user clears the recipe intentionally.
   useEffect(() => {
     if (!targetLotNo || !selectedLot || selectedLot === targetLotNo) return;
-    if (dyes.length === 0) return;
-    if (targetExistingDyes.length > 0) return;
+    const hasRefData = dyes.length > 0 || refChemicals.length > 0;
+    if (!hasRefData) return;
+    const targetEmpty = targetExistingDyes.length === 0 && targetChemicalsAreEmpty;
+    if (!targetEmpty) return;
     const key = `${targetLotNo}::${selectedLot}`;
     if (autoClonedRef.current.has(key)) return;
     autoClonedRef.current.add(key);
-    cloneDyesToTarget()
+    Promise.all([
+      dyes.length > 0 ? cloneDyesToTarget() : Promise.resolve(),
+      refChemicals.length > 0 ? cloneChemicalsToTarget() : Promise.resolve(),
+    ])
       .then(() => toast.success(`Base recipe populated from ${selectedLot}.`))
       .catch(() => { autoClonedRef.current.delete(key); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetLotNo, selectedLot, dyes.length, targetExistingDyes.length]);
+  }, [targetLotNo, selectedLot, dyes.length, refChemicals.length, targetExistingDyes.length, targetChemicalsAreEmpty]);
+
 
 
   return (
@@ -172,7 +201,7 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
           <div>
             <div className="flex items-center justify-between mb-1">
               <p className="text-xs font-semibold text-muted-foreground">Base Recipe (Initial Dyeing)</p>
-              {canCopy && targetExistingDyes.length > 0 && (
+              {canCopy && (targetExistingDyes.length > 0 || !targetChemicalsAreEmpty) && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <button
@@ -186,14 +215,17 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
                     <AlertDialogHeader>
                       <AlertDialogTitle>Replace base recipe?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will replace the current base recipe of <strong>{targetLotNo}</strong> with the dyes from <strong>{selectedLot}</strong>. Chemicals (BUF, CDFT, CWS, etc.) are not affected.
+                        This will replace the current base recipe (dyes and chemicals) of <strong>{targetLotNo}</strong> with the recipe from <strong>{selectedLot}</strong>.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={async () => {
-                          await cloneDyesToTarget();
+                          await Promise.all([
+                            dyes.length > 0 ? cloneDyesToTarget() : Promise.resolve(),
+                            refChemicals.length > 0 ? cloneChemicalsToTarget() : Promise.resolve(),
+                          ]);
                           toast.success(`Base recipe replaced from ${selectedLot}.`);
                         }}
                       >
