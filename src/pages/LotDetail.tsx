@@ -230,20 +230,12 @@ const LotDetail: React.FC = () => {
         />
       )}
 
-      {/* Reference Recipe Panel */}
-      <ReferenceRecipePanel
-        defaultLotNo={lot.shade_number !== lot.lot_no ? lot.shade_number : undefined}
-        targetLotNo={lot.lot_no}
-        targetNetWeight={lot.net_weight}
+      {/* Reference Recipe Panel + Base Recipe (RecipeEditor receives staged data via ref) */}
+      <RecipeEditorWithReference
+        lotNo={lot.lot_no}
+        netWeight={lot.net_weight}
+        defaultReferenceLotNo={lot.shade_number !== lot.lot_no ? lot.shade_number : undefined}
       />
-
-      {/* Base Recipe */}
-      <div className="card-industrial p-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">
-          Base Recipe (Initial Dyeing)
-        </h2>
-        <RecipeEditor lotNo={lot.lot_no} netWeight={lot.net_weight} />
-      </div>
 
       {/* Base Photos */}
       <div className="card-industrial p-4">
