@@ -17,7 +17,7 @@ interface ReferenceRecipePanelProps {
 }
 
 const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotNo, targetLotNo, targetNetWeight }) => {
-  const { lots, getDyesForLot, masterItems, getProcessStepsForLot, getStepDyes, getStepChemicals, updateRecipeDyes } = useApp();
+  const { lots, getDyesForLot, getChemicalsForLot, masterItems, getProcessStepsForLot, getStepDyes, getStepChemicals, updateRecipeDyes, updateRecipeChemicals } = useApp();
   const [selectedLot, setSelectedLot] = useState(defaultLotNo || '');
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
