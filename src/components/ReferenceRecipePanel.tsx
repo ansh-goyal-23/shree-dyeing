@@ -1,17 +1,28 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
-import { calculateNetWeight } from '@/lib/calculations';
+import { calculateNetWeight, calculateDyeGrams } from '@/lib/calculations';
+import { toast } from 'sonner';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Copy } from 'lucide-react';
 
 interface ReferenceRecipePanelProps {
   defaultLotNo?: string;
+  /** When provided, enables copying the reference base recipe into this lot's base recipe. */
+  targetLotNo?: string;
+  /** Net weight of the target lot — used to recompute dye grams. */
+  targetNetWeight?: number;
 }
 
-const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotNo }) => {
-  const { lots, getDyesForLot, masterItems, getProcessStepsForLot, getStepDyes, getStepChemicals } = useApp();
+const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotNo, targetLotNo, targetNetWeight }) => {
+  const { lots, getDyesForLot, masterItems, getProcessStepsForLot, getStepDyes, getStepChemicals, updateRecipeDyes } = useApp();
   const [selectedLot, setSelectedLot] = useState(defaultLotNo || '');
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const wrapperRef = React.useRef<HTMLDivElement>(null);
+  const autoClonedRef = useRef<Set<string>>(new Set());
 
   const allLots = useMemo(() =>
     [...lots].sort((a, b) =>
@@ -73,6 +84,43 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
 
   const netWeight = lot ? calculateNetWeight(lot.gross_weight, lot.number_of_chesses) : 0;
 
+  // Copy-to-target support
+  const targetExistingDyes = useMemo(
+    () => (targetLotNo ? getDyesForLot(targetLotNo) : []),
+    [targetLotNo, getDyesForLot]
+  );
+  const canCopy = !!targetLotNo && targetLotNo !== selectedLot && dyes.length > 0;
+
+  const cloneDyesToTarget = async () => {
+    if (!targetLotNo || dyes.length === 0) return;
+    const nw = targetNetWeight ?? 0;
+    const cloned = dyes.map(d => ({
+      id: crypto.randomUUID(),
+      lot_no: targetLotNo,
+      dye_id: d.dye_id,
+      percentage: d.percentage,
+      qty_grams: calculateDyeGrams(d.percentage, nw),
+    }));
+    await updateRecipeDyes(targetLotNo, cloned);
+  };
+
+  // Auto-copy: when target lot's base recipe is empty and a reference is
+  // selected, clone its dyes once. Tracked per (target, reference) pair so
+  // it does not re-fire if the user clears the recipe intentionally.
+  useEffect(() => {
+    if (!targetLotNo || !selectedLot || selectedLot === targetLotNo) return;
+    if (dyes.length === 0) return;
+    if (targetExistingDyes.length > 0) return;
+    const key = `${targetLotNo}::${selectedLot}`;
+    if (autoClonedRef.current.has(key)) return;
+    autoClonedRef.current.add(key);
+    cloneDyesToTarget()
+      .then(() => toast.success(`Base recipe populated from ${selectedLot}.`))
+      .catch(() => { autoClonedRef.current.delete(key); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetLotNo, selectedLot, dyes.length, targetExistingDyes.length]);
+
+
   return (
     <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
       <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
@@ -122,7 +170,40 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
 
           {/* Base Recipe */}
           <div>
-            <p className="text-xs font-semibold text-muted-foreground mb-1">Base Recipe (Initial Dyeing)</p>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs font-semibold text-muted-foreground">Base Recipe (Initial Dyeing)</p>
+              {canCopy && targetExistingDyes.length > 0 && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border border-input hover:bg-secondary btn-transition"
+                    >
+                      <Copy className="w-3 h-3" /> Copy to Base Recipe
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Replace base recipe?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will replace the current base recipe of <strong>{targetLotNo}</strong> with the dyes from <strong>{selectedLot}</strong>. Chemicals (BUF, CDFT, CWS, etc.) are not affected.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={async () => {
+                          await cloneDyesToTarget();
+                          toast.success(`Base recipe replaced from ${selectedLot}.`);
+                        }}
+                      >
+                        Replace
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
             {dyeDisplay.length > 0 ? (
               <div className="rounded border bg-background">
                 <table className="w-full text-sm">

@@ -231,7 +231,11 @@ const LotDetail: React.FC = () => {
       )}
 
       {/* Reference Recipe Panel */}
-      <ReferenceRecipePanel defaultLotNo={lot.shade_number !== lot.lot_no ? lot.shade_number : undefined} />
+      <ReferenceRecipePanel
+        defaultLotNo={lot.shade_number !== lot.lot_no ? lot.shade_number : undefined}
+        targetLotNo={lot.lot_no}
+        targetNetWeight={lot.net_weight}
+      />
 
       {/* Base Recipe */}
       <div className="card-industrial p-4">
