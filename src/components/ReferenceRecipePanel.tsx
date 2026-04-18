@@ -1,17 +1,28 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
-import { calculateNetWeight } from '@/lib/calculations';
+import { calculateNetWeight, calculateDyeGrams } from '@/lib/calculations';
+import { toast } from 'sonner';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Copy } from 'lucide-react';
 
 interface ReferenceRecipePanelProps {
   defaultLotNo?: string;
+  /** When provided, enables copying the reference base recipe into this lot's base recipe. */
+  targetLotNo?: string;
+  /** Net weight of the target lot — used to recompute dye grams. */
+  targetNetWeight?: number;
 }
 
-const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotNo }) => {
-  const { lots, getDyesForLot, masterItems, getProcessStepsForLot, getStepDyes, getStepChemicals } = useApp();
+const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotNo, targetLotNo, targetNetWeight }) => {
+  const { lots, getDyesForLot, masterItems, getProcessStepsForLot, getStepDyes, getStepChemicals, updateRecipeDyes } = useApp();
   const [selectedLot, setSelectedLot] = useState(defaultLotNo || '');
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const wrapperRef = React.useRef<HTMLDivElement>(null);
+  const autoClonedRef = useRef<Set<string>>(new Set());
 
   const allLots = useMemo(() =>
     [...lots].sort((a, b) =>
