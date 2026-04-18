@@ -58,6 +58,29 @@ const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, 
   const [dirty, setDirty] = useState(false);
   const [prevDyes, setPrevDyes] = useState<RecipeDye[] | null>(null);
 
+  // Imperative API: stage a reference recipe into local state without saving.
+  useImperativeHandle(ref, () => ({
+    applyReference: (refDyes, refChemicals) => {
+      const stagedDyes: RecipeDye[] = refDyes.map(d => ({
+        id: crypto.randomUUID(),
+        lot_no: lotNo,
+        dye_id: d.dye_id,
+        percentage: d.percentage,
+        qty_grams: calculateDyeGrams(d.percentage, netWeight),
+      }));
+      const stagedChems: RecipeChemical[] = refChemicals.map(c => ({
+        id: crypto.randomUUID(),
+        lot_no: lotNo,
+        chemical_id: c.chemical_id,
+        qty: c.qty,
+        ph_value: c.ph_value ?? null,
+      }));
+      setLocalDyes(stagedDyes);
+      if (stagedChems.length > 0) setLocalChemicals(stagedChems);
+      setDirty(true);
+    },
+  }), [lotNo, netWeight]);
+
   const applyReduction = () => {
     setPrevDyes([...localDyes]);
     setLocalDyes(prev => prev.map(dye => {
