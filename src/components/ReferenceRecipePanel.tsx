@@ -170,7 +170,40 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
 
           {/* Base Recipe */}
           <div>
-            <p className="text-xs font-semibold text-muted-foreground mb-1">Base Recipe (Initial Dyeing)</p>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs font-semibold text-muted-foreground">Base Recipe (Initial Dyeing)</p>
+              {canCopy && targetExistingDyes.length > 0 && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border border-input hover:bg-secondary btn-transition"
+                    >
+                      <Copy className="w-3 h-3" /> Copy to Base Recipe
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Replace base recipe?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will replace the current base recipe of <strong>{targetLotNo}</strong> with the dyes from <strong>{selectedLot}</strong>. Chemicals (BUF, CDFT, CWS, etc.) are not affected.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={async () => {
+                          await cloneDyesToTarget();
+                          toast.success(`Base recipe replaced from ${selectedLot}.`);
+                        }}
+                      >
+                        Replace
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
             {dyeDisplay.length > 0 ? (
               <div className="rounded border bg-background">
                 <table className="w-full text-sm">
