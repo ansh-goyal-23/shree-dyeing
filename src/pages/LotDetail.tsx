@@ -1,7 +1,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
-import RecipeEditor from '@/components/RecipeEditor';
+import RecipeEditor, { type RecipeEditorHandle } from '@/components/RecipeEditor';
 import { calculateNetWeight, calculateDyeGrams } from '@/lib/calculations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ProcessStepForm from '@/components/ProcessStepForm';
