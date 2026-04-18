@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
 import { useApp } from '@/context/AppContext';
 import { calculateDyeGrams } from '@/lib/calculations';
 import { Plus, Trash2, Percent, Undo2 } from 'lucide-react';
@@ -19,7 +19,12 @@ interface Props {
   readOnly?: boolean;
 }
 
-const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) => {
+export interface RecipeEditorHandle {
+  /** Stage a reference recipe into local editor state without saving. */
+  applyReference: (refDyes: RecipeDye[], refChemicals: RecipeChemical[]) => void;
+}
+
+const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, readOnly = false }, ref) => {
   const { masterItems, getDyesForLot, getChemicalsForLot, updateRecipeDyes, updateRecipeChemicals } = useApp();
 
   const dyes = getDyesForLot(lotNo);
