@@ -1,28 +1,35 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
-import { calculateNetWeight, calculateDyeGrams } from '@/lib/calculations';
+import { calculateNetWeight } from '@/lib/calculations';
 import { toast } from 'sonner';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Copy } from 'lucide-react';
+import type { RecipeDye, RecipeChemical } from '@/types';
 
 interface ReferenceRecipePanelProps {
   defaultLotNo?: string;
-  /** When provided, enables copying the reference base recipe into this lot's base recipe. */
+  /** When provided, enables staging the reference recipe into the target lot's editor. */
   targetLotNo?: string;
-  /** Net weight of the target lot — used to recompute dye grams. */
-  targetNetWeight?: number;
+  /**
+   * Stage reference dyes/chemicals into the editor. The host page forwards
+   * this to RecipeEditor. Nothing is written to the database here — the user
+   * must press Save in the editor to persist.
+   */
+  onApplyReference?: (refDyes: RecipeDye[], refChemicals: RecipeChemical[]) => void;
+  /** Whether the target lot's base recipe is currently empty (no dyes & no non-zero chemicals). */
+  targetIsEmpty?: boolean;
 }
 
-const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotNo, targetLotNo, targetNetWeight }) => {
-  const { lots, getDyesForLot, getChemicalsForLot, masterItems, getProcessStepsForLot, getStepDyes, getStepChemicals, updateRecipeDyes, updateRecipeChemicals } = useApp();
+const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotNo, targetLotNo, onApplyReference, targetIsEmpty }) => {
+  const { lots, getDyesForLot, getChemicalsForLot, masterItems, getProcessStepsForLot, getStepDyes, getStepChemicals } = useApp();
   const [selectedLot, setSelectedLot] = useState(defaultLotNo || '');
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const wrapperRef = React.useRef<HTMLDivElement>(null);
-  const autoClonedRef = useRef<Set<string>>(new Set());
+  const autoStagedRef = useRef<Set<string>>(new Set());
 
   const allLots = useMemo(() =>
     [...lots].sort((a, b) =>
@@ -85,68 +92,31 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
 
   const netWeight = lot ? calculateNetWeight(lot.gross_weight, lot.number_of_chesses) : 0;
 
-  // Copy-to-target support
-  const targetExistingDyes = useMemo(
-    () => (targetLotNo ? getDyesForLot(targetLotNo) : []),
-    [targetLotNo, getDyesForLot]
-  );
-  const targetExistingChemicals = useMemo(
-    () => (targetLotNo ? getChemicalsForLot(targetLotNo) : []),
-    [targetLotNo, getChemicalsForLot]
-  );
-  // A target's chemicals are considered "empty" if every chemical qty is 0
-  // (the editor pre-fills BUF/CDFT/CWS rows with qty=0 by default).
-  const targetChemicalsAreEmpty = useMemo(
-    () => targetExistingChemicals.every(c => !c.qty || c.qty === 0),
-    [targetExistingChemicals]
-  );
-  const canCopy = !!targetLotNo && targetLotNo !== selectedLot && (dyes.length > 0 || refChemicals.length > 0);
+  // Stage-to-target support (via callback — no DB writes here).
+  const canCopy = !!targetLotNo && targetLotNo !== selectedLot && !!onApplyReference && (dyes.length > 0 || refChemicals.length > 0);
 
-  const cloneDyesToTarget = async () => {
-    if (!targetLotNo || dyes.length === 0) return;
-    const nw = targetNetWeight ?? 0;
-    const cloned = dyes.map(d => ({
-      id: crypto.randomUUID(),
-      lot_no: targetLotNo,
-      dye_id: d.dye_id,
-      percentage: d.percentage,
-      qty_grams: calculateDyeGrams(d.percentage, nw),
-    }));
-    await updateRecipeDyes(targetLotNo, cloned);
+  const stageToTarget = () => {
+    if (!onApplyReference) return;
+    onApplyReference(dyes, refChemicals);
   };
 
-  const cloneChemicalsToTarget = async () => {
-    if (!targetLotNo || refChemicals.length === 0) return;
-    const cloned = refChemicals.map(c => ({
-      id: crypto.randomUUID(),
-      lot_no: targetLotNo,
-      chemical_id: c.chemical_id,
-      qty: c.qty,
-      ph_value: c.ph_value ?? null,
-    }));
-    await updateRecipeChemicals(targetLotNo, cloned);
-  };
-
-  // Auto-copy: when target lot's base recipe is empty and a reference is
-  // selected, clone its dyes and chemicals once. Tracked per (target, reference)
-  // pair so it does not re-fire if the user clears the recipe intentionally.
+  // Auto-stage: when target lot's base recipe is empty and a reference is
+  // selected, stage its dyes/chemicals into the editor once. Tracked per
+  // (target, reference) pair so it does not re-fire on every render.
   useEffect(() => {
     if (!targetLotNo || !selectedLot || selectedLot === targetLotNo) return;
+    if (!onApplyReference) return;
     const hasRefData = dyes.length > 0 || refChemicals.length > 0;
     if (!hasRefData) return;
-    const targetEmpty = targetExistingDyes.length === 0 && targetChemicalsAreEmpty;
-    if (!targetEmpty) return;
+    if (!targetIsEmpty) return;
     const key = `${targetLotNo}::${selectedLot}`;
-    if (autoClonedRef.current.has(key)) return;
-    autoClonedRef.current.add(key);
-    Promise.all([
-      dyes.length > 0 ? cloneDyesToTarget() : Promise.resolve(),
-      refChemicals.length > 0 ? cloneChemicalsToTarget() : Promise.resolve(),
-    ])
-      .then(() => toast.success(`Base recipe populated from ${selectedLot}.`))
-      .catch(() => { autoClonedRef.current.delete(key); });
+    if (autoStagedRef.current.has(key)) return;
+    autoStagedRef.current.add(key);
+    onApplyReference(dyes, refChemicals);
+    toast.success(`Reference recipe staged from ${selectedLot}. Press Save to persist.`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetLotNo, selectedLot, dyes.length, refChemicals.length, targetExistingDyes.length, targetChemicalsAreEmpty]);
+  }, [targetLotNo, selectedLot, dyes.length, refChemicals.length, targetIsEmpty]);
+
 
 
 
@@ -201,7 +171,7 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
           <div>
             <div className="flex items-center justify-between mb-1">
               <p className="text-xs font-semibold text-muted-foreground">Base Recipe (Initial Dyeing)</p>
-              {canCopy && (targetExistingDyes.length > 0 || !targetChemicalsAreEmpty) && (
+              {canCopy && !targetIsEmpty && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <button
@@ -213,23 +183,22 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Replace base recipe?</AlertDialogTitle>
+                      <AlertDialogTitle>Stage reference recipe?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will replace the current base recipe (dyes and chemicals) of <strong>{targetLotNo}</strong> with the recipe from <strong>{selectedLot}</strong>.
+                        This will replace the current base recipe (dyes and chemicals) of <strong>{targetLotNo}</strong> with the recipe from <strong>{selectedLot}</strong> in the editor below.
+                        <br /><br />
+                        <span className="text-xs text-muted-foreground">No changes are saved until you click <strong>Save Recipe</strong>.</span>
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                       <AlertDialogAction
-                        onClick={async () => {
-                          await Promise.all([
-                            dyes.length > 0 ? cloneDyesToTarget() : Promise.resolve(),
-                            refChemicals.length > 0 ? cloneChemicalsToTarget() : Promise.resolve(),
-                          ]);
-                          toast.success(`Base recipe replaced from ${selectedLot}.`);
+                        onClick={() => {
+                          stageToTarget();
+                          toast.success(`Reference staged from ${selectedLot}. Press Save to persist.`);
                         }}
                       >
-                        Replace
+                        Stage
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
-import RecipeEditor from '@/components/RecipeEditor';
+import RecipeEditor, { type RecipeEditorHandle } from '@/components/RecipeEditor';
 import { calculateNetWeight, calculateDyeGrams } from '@/lib/calculations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ProcessStepForm from '@/components/ProcessStepForm';
@@ -230,20 +230,12 @@ const LotDetail: React.FC = () => {
         />
       )}
 
-      {/* Reference Recipe Panel */}
-      <ReferenceRecipePanel
-        defaultLotNo={lot.shade_number !== lot.lot_no ? lot.shade_number : undefined}
-        targetLotNo={lot.lot_no}
-        targetNetWeight={lot.net_weight}
+      {/* Reference Recipe Panel + Base Recipe (RecipeEditor receives staged data via ref) */}
+      <RecipeEditorWithReference
+        lotNo={lot.lot_no}
+        netWeight={lot.net_weight}
+        defaultReferenceLotNo={lot.shade_number !== lot.lot_no ? lot.shade_number : undefined}
       />
-
-      {/* Base Recipe */}
-      <div className="card-industrial p-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">
-          Base Recipe (Initial Dyeing)
-        </h2>
-        <RecipeEditor lotNo={lot.lot_no} netWeight={lot.net_weight} />
-      </div>
 
       {/* Base Photos */}
       <div className="card-industrial p-4">
@@ -331,6 +323,48 @@ const OrderHistory: React.FC<{ lotNo: string }> = ({ lotNo }) => {
         ))}
       </div>
     </div>
+  );
+};
+
+/**
+ * Couples ReferenceRecipePanel with RecipeEditor so a selected reference
+ * recipe is staged into the editor's local state (not persisted) until the
+ * user clicks Save Recipe.
+ */
+const RecipeEditorWithReference: React.FC<{
+  lotNo: string;
+  netWeight: number;
+  defaultReferenceLotNo?: string;
+}> = ({ lotNo, netWeight, defaultReferenceLotNo }) => {
+  const { getDyesForLot, getChemicalsForLot } = useApp();
+  const editorRef = useRef<RecipeEditorHandle>(null);
+
+  const existingDyes = getDyesForLot(lotNo);
+  const existingChemicals = getChemicalsForLot(lotNo);
+  // Empty = no dye rows AND every chemical qty is 0 (defaults pre-fill BUF/CDFT/CWS at 0).
+  const targetIsEmpty = useMemo(
+    () => existingDyes.length === 0 && existingChemicals.every(c => !c.qty || c.qty === 0),
+    [existingDyes, existingChemicals]
+  );
+
+  return (
+    <>
+      <ReferenceRecipePanel
+        defaultLotNo={defaultReferenceLotNo}
+        targetLotNo={lotNo}
+        targetIsEmpty={targetIsEmpty}
+        onApplyReference={(refDyes, refChems) => {
+          editorRef.current?.applyReference(refDyes, refChems);
+        }}
+      />
+
+      <div className="card-industrial p-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">
+          Base Recipe (Initial Dyeing)
+        </h2>
+        <RecipeEditor ref={editorRef} lotNo={lotNo} netWeight={netWeight} />
+      </div>
+    </>
   );
 };
 

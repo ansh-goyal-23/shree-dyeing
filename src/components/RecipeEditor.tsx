@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
 import { useApp } from '@/context/AppContext';
 import { calculateDyeGrams } from '@/lib/calculations';
 import { Plus, Trash2, Percent, Undo2 } from 'lucide-react';
@@ -19,7 +19,12 @@ interface Props {
   readOnly?: boolean;
 }
 
-const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) => {
+export interface RecipeEditorHandle {
+  /** Stage a reference recipe into local editor state without saving. */
+  applyReference: (refDyes: RecipeDye[], refChemicals: RecipeChemical[]) => void;
+}
+
+const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, readOnly = false }, ref) => {
   const { masterItems, getDyesForLot, getChemicalsForLot, updateRecipeDyes, updateRecipeChemicals } = useApp();
 
   const dyes = getDyesForLot(lotNo);
@@ -52,6 +57,29 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
   const [localChemicals, setLocalChemicals] = useState<RecipeChemical[]>(initialChemicals);
   const [dirty, setDirty] = useState(false);
   const [prevDyes, setPrevDyes] = useState<RecipeDye[] | null>(null);
+
+  // Imperative API: stage a reference recipe into local state without saving.
+  useImperativeHandle(ref, () => ({
+    applyReference: (refDyes, refChemicals) => {
+      const stagedDyes: RecipeDye[] = refDyes.map(d => ({
+        id: crypto.randomUUID(),
+        lot_no: lotNo,
+        dye_id: d.dye_id,
+        percentage: d.percentage,
+        qty_grams: calculateDyeGrams(d.percentage, netWeight),
+      }));
+      const stagedChems: RecipeChemical[] = refChemicals.map(c => ({
+        id: crypto.randomUUID(),
+        lot_no: lotNo,
+        chemical_id: c.chemical_id,
+        qty: c.qty,
+        ph_value: c.ph_value ?? null,
+      }));
+      setLocalDyes(stagedDyes);
+      if (stagedChems.length > 0) setLocalChemicals(stagedChems);
+      setDirty(true);
+    },
+  }), [lotNo, netWeight]);
 
   const applyReduction = () => {
     setPrevDyes([...localDyes]);
@@ -328,6 +356,8 @@ const RecipeEditor: React.FC<Props> = ({ lotNo, netWeight, readOnly = false }) =
       )}
     </div>
   );
-};
+});
+
+RecipeEditor.displayName = 'RecipeEditor';
 
 export default RecipeEditor;
