@@ -201,7 +201,7 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
           <div>
             <div className="flex items-center justify-between mb-1">
               <p className="text-xs font-semibold text-muted-foreground">Base Recipe (Initial Dyeing)</p>
-              {canCopy && targetExistingDyes.length > 0 && (
+              {canCopy && (targetExistingDyes.length > 0 || !targetChemicalsAreEmpty) && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <button
@@ -215,14 +215,17 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
                     <AlertDialogHeader>
                       <AlertDialogTitle>Replace base recipe?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will replace the current base recipe of <strong>{targetLotNo}</strong> with the dyes from <strong>{selectedLot}</strong>. Chemicals (BUF, CDFT, CWS, etc.) are not affected.
+                        This will replace the current base recipe (dyes and chemicals) of <strong>{targetLotNo}</strong> with the recipe from <strong>{selectedLot}</strong>.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={async () => {
-                          await cloneDyesToTarget();
+                          await Promise.all([
+                            dyes.length > 0 ? cloneDyesToTarget() : Promise.resolve(),
+                            refChemicals.length > 0 ? cloneChemicalsToTarget() : Promise.resolve(),
+                          ]);
                           toast.success(`Base recipe replaced from ${selectedLot}.`);
                         }}
                       >
