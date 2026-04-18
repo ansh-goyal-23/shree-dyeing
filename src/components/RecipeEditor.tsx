@@ -333,6 +333,8 @@ const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, 
       )}
     </div>
   );
-};
+});
+
+RecipeEditor.displayName = 'RecipeEditor';
 
 export default RecipeEditor;
