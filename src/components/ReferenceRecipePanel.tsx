@@ -1,28 +1,35 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
-import { calculateNetWeight, calculateDyeGrams } from '@/lib/calculations';
+import { calculateNetWeight } from '@/lib/calculations';
 import { toast } from 'sonner';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Copy } from 'lucide-react';
+import type { RecipeDye, RecipeChemical } from '@/types';
 
 interface ReferenceRecipePanelProps {
   defaultLotNo?: string;
-  /** When provided, enables copying the reference base recipe into this lot's base recipe. */
+  /** When provided, enables staging the reference recipe into the target lot's editor. */
   targetLotNo?: string;
-  /** Net weight of the target lot — used to recompute dye grams. */
-  targetNetWeight?: number;
+  /**
+   * Stage reference dyes/chemicals into the editor. The host page forwards
+   * this to RecipeEditor. Nothing is written to the database here — the user
+   * must press Save in the editor to persist.
+   */
+  onApplyReference?: (refDyes: RecipeDye[], refChemicals: RecipeChemical[]) => void;
+  /** Whether the target lot's base recipe is currently empty (no dyes & no non-zero chemicals). */
+  targetIsEmpty?: boolean;
 }
 
-const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotNo, targetLotNo, targetNetWeight }) => {
-  const { lots, getDyesForLot, getChemicalsForLot, masterItems, getProcessStepsForLot, getStepDyes, getStepChemicals, updateRecipeDyes, updateRecipeChemicals } = useApp();
+const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotNo, targetLotNo, onApplyReference, targetIsEmpty }) => {
+  const { lots, getDyesForLot, getChemicalsForLot, masterItems, getProcessStepsForLot, getStepDyes, getStepChemicals } = useApp();
   const [selectedLot, setSelectedLot] = useState(defaultLotNo || '');
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const wrapperRef = React.useRef<HTMLDivElement>(null);
-  const autoClonedRef = useRef<Set<string>>(new Set());
+  const autoStagedRef = useRef<Set<string>>(new Set());
 
   const allLots = useMemo(() =>
     [...lots].sort((a, b) =>
