@@ -41,6 +41,7 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
 
   const lot = useMemo(() => lots.find(l => l.lot_no === selectedLot), [lots, selectedLot]);
   const dyes = useMemo(() => selectedLot ? getDyesForLot(selectedLot) : [], [selectedLot, getDyesForLot]);
+  const refChemicals = useMemo(() => selectedLot ? getChemicalsForLot(selectedLot) : [], [selectedLot, getChemicalsForLot]);
 
   const dyeDisplay = useMemo(() =>
     dyes.map(d => {
