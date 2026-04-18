@@ -90,7 +90,17 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
     () => (targetLotNo ? getDyesForLot(targetLotNo) : []),
     [targetLotNo, getDyesForLot]
   );
-  const canCopy = !!targetLotNo && targetLotNo !== selectedLot && dyes.length > 0;
+  const targetExistingChemicals = useMemo(
+    () => (targetLotNo ? getChemicalsForLot(targetLotNo) : []),
+    [targetLotNo, getChemicalsForLot]
+  );
+  // A target's chemicals are considered "empty" if every chemical qty is 0
+  // (the editor pre-fills BUF/CDFT/CWS rows with qty=0 by default).
+  const targetChemicalsAreEmpty = useMemo(
+    () => targetExistingChemicals.every(c => !c.qty || c.qty === 0),
+    [targetExistingChemicals]
+  );
+  const canCopy = !!targetLotNo && targetLotNo !== selectedLot && (dyes.length > 0 || refChemicals.length > 0);
 
   const cloneDyesToTarget = async () => {
     if (!targetLotNo || dyes.length === 0) return;
@@ -105,21 +115,39 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
     await updateRecipeDyes(targetLotNo, cloned);
   };
 
+  const cloneChemicalsToTarget = async () => {
+    if (!targetLotNo || refChemicals.length === 0) return;
+    const cloned = refChemicals.map(c => ({
+      id: crypto.randomUUID(),
+      lot_no: targetLotNo,
+      chemical_id: c.chemical_id,
+      qty: c.qty,
+      ph_value: c.ph_value ?? null,
+    }));
+    await updateRecipeChemicals(targetLotNo, cloned);
+  };
+
   // Auto-copy: when target lot's base recipe is empty and a reference is
-  // selected, clone its dyes once. Tracked per (target, reference) pair so
-  // it does not re-fire if the user clears the recipe intentionally.
+  // selected, clone its dyes and chemicals once. Tracked per (target, reference)
+  // pair so it does not re-fire if the user clears the recipe intentionally.
   useEffect(() => {
     if (!targetLotNo || !selectedLot || selectedLot === targetLotNo) return;
-    if (dyes.length === 0) return;
-    if (targetExistingDyes.length > 0) return;
+    const hasRefData = dyes.length > 0 || refChemicals.length > 0;
+    if (!hasRefData) return;
+    const targetEmpty = targetExistingDyes.length === 0 && targetChemicalsAreEmpty;
+    if (!targetEmpty) return;
     const key = `${targetLotNo}::${selectedLot}`;
     if (autoClonedRef.current.has(key)) return;
     autoClonedRef.current.add(key);
-    cloneDyesToTarget()
+    Promise.all([
+      dyes.length > 0 ? cloneDyesToTarget() : Promise.resolve(),
+      refChemicals.length > 0 ? cloneChemicalsToTarget() : Promise.resolve(),
+    ])
       .then(() => toast.success(`Base recipe populated from ${selectedLot}.`))
       .catch(() => { autoClonedRef.current.delete(key); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetLotNo, selectedLot, dyes.length, targetExistingDyes.length]);
+  }, [targetLotNo, selectedLot, dyes.length, refChemicals.length, targetExistingDyes.length, targetChemicalsAreEmpty]);
+
 
 
   return (
