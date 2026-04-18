@@ -84,6 +84,43 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
 
   const netWeight = lot ? calculateNetWeight(lot.gross_weight, lot.number_of_chesses) : 0;
 
+  // Copy-to-target support
+  const targetExistingDyes = useMemo(
+    () => (targetLotNo ? getDyesForLot(targetLotNo) : []),
+    [targetLotNo, getDyesForLot]
+  );
+  const canCopy = !!targetLotNo && targetLotNo !== selectedLot && dyes.length > 0;
+
+  const cloneDyesToTarget = async () => {
+    if (!targetLotNo || dyes.length === 0) return;
+    const nw = targetNetWeight ?? 0;
+    const cloned = dyes.map(d => ({
+      id: crypto.randomUUID(),
+      lot_no: targetLotNo,
+      dye_id: d.dye_id,
+      percentage: d.percentage,
+      qty_grams: calculateDyeGrams(d.percentage, nw),
+    }));
+    await updateRecipeDyes(targetLotNo, cloned);
+  };
+
+  // Auto-copy: when target lot's base recipe is empty and a reference is
+  // selected, clone its dyes once. Tracked per (target, reference) pair so
+  // it does not re-fire if the user clears the recipe intentionally.
+  useEffect(() => {
+    if (!targetLotNo || !selectedLot || selectedLot === targetLotNo) return;
+    if (dyes.length === 0) return;
+    if (targetExistingDyes.length > 0) return;
+    const key = `${targetLotNo}::${selectedLot}`;
+    if (autoClonedRef.current.has(key)) return;
+    autoClonedRef.current.add(key);
+    cloneDyesToTarget()
+      .then(() => toast.success(`Base recipe populated from ${selectedLot}.`))
+      .catch(() => { autoClonedRef.current.delete(key); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetLotNo, selectedLot, dyes.length, targetExistingDyes.length]);
+
+
   return (
     <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
       <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
