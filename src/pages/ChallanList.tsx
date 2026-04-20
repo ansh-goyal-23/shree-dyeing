@@ -110,11 +110,24 @@ const ChallanList: React.FC = () => {
     }
 
     if (clientFilter) list = list.filter(c => c.client_name === clientFilter);
-    if (dateFrom) list = list.filter(c => new Date(c.date) >= dateFrom);
+
+    // Normalize challan date string (YYYY-MM-DD or ISO) to a local Date at start-of-day
+    // to avoid timezone off-by-one issues when comparing against calendar-picked dates.
+    const toLocalDay = (s: string): Date => {
+      const datePart = s.includes('T') ? s.split('T')[0] : s;
+      const m = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+      const d = new Date(s);
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    };
+
+    if (dateFrom) {
+      const from = new Date(dateFrom.getFullYear(), dateFrom.getMonth(), dateFrom.getDate());
+      list = list.filter(c => toLocalDay(c.date) >= from);
+    }
     if (dateTo) {
-      const end = new Date(dateTo);
-      end.setHours(23, 59, 59, 999);
-      list = list.filter(c => new Date(c.date) <= end);
+      const to = new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate(), 23, 59, 59, 999);
+      list = list.filter(c => toLocalDay(c.date) <= to);
     }
 
     // Sort
