@@ -9,6 +9,7 @@ import Dashboard from "@/pages/Dashboard";
 import LotList from "@/pages/LotList";
 import CreateLot from "@/pages/CreateLot";
 import LotDetail from "@/pages/LotDetail";
+import CompareLots from "@/pages/CompareLots";
 import MasterData from "@/pages/MasterData";
 import PlaceholderModule from "@/pages/PlaceholderModule";
 import ChallanList from "@/pages/ChallanList";
@@ -62,6 +63,7 @@ const App = () => (
                       <Route path="/shade-management" element={<Dashboard />} />
                       <Route path="/shade-management/lots" element={<LotList />} />
                       <Route path="/shade-management/lots/create" element={<CreateLot />} />
+                      <Route path="/shade-management/compare" element={<CompareLots />} />
                       <Route path="/shade-management/lots/:lotNo" element={<LotDetail />} />
                       <Route path="/shade-management/master" element={<MasterData />} />
                       <Route path="/sampling" element={<IntakeList />} />

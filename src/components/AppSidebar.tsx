@@ -8,6 +8,7 @@ import {
   List,
   PlusCircle,
   Database,
+  GitCompare,
   ClipboardList,
   ShoppingCart,
   Upload,
@@ -31,6 +32,7 @@ const shadeItems = [
   { title: 'Dashboard', url: '/shade-management', icon: LayoutDashboard },
   { title: 'Lot List', url: '/shade-management/lots', icon: List },
   { title: 'Create Lot', url: '/shade-management/lots/create', icon: PlusCircle },
+  { title: 'Compare Lots', url: '/shade-management/compare', icon: GitCompare },
   { title: 'Master Data', url: '/shade-management/master', icon: Database },
 ];
 
