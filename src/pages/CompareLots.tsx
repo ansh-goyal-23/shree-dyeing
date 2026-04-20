@@ -208,7 +208,7 @@ const CompareLots: React.FC = () => {
                       {selectedLots.map(l => (
                         <td
                           key={l.lot_no}
-                          className={cn('px-3 py-2 border-r', diff && 'bg-amber-500/10 dark:bg-amber-400/10')}
+                          className={cn('px-3 py-2 border-r', diff && 'bg-accent text-accent-foreground')}
                         >
                           {row.get(l)}
                         </td>
@@ -257,7 +257,7 @@ const CompareLots: React.FC = () => {
                               key={l.lot_no}
                               className={cn(
                                 'px-3 py-2 border-r tabular-nums',
-                                diff && !absent && 'bg-amber-500/10 dark:bg-amber-400/10',
+                                diff && !absent && 'bg-accent text-accent-foreground',
                                 absent && 'bg-destructive/5 text-muted-foreground italic',
                               )}
                             >
