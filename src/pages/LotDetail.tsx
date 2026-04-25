@@ -10,11 +10,12 @@ import LotPhotos from '@/components/LotPhotos';
 import ReferenceRecipePanel from '@/components/ReferenceRecipePanel';
 import { useOrdersForLot } from '@/hooks/useSampling';
 import type { LotStatus } from '@/types';
-import { Search, CheckCircle2, Clock, Plus, ArrowLeft, ShoppingCart, Trash2, Pencil, Save, X } from 'lucide-react';
+import { Search, CheckCircle2, Clock, Plus, ArrowLeft, ShoppingCart, Trash2, Pencil, Save, X, MessageSquarePlus, StickyNote } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const LotDetail: React.FC = () => {
@@ -33,6 +34,9 @@ const LotDetail: React.FC = () => {
     date: '', yarn_company_name: '', color_name: '', denier: '',
     number_of_chesses: 0, gross_weight: 0,
   });
+  const [editingRemarks, setEditingRemarks] = useState(false);
+  const [remarksDraft, setRemarksDraft] = useState('');
+  const [savingRemarks, setSavingRemarks] = useState(false);
 
   if (!lot) {
     return (
@@ -89,6 +93,23 @@ const LotDetail: React.FC = () => {
     setShowStepForm(false);
   };
 
+  const startEditingRemarks = () => {
+    setRemarksDraft(lot.remarks || '');
+    setEditingRemarks(true);
+  };
+
+  const handleSaveRemarks = async () => {
+    setSavingRemarks(true);
+    const success = await updateLot(lot.lot_no, { remarks: remarksDraft });
+    setSavingRemarks(false);
+    if (success) {
+      toast.success('Remarks saved.');
+      setEditingRemarks(false);
+    } else {
+      toast.error('Failed to save remarks.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Back */}
@@ -112,6 +133,12 @@ const LotDetail: React.FC = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={() => setShowStepForm(true)} className="px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring inline-flex items-center gap-2">
               <Plus className="w-4 h-4" /> Add Process Step
+            </button>
+            <button
+              onClick={startEditingRemarks}
+              className="px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring inline-flex items-center gap-2"
+            >
+              <MessageSquarePlus className="w-4 h-4" /> {lot.remarks ? 'Edit Remarks' : 'Add Remarks'}
             </button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -236,6 +263,42 @@ const LotDetail: React.FC = () => {
         netWeight={lot.net_weight}
         defaultReferenceLotNo={lot.shade_number !== lot.lot_no ? lot.shade_number : undefined}
       />
+
+      {/* Remarks (free-form notes for this lot) */}
+      {(editingRemarks || lot.remarks) && (
+        <div className="card-industrial p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+              <StickyNote className="w-4 h-4" /> Remarks
+            </h2>
+            {!editingRemarks ? (
+              <Button variant="outline" size="sm" onClick={startEditingRemarks} className="gap-1.5">
+                <Pencil className="w-3.5 h-3.5" /> Edit
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setEditingRemarks(false)} disabled={savingRemarks} className="gap-1.5">
+                  <X className="w-3.5 h-3.5" /> Cancel
+                </Button>
+                <Button size="sm" onClick={handleSaveRemarks} disabled={savingRemarks} className="gap-1.5">
+                  <Save className="w-3.5 h-3.5" /> {savingRemarks ? 'Saving…' : 'Save'}
+                </Button>
+              </div>
+            )}
+          </div>
+          {editingRemarks ? (
+            <Textarea
+              value={remarksDraft}
+              onChange={e => setRemarksDraft(e.target.value)}
+              placeholder="Write any reference notes for this lot…"
+              rows={4}
+              autoFocus
+            />
+          ) : (
+            <p className="text-sm whitespace-pre-wrap leading-relaxed">{lot.remarks}</p>
+          )}
+        </div>
+      )}
 
       {/* Base Photos */}
       <div className="card-industrial p-4">
