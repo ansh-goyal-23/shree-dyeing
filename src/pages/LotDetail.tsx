@@ -134,6 +134,12 @@ const LotDetail: React.FC = () => {
             <button onClick={() => setShowStepForm(true)} className="px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring inline-flex items-center gap-2">
               <Plus className="w-4 h-4" /> Add Process Step
             </button>
+            <button
+              onClick={startEditingRemarks}
+              className="px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring inline-flex items-center gap-2"
+            >
+              <MessageSquarePlus className="w-4 h-4" /> {lot.remarks ? 'Edit Remarks' : 'Add Remarks'}
+            </button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <button className="px-4 h-11 border border-destructive text-destructive rounded-md text-sm font-medium btn-transition hover:bg-destructive/10 focus-ring inline-flex items-center gap-2">
