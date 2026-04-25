@@ -34,6 +34,9 @@ const LotDetail: React.FC = () => {
     date: '', yarn_company_name: '', color_name: '', denier: '',
     number_of_chesses: 0, gross_weight: 0,
   });
+  const [editingRemarks, setEditingRemarks] = useState(false);
+  const [remarksDraft, setRemarksDraft] = useState('');
+  const [savingRemarks, setSavingRemarks] = useState(false);
 
   if (!lot) {
     return (
