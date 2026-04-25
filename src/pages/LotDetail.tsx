@@ -93,6 +93,23 @@ const LotDetail: React.FC = () => {
     setShowStepForm(false);
   };
 
+  const startEditingRemarks = () => {
+    setRemarksDraft(lot.remarks || '');
+    setEditingRemarks(true);
+  };
+
+  const handleSaveRemarks = async () => {
+    setSavingRemarks(true);
+    const success = await updateLot(lot.lot_no, { remarks: remarksDraft });
+    setSavingRemarks(false);
+    if (success) {
+      toast.success('Remarks saved.');
+      setEditingRemarks(false);
+    } else {
+      toast.error('Failed to save remarks.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Back */}
