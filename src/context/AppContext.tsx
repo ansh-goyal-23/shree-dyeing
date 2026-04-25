@@ -285,6 +285,7 @@ const mapLot = (row: any): Lot => ({
   net_weight: Number(row.net_weight) || 0, is_approved: row.is_approved || false,
   status: row.status || (row.is_approved ? 'Approved' : 'In Approval'),
   shade_number: row.shade_number || row.lot_no, source_lot_no: row.source_lot_no || null,
+  remarks: row.remarks || '',
 });
 
 const mapDye = (row: any): RecipeDye => ({

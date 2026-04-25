@@ -22,6 +22,7 @@ export interface Lot {
   status: LotStatus;
   shade_number: string;
   source_lot_no: string | null;
+  remarks: string;
 }
 
 export interface RecipeDye {
