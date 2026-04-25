@@ -10,11 +10,12 @@ import LotPhotos from '@/components/LotPhotos';
 import ReferenceRecipePanel from '@/components/ReferenceRecipePanel';
 import { useOrdersForLot } from '@/hooks/useSampling';
 import type { LotStatus } from '@/types';
-import { Search, CheckCircle2, Clock, Plus, ArrowLeft, ShoppingCart, Trash2, Pencil, Save, X } from 'lucide-react';
+import { Search, CheckCircle2, Clock, Plus, ArrowLeft, ShoppingCart, Trash2, Pencil, Save, X, MessageSquarePlus, StickyNote } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const LotDetail: React.FC = () => {
