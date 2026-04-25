@@ -264,6 +264,42 @@ const LotDetail: React.FC = () => {
         defaultReferenceLotNo={lot.shade_number !== lot.lot_no ? lot.shade_number : undefined}
       />
 
+      {/* Remarks (free-form notes for this lot) */}
+      {(editingRemarks || lot.remarks) && (
+        <div className="card-industrial p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+              <StickyNote className="w-4 h-4" /> Remarks
+            </h2>
+            {!editingRemarks ? (
+              <Button variant="outline" size="sm" onClick={startEditingRemarks} className="gap-1.5">
+                <Pencil className="w-3.5 h-3.5" /> Edit
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setEditingRemarks(false)} disabled={savingRemarks} className="gap-1.5">
+                  <X className="w-3.5 h-3.5" /> Cancel
+                </Button>
+                <Button size="sm" onClick={handleSaveRemarks} disabled={savingRemarks} className="gap-1.5">
+                  <Save className="w-3.5 h-3.5" /> {savingRemarks ? 'Saving…' : 'Save'}
+                </Button>
+              </div>
+            )}
+          </div>
+          {editingRemarks ? (
+            <Textarea
+              value={remarksDraft}
+              onChange={e => setRemarksDraft(e.target.value)}
+              placeholder="Write any reference notes for this lot…"
+              rows={4}
+              autoFocus
+            />
+          ) : (
+            <p className="text-sm whitespace-pre-wrap leading-relaxed">{lot.remarks}</p>
+          )}
+        </div>
+      )}
+
       {/* Base Photos */}
       <div className="card-industrial p-4">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
