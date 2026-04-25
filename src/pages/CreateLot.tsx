@@ -83,6 +83,7 @@ const CreateLot: React.FC = () => {
       number_of_chesses: form.number_of_chesses,
       gross_weight: form.gross_weight,
       source_lot_no: null,
+      remarks: '',
     });
 
     if (success) {
