@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Challan, ChallanItem } from '@/types/challan';
+import { formatYmdLocal } from '@/lib/formatDate';
 
 const PACKAGING_LABEL: Record<string, string> = {
   paper_tube: 'Paper Tube',
@@ -48,7 +49,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   doc.setFont('helvetica', 'bold');
   doc.text(challan.challan_number, metaLeft, y);
   doc.setFont('helvetica', 'normal');
-  doc.text(new Date(challan.date).toLocaleDateString('en-IN'), metaMid, y);
+  doc.text(formatYmdLocal(challan.date, 'en-IN'), metaMid, y);
   doc.text(challan.client_name, metaRight - 40, y);
   y += 10;
 

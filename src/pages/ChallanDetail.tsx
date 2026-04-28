@@ -6,6 +6,7 @@ import ClientSelect from '@/components/ClientSelect';
 import ChallanItemRow from '@/components/ChallanItemRow';
 import type { ItemData } from '@/components/ChallanItemRow';
 import { downloadChallanPdf, shareChallanPdf } from '@/lib/challanPdf';
+import { formatYmdLocal } from '@/lib/formatDate';
 import { useClientRates } from '@/hooks/useClientRates';
 import { toast } from 'sonner';
 import { PlusCircle, Loader2, Pencil, Trash2, ArrowLeft, Download, Share2 } from 'lucide-react';
@@ -187,7 +188,7 @@ const ChallanDetail: React.FC = () => {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div><span className="text-muted-foreground">Challan #</span><p className="font-medium mt-0.5">{challan.challan_number}</p></div>
-            <div><span className="text-muted-foreground">Date</span><p className="font-medium mt-0.5">{new Date(challan.date).toLocaleDateString()}</p></div>
+            <div><span className="text-muted-foreground">Date</span><p className="font-medium mt-0.5">{formatYmdLocal(challan.date)}</p></div>
             <div><span className="text-muted-foreground">Client</span><p className="font-medium mt-0.5">{challan.client_name}</p></div>
             {challan.notes && <div className="col-span-2 md:col-span-4"><span className="text-muted-foreground">Notes</span><p className="mt-0.5">{challan.notes}</p></div>}
           </div>

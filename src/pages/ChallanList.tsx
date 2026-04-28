@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { formatYmdLocal } from '@/lib/formatDate';
 
 type SortField = 'challan' | 'date' | 'client' | 'net_weight' | 'amount';
 type SortDir = 'asc' | 'desc';
@@ -273,7 +274,7 @@ const ChallanList: React.FC = () => {
                     <td className="p-3">
                       <Link to={`/dispatch/${c.id}`} className="text-primary font-medium hover:underline">{c.challan_number}</Link>
                     </td>
-                    <td className="p-3">{new Date(c.date).toLocaleDateString()}</td>
+                    <td className="p-3">{formatYmdLocal(c.date)}</td>
                     <td className="p-3">{c.client_name}</td>
                     <td className="p-3 text-right">{s.totalItems}</td>
                     <td className="p-3 text-right">{s.totalNetWeight.toFixed(3)} kg</td>
