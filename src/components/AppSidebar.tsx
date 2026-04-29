@@ -13,6 +13,7 @@ import {
   ShoppingCart,
   Upload,
   IndianRupee,
+  Droplet,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
@@ -46,6 +47,7 @@ const dispatchItems = [
   { title: 'All Challans', url: '/dispatch', icon: Truck },
   { title: 'New Challan', url: '/dispatch/create', icon: PlusCircle },
   { title: 'Client Rates', url: '/dispatch/client-rates', icon: IndianRupee },
+  { title: 'Oil Consumption', url: '/dispatch/oil-consumption', icon: Droplet },
 ];
 
 const expenseItems = [

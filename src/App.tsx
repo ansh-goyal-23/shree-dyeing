@@ -16,6 +16,7 @@ import ChallanList from "@/pages/ChallanList";
 import CreateChallan from "@/pages/CreateChallan";
 import ClientRateMaster from "@/pages/ClientRateMaster";
 import ChallanDetail from "@/pages/ChallanDetail";
+import OilConsumptionReport from "@/pages/OilConsumptionReport";
 import IntakeList from "@/pages/IntakeList";
 import CreateIntake from "@/pages/CreateIntake";
 import IntakeDetail from "@/pages/IntakeDetail";
@@ -76,6 +77,7 @@ const App = () => (
                       <Route path="/dispatch" element={<ChallanList />} />
                       <Route path="/dispatch/create" element={<CreateChallan />} />
                       <Route path="/dispatch/client-rates" element={<ClientRateMaster />} />
+                      <Route path="/dispatch/oil-consumption" element={<OilConsumptionReport />} />
                       <Route path="/dispatch/:id" element={<ChallanDetail />} />
                       <Route path="/item-master" element={<ItemMaster />} />
                       <Route path="/inventory" element={<InventoryList />} />
