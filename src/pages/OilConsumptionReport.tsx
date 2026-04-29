@@ -206,7 +206,7 @@ const OilConsumptionReport: React.FC = () => {
       {data && data.length > 0 && (
         <>
           {/* Summary cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <div className="card-industrial p-4">
               <div className="text-xs uppercase text-muted-foreground">Lots</div>
               <div className="text-2xl font-bold mt-1">{totals.lots}</div>
