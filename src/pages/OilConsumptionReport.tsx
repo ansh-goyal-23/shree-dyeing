@@ -270,15 +270,17 @@ const OilConsumptionReport: React.FC = () => {
                         </span>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
                 <tfoot className="bg-muted/40 font-semibold">
                   <tr className="border-t-2 border-border">
                     <td className="p-3" colSpan={4}>Total</td>
                     <td className="p-3 text-right">{totals.cones}</td>
-                    <td className="p-3 text-right">-</td>
+                    <td className="p-3 text-right">{totals.lotNet.toFixed(3)}</td>
                     <td className="p-3 text-right">{totals.dispatchNet.toFixed(3)}</td>
                     <td className="p-3 text-right text-primary">{totals.oil.toFixed(3)}</td>
+                    <td className="p-3 text-right text-primary">{totals.oilPct.toFixed(2)}%</td>
                     <td />
                   </tr>
                 </tfoot>
