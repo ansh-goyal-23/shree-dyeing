@@ -110,11 +110,15 @@ const OilConsumptionReport: React.FC = () => {
 
   const totals = useMemo(() => {
     const rows = data || [];
+    const lotNet = rows.reduce((s, r) => s + r.lot_net_weight, 0);
+    const oil = rows.reduce((s, r) => s + r.oil_used, 0);
     return {
       lots: rows.length,
       cones: rows.reduce((s, r) => s + r.total_dispatched_cones, 0),
       dispatchNet: rows.reduce((s, r) => s + r.total_dispatch_net_weight, 0),
-      oil: rows.reduce((s, r) => s + r.oil_used, 0),
+      lotNet,
+      oil,
+      oilPct: lotNet > 0 ? (oil / lotNet) * 100 : 0,
     };
   }, [data]);
 
@@ -202,7 +206,7 @@ const OilConsumptionReport: React.FC = () => {
       {data && data.length > 0 && (
         <>
           {/* Summary cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <div className="card-industrial p-4">
               <div className="text-xs uppercase text-muted-foreground">Lots</div>
               <div className="text-2xl font-bold mt-1">{totals.lots}</div>
@@ -218,6 +222,10 @@ const OilConsumptionReport: React.FC = () => {
             <div className="card-industrial p-4 bg-primary/5 border-primary/30">
               <div className="text-xs uppercase text-muted-foreground">Total Oil Consumption (kg)</div>
               <div className="text-2xl font-bold mt-1 text-primary">{totals.oil.toFixed(3)}</div>
+            </div>
+            <div className="card-industrial p-4 bg-primary/5 border-primary/30">
+              <div className="text-xs uppercase text-muted-foreground">Oil % (of Lot Net)</div>
+              <div className="text-2xl font-bold mt-1 text-primary">{totals.oilPct.toFixed(2)}%</div>
             </div>
           </div>
 
@@ -235,11 +243,14 @@ const OilConsumptionReport: React.FC = () => {
                     <th className="p-3 text-right">Lot Net (kg)</th>
                     <th className="p-3 text-right">Dispatch Net (kg)</th>
                     <th className="p-3 text-right">Oil Used (kg)</th>
+                    <th className="p-3 text-right">Oil %</th>
                     <th className="p-3 text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.map(r => (
+                  {data.map(r => {
+                    const oilPct = r.lot_net_weight > 0 ? (r.oil_used / r.lot_net_weight) * 100 : 0;
+                    return (
                     <tr key={r.lot_no} className="border-t border-border hover:bg-muted/30">
                       <td className="p-3 font-medium">{r.lot_no}</td>
                       <td className="p-3">{r.shade_number || '-'}</td>
@@ -251,6 +262,9 @@ const OilConsumptionReport: React.FC = () => {
                       <td className={cn('p-3 text-right font-semibold', r.oil_used > 0 ? 'text-primary' : 'text-muted-foreground')}>
                         {r.oil_used.toFixed(3)}
                       </td>
+                      <td className={cn('p-3 text-right font-semibold', oilPct > 0 ? 'text-primary' : 'text-muted-foreground')}>
+                        {oilPct.toFixed(2)}%
+                      </td>
                       <td className="p-3 text-center">
                         <span className={cn(
                           'inline-block px-2 py-0.5 rounded text-xs',
@@ -260,15 +274,17 @@ const OilConsumptionReport: React.FC = () => {
                         </span>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
                 <tfoot className="bg-muted/40 font-semibold">
                   <tr className="border-t-2 border-border">
                     <td className="p-3" colSpan={4}>Total</td>
                     <td className="p-3 text-right">{totals.cones}</td>
-                    <td className="p-3 text-right">-</td>
+                    <td className="p-3 text-right">{totals.lotNet.toFixed(3)}</td>
                     <td className="p-3 text-right">{totals.dispatchNet.toFixed(3)}</td>
                     <td className="p-3 text-right text-primary">{totals.oil.toFixed(3)}</td>
+                    <td className="p-3 text-right text-primary">{totals.oilPct.toFixed(2)}%</td>
                     <td />
                   </tr>
                 </tfoot>
