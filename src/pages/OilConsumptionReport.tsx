@@ -45,7 +45,7 @@ const OilConsumptionReport: React.FC = () => {
       // 2. Fetch all items for those challans
       const { data: items, error: iErr } = await supabase
         .from('challan_items')
-        .select('lot_no, shade_number, color_name, num_of_units, num_of_paper_tubes, net_weight')
+        .select('lot_no, shade_number, color_name, num_of_units, net_weight')
         .in('challan_id', ids);
       if (iErr) throw iErr;
 
@@ -54,7 +54,7 @@ const OilConsumptionReport: React.FC = () => {
       for (const it of items || []) {
         const lot = (it as any).lot_no as string;
         if (!lot) continue;
-        const cones = Number((it as any).num_of_units ?? (it as any).num_of_paper_tubes ?? 0) || 0;
+        const cones = Number((it as any).num_of_units ?? 0) || 0;
         const net = Number((it as any).net_weight) || 0;
         const cur = grouped.get(lot) || { cones: 0, net: 0, shade_number: '', color_name: '' };
         cur.cones += cones;
