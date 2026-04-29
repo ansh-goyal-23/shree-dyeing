@@ -110,11 +110,15 @@ const OilConsumptionReport: React.FC = () => {
 
   const totals = useMemo(() => {
     const rows = data || [];
+    const lotNet = rows.reduce((s, r) => s + r.lot_net_weight, 0);
+    const oil = rows.reduce((s, r) => s + r.oil_used, 0);
     return {
       lots: rows.length,
       cones: rows.reduce((s, r) => s + r.total_dispatched_cones, 0),
       dispatchNet: rows.reduce((s, r) => s + r.total_dispatch_net_weight, 0),
-      oil: rows.reduce((s, r) => s + r.oil_used, 0),
+      lotNet,
+      oil,
+      oilPct: lotNet > 0 ? (oil / lotNet) * 100 : 0,
     };
   }, [data]);
 
