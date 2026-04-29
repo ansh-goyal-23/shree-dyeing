@@ -239,11 +239,14 @@ const OilConsumptionReport: React.FC = () => {
                     <th className="p-3 text-right">Lot Net (kg)</th>
                     <th className="p-3 text-right">Dispatch Net (kg)</th>
                     <th className="p-3 text-right">Oil Used (kg)</th>
+                    <th className="p-3 text-right">Oil %</th>
                     <th className="p-3 text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.map(r => (
+                  {data.map(r => {
+                    const oilPct = r.lot_net_weight > 0 ? (r.oil_used / r.lot_net_weight) * 100 : 0;
+                    return (
                     <tr key={r.lot_no} className="border-t border-border hover:bg-muted/30">
                       <td className="p-3 font-medium">{r.lot_no}</td>
                       <td className="p-3">{r.shade_number || '-'}</td>
@@ -254,6 +257,9 @@ const OilConsumptionReport: React.FC = () => {
                       <td className="p-3 text-right">{r.total_dispatch_net_weight.toFixed(3)}</td>
                       <td className={cn('p-3 text-right font-semibold', r.oil_used > 0 ? 'text-primary' : 'text-muted-foreground')}>
                         {r.oil_used.toFixed(3)}
+                      </td>
+                      <td className={cn('p-3 text-right font-semibold', oilPct > 0 ? 'text-primary' : 'text-muted-foreground')}>
+                        {oilPct.toFixed(2)}%
                       </td>
                       <td className="p-3 text-center">
                         <span className={cn(
