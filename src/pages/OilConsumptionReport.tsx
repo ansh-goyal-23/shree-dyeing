@@ -223,6 +223,10 @@ const OilConsumptionReport: React.FC = () => {
               <div className="text-xs uppercase text-muted-foreground">Total Oil Consumption (kg)</div>
               <div className="text-2xl font-bold mt-1 text-primary">{totals.oil.toFixed(3)}</div>
             </div>
+            <div className="card-industrial p-4 bg-primary/5 border-primary/30">
+              <div className="text-xs uppercase text-muted-foreground">Oil % (of Lot Net)</div>
+              <div className="text-2xl font-bold mt-1 text-primary">{totals.oilPct.toFixed(2)}%</div>
+            </div>
           </div>
 
           {/* Per-lot table */}
