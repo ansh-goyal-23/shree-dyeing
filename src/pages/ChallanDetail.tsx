@@ -309,6 +309,15 @@ const ChallanDetail: React.FC = () => {
           </div>
         )
       )}
+
+      <InventoryApprovalDialog
+        open={inv.open}
+        rows={inv.rows}
+        title={inv.title}
+        busy={inv.busy}
+        onApprove={inv.handleApprove}
+        onCancel={inv.handleCancel}
+      />
     </div>
   );
 };
