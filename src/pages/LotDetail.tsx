@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import RecipeEditor, { type RecipeEditorHandle } from '@/components/RecipeEditor';
@@ -17,6 +17,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import InventoryApprovalDialog from '@/components/InventoryApprovalDialog';
+import { useInventoryApproval } from '@/hooks/useInventoryApproval';
+import { supabase } from '@/integrations/supabase/client';
 
 const LotDetail: React.FC = () => {
   const { lotNo } = useParams<{ lotNo: string }>();
@@ -24,8 +27,10 @@ const LotDetail: React.FC = () => {
   const {
     getLot, deleteLot, updateLotStatus, approveLot, unapproveLot, updateLot, masterItems,
     getLotsReferencingSource, addProcessStep, updateProcessStep, deleteProcessStep,
-    getProcessStepsForLot, stepDyes, stepChemicals, getDyesForLot, getChemicalsForLot,
+    getProcessStepsForLot, stepDyes, stepChemicals, getDyesForLot, getChemicalsForLot, refreshData,
   } = useApp();
+
+  const inv = useInventoryApproval();
 
   const lot = getLot(lotNo || '');
   const [showStepForm, setShowStepForm] = useState(false);
