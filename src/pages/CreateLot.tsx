@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { calculateNetWeight, calculateDyeGrams } from '@/lib/calculations';
@@ -14,6 +14,18 @@ import { seedFinishedGoodsForLot } from '@/lib/inventoryEngine';
 const CreateLot: React.FC = () => {
   const { addLot, lots, getDyesForLot, getChemicalsForLot, updateRecipeDyes, updateRecipeChemicals, masterItems, processSteps, stepDyes, stepChemicals, recipeDyes, recipeChemicals, refreshData } = useApp();
   const inv = useInventoryApproval();
+  const pendingNavRef = useRef<string | null>(null);
+  const wasOpenRef = useRef(false);
+  const navigate2 = useNavigate();
+  useEffect(() => {
+    if (inv.open) wasOpenRef.current = true;
+    else if (wasOpenRef.current && pendingNavRef.current) {
+      const t = pendingNavRef.current;
+      pendingNavRef.current = null;
+      wasOpenRef.current = false;
+      navigate2(t);
+    }
+  }, [inv.open, navigate2]);
   const companyNames = useMemo(() => [...lots.map(l => l.yarn_company_name)].sort((a, b) => a.localeCompare(b)), [lots]);
   const colorNames = useMemo(() => ([...lots.map(l => l.color_name).filter(Boolean)] as string[]).sort((a, b) => a.localeCompare(b)), [lots]);
   const denierValues = useMemo(() => ([...lots.map(l => l.denier).filter(Boolean)] as string[]).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [lots]);
