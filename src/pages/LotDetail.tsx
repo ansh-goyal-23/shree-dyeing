@@ -61,6 +61,40 @@ const LotDetail: React.FC = () => {
     setEditing(true);
   };
 
+  const triggerLotInventory = useCallback(async (lotForInv = lot) => {
+    if (!lotForInv) return;
+    await refreshData();
+    const [{ data: rd }, { data: rc }, { data: ps }] = await Promise.all([
+      supabase.from('recipe_dyes').select('*').eq('lot_no', lotForInv.lot_no),
+      supabase.from('recipe_chemicals').select('*').eq('lot_no', lotForInv.lot_no),
+      supabase.from('process_steps').select('id').eq('lot_no', lotForInv.lot_no),
+    ]);
+    const stepIds = (ps || []).map((s: any) => s.id);
+    let sd: any[] = []; let sc: any[] = [];
+    if (stepIds.length) {
+      const [{ data: sdd }, { data: scc }] = await Promise.all([
+        supabase.from('step_dyes').select('*').in('step_id', stepIds),
+        supabase.from('step_chemicals').select('*').in('step_id', stepIds),
+      ]);
+      sd = sdd || []; sc = scc || [];
+    }
+    const recipeDyes = (rd || []).map((r: any) => ({ id: r.id, lot_no: r.lot_no, dye_id: r.dye_id, percentage: Number(r.percentage)||0, qty_grams: Number(r.qty_grams)||0 }));
+    const recipeChemicals = (rc || []).map((r: any) => ({ id: r.id, lot_no: r.lot_no, chemical_id: r.chemical_id, qty: Number(r.qty)||0, ph_value: r.ph_value!=null?Number(r.ph_value):null }));
+    const stepDyesArr = sd.map((r: any) => ({ id: r.id, step_id: r.step_id, dye_id: r.dye_id, percentage: Number(r.percentage)||0, qty_grams: Number(r.qty_grams)||0 }));
+    const stepChemArr = sc.map((r: any) => ({ id: r.id, step_id: r.step_id, chemical_id: r.chemical_id, qty: Number(r.qty)||0 }));
+    const stepObjs = (ps || []).map((s: any) => ({ id: s.id, lot_no: lotForInv.lot_no, step_number: 0, step_type: '' as any, description: '', created_at: '' }));
+
+    await inv.openForLot({
+      lot: lotForInv,
+      recipeDyes,
+      recipeChemicals,
+      steps: stepObjs as any,
+      stepDyes: stepDyesArr as any,
+      stepChemicals: stepChemArr as any,
+      masterItems,
+    });
+  }, [lot, refreshData, inv, masterItems]);
+
   const handleSaveEdit = async () => {
     const success = await updateLot(lot.lot_no, {
       date: editData.date,
@@ -73,6 +107,19 @@ const LotDetail: React.FC = () => {
     if (success) {
       toast.success('Lot details updated.');
       setEditing(false);
+      // Re-fetch updated lot for inventory calc (gross/denier/company may have changed)
+      const { data: updated } = await supabase.from('lots').select('*').eq('lot_no', lot.lot_no).single();
+      if (updated) {
+        const lotSnap = {
+          ...lot,
+          date: updated.date, yarn_company_name: updated.yarn_company_name,
+          color_name: updated.color_name || '', denier: updated.denier || '',
+          number_of_chesses: Number(updated.number_of_chesses)||0,
+          gross_weight: Number(updated.gross_weight)||0,
+          net_weight: Number(updated.net_weight)||0,
+        };
+        await triggerLotInventory(lotSnap as any);
+      }
     } else {
       toast.error('Failed to update lot.');
     }
@@ -96,6 +143,7 @@ const LotDetail: React.FC = () => {
     await addProcessStep(lot.lot_no, data);
     toast.success(`${data.step_type} step recorded.`);
     setShowStepForm(false);
+    await triggerLotInventory();
   };
 
   const startEditingRemarks = () => {
