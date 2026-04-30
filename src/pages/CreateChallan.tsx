@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCreateChallan } from '@/hooks/useChallan';
 import { useApp } from '@/context/AppContext';
@@ -10,6 +10,8 @@ import { useChallanFooterOptions } from '@/hooks/useChallanFooterOptions';
 import { useClientRates } from '@/hooks/useClientRates';
 import FooterAutocomplete from '@/components/FooterAutocomplete';
 import { PlusCircle, Loader2 } from 'lucide-react';
+import InventoryApprovalDialog from '@/components/InventoryApprovalDialog';
+import { useInventoryApproval } from '@/hooks/useInventoryApproval';
 
 const emptyItem = (): ItemData => ({
   lot_no: '', shade_number: '', color_name: '', denier: '', packaging_type: 'paper_tube',
@@ -21,6 +23,16 @@ const CreateChallan: React.FC = () => {
   const createChallan = useCreateChallan();
   const { lots } = useApp();
   const { data: footerOptions } = useChallanFooterOptions();
+  const inv = useInventoryApproval();
+  const pendingNavRef = useRef<string | null>(null);
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    if (inv.open) wasOpenRef.current = true;
+    else if (wasOpenRef.current && pendingNavRef.current) {
+      const t = pendingNavRef.current; pendingNavRef.current = null; wasOpenRef.current = false;
+      navigate(t);
+    }
+  }, [inv.open, navigate]);
 
   const preparedByOptions = footerOptions?.preparedByOptions || [];
   const receiverOptions = footerOptions?.receiverOptions || [];
@@ -65,7 +77,7 @@ const CreateChallan: React.FC = () => {
     if (validItems.length === 0) { toast.error('Add at least one item.'); return; }
 
     try {
-      await createChallan.mutateAsync({
+      const created = await createChallan.mutateAsync({
         challan_number: form.challan_number.trim(),
         date: form.date,
         client_id: form.client_id,
@@ -76,7 +88,13 @@ const CreateChallan: React.FC = () => {
         items: validItems,
       });
       toast.success('Challan created successfully.');
-      navigate('/dispatch');
+      // Trigger inventory approval popup for FG + oil
+      await inv.openForDispatch({
+        challan: { id: (created as any).id, date: form.date },
+        items: validItems.map(it => ({ lot_no: it.lot_no, num_of_units: it.num_of_units, net_weight: it.net_weight })),
+        lots,
+      });
+      pendingNavRef.current = '/dispatch';
     } catch (err: any) {
       if (err?.message?.includes('duplicate') || err?.code === '23505') {
         toast.error('Challan number already exists.');
@@ -206,6 +224,15 @@ const CreateChallan: React.FC = () => {
           </button>
         </div>
       </form>
+
+      <InventoryApprovalDialog
+        open={inv.open}
+        rows={inv.rows}
+        title={inv.title}
+        busy={inv.busy}
+        onApprove={inv.handleApprove}
+        onCancel={inv.handleCancel}
+      />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { calculateNetWeight, calculateDyeGrams } from '@/lib/calculations';
@@ -6,10 +6,26 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import LotFieldAutocomplete from '@/components/LotFieldAutocomplete';
 import DecimalInput from '@/components/DecimalInput';
+import InventoryApprovalDialog from '@/components/InventoryApprovalDialog';
+import { useInventoryApproval } from '@/hooks/useInventoryApproval';
+import { seedFinishedGoodsForLot } from '@/lib/inventoryEngine';
 
 
 const CreateLot: React.FC = () => {
-  const { addLot, lots, getDyesForLot, getChemicalsForLot, updateRecipeDyes, updateRecipeChemicals, masterItems } = useApp();
+  const { addLot, lots, getDyesForLot, getChemicalsForLot, updateRecipeDyes, updateRecipeChemicals, masterItems, processSteps, stepDyes, stepChemicals, recipeDyes, recipeChemicals, refreshData } = useApp();
+  const inv = useInventoryApproval();
+  const pendingNavRef = useRef<string | null>(null);
+  const wasOpenRef = useRef(false);
+  const navigate2 = useNavigate();
+  useEffect(() => {
+    if (inv.open) wasOpenRef.current = true;
+    else if (wasOpenRef.current && pendingNavRef.current) {
+      const t = pendingNavRef.current;
+      pendingNavRef.current = null;
+      wasOpenRef.current = false;
+      navigate2(t);
+    }
+  }, [inv.open, navigate2]);
   const companyNames = useMemo(() => [...lots.map(l => l.yarn_company_name)].sort((a, b) => a.localeCompare(b)), [lots]);
   const colorNames = useMemo(() => ([...lots.map(l => l.color_name).filter(Boolean)] as string[]).sort((a, b) => a.localeCompare(b)), [lots]);
   const denierValues = useMemo(() => ([...lots.map(l => l.denier).filter(Boolean)] as string[]).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [lots]);
@@ -122,11 +138,50 @@ const CreateLot: React.FC = () => {
         }).eq('id', intakeItemId);
       }
       toast.success(`Lot ${form.lot_no} created successfully.`);
-      if (intakeId) {
-        navigate(`/sampling/${intakeId}`);
-      } else {
-        navigate(`/shade-management/lots/${form.lot_no}`);
-      }
+
+      // Refresh state so engine sees the freshly inserted recipe rows
+      await refreshData();
+
+      // Build the freshly-saved lot snapshot for the engine
+      const newLotNo = form.lot_no.trim();
+      const newNet = calculateNetWeight(form.gross_weight, form.number_of_chesses);
+      const newLot = {
+        lot_no: newLotNo,
+        date: form.date,
+        yarn_company_name: form.yarn_company_name.trim(),
+        color_name: form.color_name.trim(),
+        denier: form.denier.trim(),
+        number_of_chesses: form.number_of_chesses,
+        gross_weight: form.gross_weight,
+        net_weight: newNet,
+        is_approved: false,
+        status: (form.shade_number.trim() && form.shade_number.trim() !== newLotNo) ? 'Production' : 'In Approval' as any,
+        shade_number: form.shade_number.trim() || newLotNo,
+        source_lot_no: null,
+        remarks: '',
+      };
+
+      await seedFinishedGoodsForLot(newLot);
+
+      // Pull updated recipe snapshot (after potential clone) directly from supabase
+      const [{ data: rd }, { data: rc }] = await Promise.all([
+        supabase.from('recipe_dyes').select('*').eq('lot_no', newLotNo),
+        supabase.from('recipe_chemicals').select('*').eq('lot_no', newLotNo),
+      ]);
+      const freshDyes = (rd || []).map((r: any) => ({ id: r.id, lot_no: r.lot_no, dye_id: r.dye_id, percentage: Number(r.percentage)||0, qty_grams: Number(r.qty_grams)||0 }));
+      const freshChems = (rc || []).map((r: any) => ({ id: r.id, lot_no: r.lot_no, chemical_id: r.chemical_id, qty: Number(r.qty)||0, ph_value: r.ph_value!=null?Number(r.ph_value):null }));
+
+      await inv.openForLot({
+        lot: newLot,
+        recipeDyes: freshDyes,
+        recipeChemicals: freshChems,
+        steps: processSteps,
+        stepDyes,
+        stepChemicals,
+        masterItems,
+      });
+
+      pendingNavRef.current = intakeId ? `/sampling/${intakeId}` : `/shade-management/lots/${newLotNo}`;
     } else {
       toast.error(`Failed to create lot. Lot No may already exist.`);
     }
@@ -264,6 +319,15 @@ const CreateLot: React.FC = () => {
           </button>
         </div>
       </form>
+
+      <InventoryApprovalDialog
+        open={inv.open}
+        rows={inv.rows}
+        title={inv.title}
+        busy={inv.busy}
+        onApprove={inv.handleApprove}
+        onCancel={inv.handleCancel}
+      />
     </div>
   );
 };

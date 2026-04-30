@@ -17,6 +17,7 @@ interface Props {
   lotNo: string;
   netWeight: number;
   readOnly?: boolean;
+  onAfterSave?: () => void | Promise<void>;
 }
 
 export interface RecipeEditorHandle {
@@ -24,7 +25,7 @@ export interface RecipeEditorHandle {
   applyReference: (refDyes: RecipeDye[], refChemicals: RecipeChemical[]) => void;
 }
 
-const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, readOnly = false }, ref) => {
+const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, readOnly = false, onAfterSave }, ref) => {
   const { masterItems, getDyesForLot, getChemicalsForLot, updateRecipeDyes, updateRecipeChemicals } = useApp();
 
   const dyes = getDyesForLot(lotNo);
@@ -175,6 +176,7 @@ const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, 
     await updateRecipeDyes(lotNo, localDyes);
     await updateRecipeChemicals(lotNo, localChemicals);
     setDirty(false);
+    if (onAfterSave) await onAfterSave();
   };
 
   const getDyeDisplayName = (id: string) => {
