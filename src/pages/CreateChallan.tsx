@@ -77,7 +77,7 @@ const CreateChallan: React.FC = () => {
     if (validItems.length === 0) { toast.error('Add at least one item.'); return; }
 
     try {
-      await createChallan.mutateAsync({
+      const created = await createChallan.mutateAsync({
         challan_number: form.challan_number.trim(),
         date: form.date,
         client_id: form.client_id,
@@ -88,7 +88,13 @@ const CreateChallan: React.FC = () => {
         items: validItems,
       });
       toast.success('Challan created successfully.');
-      navigate('/dispatch');
+      // Trigger inventory approval popup for FG + oil
+      await inv.openForDispatch({
+        challan: { id: (created as any).id, date: form.date },
+        items: validItems.map(it => ({ lot_no: it.lot_no, num_of_units: it.num_of_units, net_weight: it.net_weight })),
+        lots,
+      });
+      pendingNavRef.current = '/dispatch';
     } catch (err: any) {
       if (err?.message?.includes('duplicate') || err?.code === '23505') {
         toast.error('Challan number already exists.');
