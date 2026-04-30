@@ -6,10 +6,14 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import LotFieldAutocomplete from '@/components/LotFieldAutocomplete';
 import DecimalInput from '@/components/DecimalInput';
+import InventoryApprovalDialog from '@/components/InventoryApprovalDialog';
+import { useInventoryApproval } from '@/hooks/useInventoryApproval';
+import { seedFinishedGoodsForLot } from '@/lib/inventoryEngine';
 
 
 const CreateLot: React.FC = () => {
-  const { addLot, lots, getDyesForLot, getChemicalsForLot, updateRecipeDyes, updateRecipeChemicals, masterItems } = useApp();
+  const { addLot, lots, getDyesForLot, getChemicalsForLot, updateRecipeDyes, updateRecipeChemicals, masterItems, processSteps, stepDyes, stepChemicals, recipeDyes, recipeChemicals, refreshData } = useApp();
+  const inv = useInventoryApproval();
   const companyNames = useMemo(() => [...lots.map(l => l.yarn_company_name)].sort((a, b) => a.localeCompare(b)), [lots]);
   const colorNames = useMemo(() => ([...lots.map(l => l.color_name).filter(Boolean)] as string[]).sort((a, b) => a.localeCompare(b)), [lots]);
   const denierValues = useMemo(() => ([...lots.map(l => l.denier).filter(Boolean)] as string[]).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [lots]);
