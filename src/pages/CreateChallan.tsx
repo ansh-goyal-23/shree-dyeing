@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCreateChallan } from '@/hooks/useChallan';
 import { useApp } from '@/context/AppContext';
@@ -10,6 +10,8 @@ import { useChallanFooterOptions } from '@/hooks/useChallanFooterOptions';
 import { useClientRates } from '@/hooks/useClientRates';
 import FooterAutocomplete from '@/components/FooterAutocomplete';
 import { PlusCircle, Loader2 } from 'lucide-react';
+import InventoryApprovalDialog from '@/components/InventoryApprovalDialog';
+import { useInventoryApproval } from '@/hooks/useInventoryApproval';
 
 const emptyItem = (): ItemData => ({
   lot_no: '', shade_number: '', color_name: '', denier: '', packaging_type: 'paper_tube',
@@ -21,6 +23,16 @@ const CreateChallan: React.FC = () => {
   const createChallan = useCreateChallan();
   const { lots } = useApp();
   const { data: footerOptions } = useChallanFooterOptions();
+  const inv = useInventoryApproval();
+  const pendingNavRef = useRef<string | null>(null);
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    if (inv.open) wasOpenRef.current = true;
+    else if (wasOpenRef.current && pendingNavRef.current) {
+      const t = pendingNavRef.current; pendingNavRef.current = null; wasOpenRef.current = false;
+      navigate(t);
+    }
+  }, [inv.open, navigate]);
 
   const preparedByOptions = footerOptions?.preparedByOptions || [];
   const receiverOptions = footerOptions?.receiverOptions || [];
