@@ -319,6 +319,15 @@ const CreateLot: React.FC = () => {
           </button>
         </div>
       </form>
+
+      <InventoryApprovalDialog
+        open={inv.open}
+        rows={inv.rows}
+        title={inv.title}
+        busy={inv.busy}
+        onApprove={inv.handleApprove}
+        onCancel={inv.handleCancel}
+      />
     </div>
   );
 };
