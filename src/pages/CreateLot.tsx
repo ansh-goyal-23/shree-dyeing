@@ -169,15 +169,7 @@ const CreateLot: React.FC = () => {
         masterItems,
       });
 
-      const navTarget = intakeId ? `/sampling/${intakeId}` : `/shade-management/lots/${newLotNo}`;
-      // Navigate after the user resolves the approval dialog
-      const interval = setInterval(() => {
-        // crude: poll until dialog closed
-        // (Approval hook closes the dialog after approve/cancel)
-      }, 0);
-      clearInterval(interval);
-      // Use setTimeout so the dialog opens before navigation; navigation is deferred via useEffect below
-      pendingNavRef.current = navTarget;
+      pendingNavRef.current = intakeId ? `/sampling/${intakeId}` : `/shade-management/lots/${newLotNo}`;
     } else {
       toast.error(`Failed to create lot. Lot No may already exist.`);
     }
