@@ -315,6 +315,7 @@ const LotDetail: React.FC = () => {
         lotNo={lot.lot_no}
         netWeight={lot.net_weight}
         defaultReferenceLotNo={lot.shade_number !== lot.lot_no ? lot.shade_number : undefined}
+        onRecipeSaved={() => triggerLotInventory()}
       />
 
       {/* Remarks (free-form notes for this lot) */}
@@ -451,13 +452,13 @@ const RecipeEditorWithReference: React.FC<{
   lotNo: string;
   netWeight: number;
   defaultReferenceLotNo?: string;
-}> = ({ lotNo, netWeight, defaultReferenceLotNo }) => {
+  onRecipeSaved?: () => void | Promise<void>;
+}> = ({ lotNo, netWeight, defaultReferenceLotNo, onRecipeSaved }) => {
   const { getDyesForLot, getChemicalsForLot } = useApp();
   const editorRef = useRef<RecipeEditorHandle>(null);
 
   const existingDyes = getDyesForLot(lotNo);
   const existingChemicals = getChemicalsForLot(lotNo);
-  // Empty = no dye rows AND every chemical qty is 0 (defaults pre-fill BUF/CDFT/CWS at 0).
   const targetIsEmpty = useMemo(
     () => existingDyes.length === 0 && existingChemicals.every(c => !c.qty || c.qty === 0),
     [existingDyes, existingChemicals]
@@ -478,7 +479,7 @@ const RecipeEditorWithReference: React.FC<{
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">
           Base Recipe (Initial Dyeing)
         </h2>
-        <RecipeEditor ref={editorRef} lotNo={lotNo} netWeight={netWeight} />
+        <RecipeEditor ref={editorRef} lotNo={lotNo} netWeight={netWeight} onAfterSave={onRecipeSaved} />
       </div>
     </>
   );
