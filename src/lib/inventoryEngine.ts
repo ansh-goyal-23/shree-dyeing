@@ -316,8 +316,9 @@ export async function computeDispatchConsumption(args: {
   challan: { id: string; date: string; last_oil_by_lot?: any; last_fg_by_lot?: any };
   items: Array<{ lot_no: string; num_of_units: number; net_weight: number }>;
   lots: Lot[];
+  allowOilRestore?: boolean;
 }): Promise<{ delta: DispatchConsumptionDelta; rows: ApprovalRow[] }> {
-  const { challan, items, lots } = args;
+  const { challan, items, lots, allowOilRestore = false } = args;
 
   // Read live tracking columns
   const { data: chRow } = await supabase
