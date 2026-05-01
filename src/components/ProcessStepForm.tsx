@@ -26,13 +26,27 @@ interface Props {
 
 const STEP_TYPES: ProcessStepType[] = ['Color Addition', 'RC', 'Leveling'];
 
-const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, onSubmit, onCancel, editingData }) => {
+const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, baseRecipeDyes, baseRecipeChemicals, onSubmit, onCancel, editingData }) => {
   const [step, setStep] = useState<1 | 2>(editingData ? 2 : 1);
   const [stepType, setStepType] = useState<ProcessStepType | ''>(editingData?.step_type || '');
   const [description, setDescription] = useState(editingData?.description || '');
   const [dyes, setDyes] = useState<{ dye_id: string; percentage: number; qty_grams: number }[]>(editingData?.dyes || []);
   const [chemicals, setChemicals] = useState<{ chemical_id: string; qty: number }[]>(editingData?.chemicals || []);
   const [submitting, setSubmitting] = useState(false);
+  const [prefilledFor, setPrefilledFor] = useState<ProcessStepType | null>(null);
+
+  // Auto-prefill from base recipe when entering Color Addition (new step only)
+  useEffect(() => {
+    if (editingData) return;
+    if (stepType === 'Color Addition' && prefilledFor !== 'Color Addition') {
+      const seedDyes = (baseRecipeDyes || []).map(d => ({ dye_id: d.dye_id, percentage: 0, qty_grams: 0 }));
+      const seedChems = (baseRecipeChemicals || []).map(c => ({ chemical_id: c.chemical_id, qty: c.qty }));
+      if (seedDyes.length) setDyes(seedDyes);
+      if (seedChems.length) setChemicals(seedChems);
+      setPrefilledFor('Color Addition');
+    }
+  }, [stepType, editingData, baseRecipeDyes, baseRecipeChemicals, prefilledFor]);
+
 
   const dyeItems = masterItems.filter(m => m.type === 'dye' && m.is_active).sort((a, b) => (a.short_name || a.name).localeCompare(b.short_name || b.name));
   const chemicalItems = masterItems.filter(m => m.type === 'chemical' && m.is_active).sort((a, b) => a.name.localeCompare(b.name));
