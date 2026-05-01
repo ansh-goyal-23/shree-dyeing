@@ -374,9 +374,9 @@ export async function computeDispatchConsumption(args: {
     }
     // If dispatch weight is less than expected base weight, oil "gain" is impossible — clamp to 0.
     if (newOil < 0) newOil = 0;
-    // Delta must never be negative (no de-consumption of oil from a dispatch).
+    // Normally oil cannot be de-consumed. Exception: challan delete (allowOilRestore) restores oil back.
     let dOil = newOil - lastO;
-    if (dOil < 0) {
+    if (dOil < 0 && !allowOilRestore) {
       dOil = 0;
       newOil = lastO; // keep tracker at previously-recorded value
     }
