@@ -25,8 +25,13 @@ const InventoryApprovalDialog: React.FC<Props> = ({ open, rows, title, busy, onA
   const empty = rows.length === 0;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o && !busy) onCancel(); }}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+    <Dialog open={open}>
+      <DialogContent
+        className="max-w-3xl max-h-[85vh] overflow-y-auto [&>button]:hidden"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{title || 'Inventory Changes'}</DialogTitle>
           <DialogDescription>
