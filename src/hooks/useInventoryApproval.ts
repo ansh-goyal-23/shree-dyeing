@@ -11,8 +11,8 @@ import {
 import type { ApprovalRow, LotConsumptionDelta, DispatchConsumptionDelta } from '@/types/inventoryV2';
 import type { Lot } from '@/types';
 
-type LotApply = { kind: 'lot'; lot: Lot; delta: LotConsumptionDelta };
-type DispatchApply = { kind: 'dispatch'; challanId: string; delta: DispatchConsumptionDelta; lots: Lot[] };
+type LotApply = { kind: 'lot'; lot: Lot; delta: LotConsumptionDelta; source: 'Lot Save' | 'Lot Edit' | 'Lot Delete'; onAfterApprove?: () => Promise<void> | void; skipMarkUnsynced?: boolean };
+type DispatchApply = { kind: 'dispatch'; challanId: string; delta: DispatchConsumptionDelta; lots: Lot[]; source: 'Dispatch' | 'Dispatch Edit' | 'Dispatch Delete'; onAfterApprove?: () => Promise<void> | void; skipMarkUnsynced?: boolean };
 type Pending = LotApply | DispatchApply;
 
 export function useInventoryApproval() {
@@ -27,7 +27,7 @@ export function useInventoryApproval() {
       const { delta, rows } = await computeLotConsumption(params);
       setRows(rows);
       setTitle(opts?.title || `Inventory changes — Lot ${params.lot.lot_no}`);
-      setPending({ kind: 'lot', lot: params.lot, delta });
+      setPending({ kind: 'lot', lot: params.lot, delta, source: 'Lot Save' });
       setOpen(true);
     } catch (e: any) {
       toast.error(`Inventory preview failed: ${e?.message || e}`);
@@ -39,7 +39,41 @@ export function useInventoryApproval() {
       const { delta, rows } = await computeDispatchConsumption(params);
       setRows(rows);
       setTitle(opts?.title || `Inventory changes — Challan`);
-      setPending({ kind: 'dispatch', challanId: params.challan.id, delta, lots: params.lots });
+      setPending({ kind: 'dispatch', challanId: params.challan.id, delta, lots: params.lots, source: 'Dispatch' });
+      setOpen(true);
+    } catch (e: any) {
+      toast.error(`Inventory preview failed: ${e?.message || e}`);
+    }
+  }, []);
+
+  // Reversal: compute consumption with empty inputs (yields negative deltas that restore stock)
+  const openForLotDelete = useCallback(async (params: { lot: Lot; masterItems: Parameters<typeof computeLotConsumption>[0]['masterItems']; onAfterApprove: () => Promise<void> | void }) => {
+    try {
+      const { delta, rows } = await computeLotConsumption({
+        lot: { ...params.lot, net_weight: 0 } as Lot,
+        recipeDyes: [], recipeChemicals: [],
+        steps: [], stepDyes: [], stepChemicals: [],
+        masterItems: params.masterItems,
+      });
+      setRows(rows);
+      setTitle(`Reverse inventory — Delete Lot ${params.lot.lot_no}`);
+      setPending({ kind: 'lot', lot: params.lot, delta, source: 'Lot Delete', onAfterApprove: params.onAfterApprove, skipMarkUnsynced: true });
+      setOpen(true);
+    } catch (e: any) {
+      toast.error(`Inventory preview failed: ${e?.message || e}`);
+    }
+  }, []);
+
+  const openForDispatchDelete = useCallback(async (params: { challan: { id: string; date: string }; lots: Lot[]; onAfterApprove: () => Promise<void> | void }) => {
+    try {
+      const { delta, rows } = await computeDispatchConsumption({
+        challan: params.challan,
+        items: [],
+        lots: params.lots,
+      });
+      setRows(rows);
+      setTitle(`Reverse inventory — Delete Challan`);
+      setPending({ kind: 'dispatch', challanId: params.challan.id, delta, lots: params.lots, source: 'Dispatch Delete', onAfterApprove: params.onAfterApprove, skipMarkUnsynced: true });
       setOpen(true);
     } catch (e: any) {
       toast.error(`Inventory preview failed: ${e?.message || e}`);
@@ -48,17 +82,23 @@ export function useInventoryApproval() {
 
   const handleApprove = useCallback(async () => {
     if (!pending) { setOpen(false); return; }
-    if (rows.length === 0) { setOpen(false); setPending(null); return; }
+    // For deletes, even if rows empty, run after-approve to perform actual deletion
+    if (rows.length === 0 && !pending.onAfterApprove) { setOpen(false); setPending(null); return; }
     setBusy(true);
     try {
       if (pending.kind === 'lot') {
-        await applyLotPreview({ lot: pending.lot, delta: pending.delta, source: 'Lot Save' });
+        if (rows.length > 0) {
+          await applyLotPreview({ lot: pending.lot, delta: pending.delta, source: pending.source });
+        }
       } else {
-        await applyDispatchPreview({ challanId: pending.challanId, delta: pending.delta, lots: pending.lots, source: 'Dispatch' });
+        if (rows.length > 0) {
+          await applyDispatchPreview({ challanId: pending.challanId, delta: pending.delta, lots: pending.lots, source: pending.source });
+        }
       }
-      toast.success('Inventory updated');
+      if (pending.onAfterApprove) await pending.onAfterApprove();
+      toast.success(pending.source.includes('Delete') ? 'Inventory reversed and record deleted' : 'Inventory updated');
     } catch (e: any) {
-      toast.error(`Failed to update inventory: ${e?.message || e}`);
+      toast.error(`Failed: ${e?.message || e}`);
     } finally {
       setBusy(false);
       setOpen(false);
@@ -67,7 +107,7 @@ export function useInventoryApproval() {
   }, [pending, rows]);
 
   const handleCancel = useCallback(async () => {
-    if (pending) {
+    if (pending && !pending.skipMarkUnsynced) {
       try {
         if (pending.kind === 'lot') await markLotInventoryUnsynced(pending.lot.lot_no);
         else await markChallanInventoryUnsynced(pending.challanId);
@@ -77,5 +117,5 @@ export function useInventoryApproval() {
     setPending(null);
   }, [pending]);
 
-  return { open, rows, title, busy, openForLot, openForDispatch, handleApprove, handleCancel };
+  return { open, rows, title, busy, openForLot, openForDispatch, openForLotDelete, openForDispatchDelete, handleApprove, handleCancel };
 }
