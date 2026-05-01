@@ -52,7 +52,7 @@ const ProcessStepForm: React.FC<Props> = ({ netWeight, masterItems, baseRecipeDy
   const chemicalItems = masterItems.filter(m => m.type === 'chemical' && m.is_active).sort((a, b) => a.name.localeCompare(b.name));
 
   const showDyes = stepType === 'Color Addition' || stepType === 'Leveling';
-  const showChemicals = stepType === 'RC' || stepType === 'Leveling';
+  const showChemicals = stepType === 'RC' || stepType === 'Leveling' || stepType === 'Color Addition';
 
   const addDye = () => setDyes(prev => [...prev, { dye_id: '', percentage: 0, qty_grams: 0 }]);
   const updateDye = (idx: number, field: string, value: string | number) => {
