@@ -358,7 +358,7 @@ export async function computeDispatchConsumption(args: {
       new_net: agg.net, last_net: lastF.net || 0, delta_net: dNet,
     });
 
-    // Oil
+    // Oil — can ONLY be consumed (never restored). Floor at 0 and never allow negative delta.
     let newOil = 0;
     if (lot) {
       const baseWeight = Number(lot.net_weight) || 0;
@@ -371,7 +371,14 @@ export async function computeDispatchConsumption(args: {
         }
       }
     }
-    const dOil = newOil - lastO;
+    // If dispatch weight is less than expected base weight, oil "gain" is impossible — clamp to 0.
+    if (newOil < 0) newOil = 0;
+    // Delta must never be negative (no de-consumption of oil from a dispatch).
+    let dOil = newOil - lastO;
+    if (dOil < 0) {
+      dOil = 0;
+      newOil = lastO; // keep tracker at previously-recorded value
+    }
     oilDelta.push({ lot_no, new_oil_kg: newOil, last_oil_kg: lastO, delta_kg: dOil });
 
     // Approval rows for FG
