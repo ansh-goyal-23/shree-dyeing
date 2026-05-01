@@ -305,6 +305,8 @@ const LotDetail: React.FC = () => {
         <ProcessStepForm
           netWeight={lot.net_weight}
           masterItems={masterItems}
+          baseRecipeDyes={getDyesForLot(lot.lot_no).map(d => ({ dye_id: d.dye_id, percentage: d.percentage }))}
+          baseRecipeChemicals={getChemicalsForLot(lot.lot_no).map(c => ({ chemical_id: c.chemical_id, qty: c.qty }))}
           onSubmit={handleStepSubmit}
           onCancel={() => setShowStepForm(false)}
         />
