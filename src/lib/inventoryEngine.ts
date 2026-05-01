@@ -122,8 +122,8 @@ export async function computeLotConsumption(args: {
   for (const c of recipeChemicals.filter(x => x.lot_no === lot.lot_no)) addChem(c.chemical_id, c.qty || 0);
   for (const c of lotStepChems) addChem(c.chemical_id, c.qty || 0);
 
-  // Yarn = lot.gross_weight (use gross as raw yarn consumed)
-  const newYarn = Number(lot.gross_weight) || 0;
+  // Yarn = lot.net_weight (net of cone weight is the actual yarn consumed)
+  const newYarn = Number(lot.net_weight) || 0;
 
   // Auto-create rows + read current stock
   const yarnRow = await getOrCreateYarn(lot.yarn_company_name, lot.denier);
