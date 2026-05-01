@@ -70,6 +70,7 @@ export function useInventoryApproval() {
         challan: params.challan,
         items: [],
         lots: params.lots,
+        allowOilRestore: true,
       });
       setRows(rows);
       setTitle(`Reverse inventory — Delete Challan`);
