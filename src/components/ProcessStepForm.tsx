@@ -7,6 +7,8 @@ import type { ProcessStepType, StepDye, StepChemical, MasterItem } from '@/types
 interface Props {
   netWeight: number;
   masterItems: MasterItem[];
+  baseRecipeDyes?: { dye_id: string; percentage: number }[];
+  baseRecipeChemicals?: { chemical_id: string; qty: number }[];
   onSubmit: (data: {
     step_type: ProcessStepType;
     description: string;
