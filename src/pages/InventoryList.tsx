@@ -414,6 +414,7 @@ const YarnTab: React.FC = () => {
 // DYES & CHEMICALS TAB
 // ============================================================
 const DyeChemTab: React.FC = () => {
+  const qc = useQueryClient();
   const { data = [], isLoading } = useQuery({
     queryKey: ['material_inventory'],
     queryFn: async () => {
@@ -424,6 +425,7 @@ const DyeChemTab: React.FC = () => {
   });
   const [search, setSearch] = useState('');
   const [type, setType] = useState<'all' | 'dye' | 'chemical'>('all');
+  const [target, setTarget] = useState<SetStockTarget | null>(null);
   const filtered = data.filter((r: any) => {
     const mi = r.master_items;
     if (!mi) return false;
@@ -448,24 +450,34 @@ const DyeChemTab: React.FC = () => {
         {isLoading ? <div className="p-8 text-center text-muted-foreground">Loading...</div>
           : filtered.length === 0 ? <div className="p-8 text-center text-muted-foreground flex flex-col items-center gap-2"><Boxes className="h-10 w-10" /><p>No dye/chemical stock yet.</p></div>
           : <Table>
-            <TableHeader><TableRow><TableHead>Item</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Stock</TableHead><TableHead>Unit</TableHead><TableHead>Last Updated</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Item</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Stock</TableHead><TableHead>Unit</TableHead><TableHead>Last Updated</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
             <TableBody>
               {filtered.map((r: any) => {
                 const mi = r.master_items;
                 const negative = Number(r.current_stock) < 0;
+                const unit = mi.type === 'dye' ? 'gm' : (mi.unit || '');
+                const label = mi.short_name ? `${mi.short_name} (${mi.name})` : mi.name;
                 return (
                   <TableRow key={r.id} className={negative ? 'bg-destructive/5' : ''}>
-                    <TableCell className="font-medium">{mi.short_name ? `${mi.short_name} (${mi.name})` : mi.name}</TableCell>
+                    <TableCell className="font-medium">{label}</TableCell>
                     <TableCell><Badge variant="outline">{mi.type}</Badge></TableCell>
                     <TableCell className={`text-right font-mono ${negative ? 'text-destructive font-semibold' : ''}`}>{Number(r.current_stock).toFixed(3)}</TableCell>
-                    <TableCell>{mi.type === 'dye' ? 'gm' : (mi.unit || '—')}</TableCell>
+                    <TableCell>{unit || '—'}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{new Date(r.last_updated).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">
+                      <Button size="sm" variant="outline" onClick={() => setTarget({
+                        kind: 'material', id: r.id, ref_key: r.master_item_id,
+                        label, current: Number(r.current_stock), unit: unit || 'units',
+                      })}><Pencil className="h-3 w-3 mr-1" /> Set</Button>
+                    </TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>}
       </CardContent></Card>
+      <SetStockDialog target={target} onClose={() => setTarget(null)}
+        onSaved={() => qc.invalidateQueries({ queryKey: ['material_inventory'] })} />
     </div>
   );
 };
@@ -474,6 +486,7 @@ const DyeChemTab: React.FC = () => {
 // OIL TAB
 // ============================================================
 const OilTab: React.FC = () => {
+  const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ['oil_inventory'],
     queryFn: async () => {
@@ -490,14 +503,19 @@ const OilTab: React.FC = () => {
       return data || [];
     },
   });
+  const [target, setTarget] = useState<SetStockTarget | null>(null);
   return (
     <div className="space-y-4 mt-4">
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><Droplet className="h-5 w-5" /> Oil Stock</CardTitle></CardHeader>
-        <CardContent>
+        <CardContent className="flex items-center justify-between gap-4 flex-wrap">
           {isLoading ? <p className="text-muted-foreground">Loading...</p> : (
             <div className="text-3xl font-bold font-mono">{Number(data?.current_stock || 0).toFixed(3)} <span className="text-base font-normal text-muted-foreground">kg</span></div>
           )}
+          <Button variant="outline" onClick={() => setTarget({
+            kind: 'oil', id: data?.id ?? null, ref_key: 'OIL',
+            label: 'Oil', current: Number(data?.current_stock || 0), unit: 'kg',
+          })}><Pencil className="h-4 w-4 mr-2" /> Set Stock</Button>
         </CardContent>
       </Card>
       <Card>
@@ -520,6 +538,8 @@ const OilTab: React.FC = () => {
             </Table>}
         </CardContent>
       </Card>
+      <SetStockDialog target={target} onClose={() => setTarget(null)}
+        onSaved={() => { qc.invalidateQueries({ queryKey: ['oil_inventory'] }); qc.invalidateQueries({ queryKey: ['oil_ledger'] }); }} />
     </div>
   );
 };
