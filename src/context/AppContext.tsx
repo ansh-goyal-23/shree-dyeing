@@ -52,6 +52,29 @@ interface AppContextType extends AppState {
 
 const AppContext = createContext<AppContextType | null>(null);
 
+type TableOrder = { column: string; ascending?: boolean };
+
+const fetchTableRows = async (table: string, orders: TableOrder[] = []) => {
+  const pageSize = 1000;
+  const rows: any[] = [];
+
+  for (let from = 0; ; from += pageSize) {
+    let query = supabase.from(table as any).select('*').range(from, from + pageSize - 1);
+    orders.forEach(({ column, ascending = true }) => {
+      query = query.order(column, { ascending });
+    });
+
+    const { data, error } = await query;
+    if (error) {
+      console.error(`Failed to fetch ${table}:`, error);
+      return rows;
+    }
+
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) return rows;
+  }
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [state, setState] = useState<AppState>({
@@ -67,24 +90,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     setState(prev => ({ ...prev, loading: true }));
 
-    const [lotsRes, dyesRes, chemsRes, masterRes, stepsRes, stepDyesRes, stepChemsRes] = await Promise.all([
-      supabase.from('lots').select('*').order('created_at', { ascending: false }),
-      supabase.from('recipe_dyes').select('*'),
-      supabase.from('recipe_chemicals').select('*'),
-      supabase.from('master_items').select('*'),
-      supabase.from('process_steps').select('*').order('step_number', { ascending: true }),
-      supabase.from('step_dyes').select('*'),
-      supabase.from('step_chemicals').select('*'),
+    const [lotsData, dyesData, chemsData, masterData, stepsData, stepDyesData, stepChemsData] = await Promise.all([
+      fetchTableRows('lots', [{ column: 'created_at', ascending: false }]),
+      fetchTableRows('recipe_dyes', [{ column: 'id' }]),
+      fetchTableRows('recipe_chemicals', [{ column: 'id' }]),
+      fetchTableRows('master_items', [{ column: 'name' }]),
+      fetchTableRows('process_steps', [{ column: 'step_number' }, { column: 'id' }]),
+      fetchTableRows('step_dyes', [{ column: 'id' }]),
+      fetchTableRows('step_chemicals', [{ column: 'id' }]),
     ]);
 
     setState({
-      lots: (lotsRes.data || []).map(mapLot),
-      recipeDyes: (dyesRes.data || []).map(mapDye),
-      recipeChemicals: (chemsRes.data || []).map(mapChemical),
-      masterItems: (masterRes.data || []).map(mapMasterItem),
-      processSteps: (stepsRes.data || []).map(mapProcessStep),
-      stepDyes: (stepDyesRes.data || []).map(mapStepDye),
-      stepChemicals: (stepChemsRes.data || []).map(mapStepChemical),
+      lots: lotsData.map(mapLot),
+      recipeDyes: dyesData.map(mapDye),
+      recipeChemicals: chemsData.map(mapChemical),
+      masterItems: masterData.map(mapMasterItem),
+      processSteps: stepsData.map(mapProcessStep),
+      stepDyes: stepDyesData.map(mapStepDye),
+      stepChemicals: stepChemsData.map(mapStepChemical),
       loading: false,
     });
   }, [user]);
