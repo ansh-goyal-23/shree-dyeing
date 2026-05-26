@@ -1,12 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { format, parseISO, isAfter, isBefore, isEqual } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Trash2, ArrowUpDown, Eye } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { PlusCircle, Trash2, ArrowUpDown, Eye, CalendarIcon, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useExpenses, useDeleteExpense, useUpdateExpensePayment } from '@/hooks/useExpenses';
 import { toast } from 'sonner';
 import ExpenseDetailDialog from '@/components/ExpenseDetailDialog';
@@ -23,6 +27,8 @@ const ExpenseList: React.FC = () => {
   const [sortField, setSortField] = useState<'date' | 'total_amount'>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
+  const [toDate, setToDate] = useState<Date | undefined>(undefined);
 
   const filtered = useMemo(() => {
     let result = expenses;
@@ -37,13 +43,28 @@ const ExpenseList: React.FC = () => {
     if (filterType !== 'all') result = result.filter(e => e.expense_type === filterType);
     if (filterPayment !== 'all') result = result.filter(e => e.payment_status === filterPayment);
 
+    if (fromDate) {
+      const from = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+      result = result.filter(e => {
+        const d = parseISO(e.date);
+        return isAfter(d, from) || isEqual(d, from);
+      });
+    }
+    if (toDate) {
+      const to = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
+      result = result.filter(e => {
+        const d = parseISO(e.date);
+        return isBefore(d, to) || isEqual(d, to);
+      });
+    }
+
     result = [...result].sort((a, b) => {
       const valA = sortField === 'date' ? new Date(a.date).getTime() : a.total_amount;
       const valB = sortField === 'date' ? new Date(b.date).getTime() : b.total_amount;
       return sortDir === 'asc' ? valA - valB : valB - valA;
     });
     return result;
-  }, [expenses, search, filterType, filterPayment, sortField, sortDir]);
+  }, [expenses, search, filterType, filterPayment, sortField, sortDir, fromDate, toDate]);
 
   const toggleSort = (field: 'date' | 'total_amount') => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -72,7 +93,7 @@ const ExpenseList: React.FC = () => {
       <Card>
         <CardHeader><CardTitle>Search & Filter</CardTitle></CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <Input placeholder="Search supplier, category, notes..." value={search} onChange={e => setSearch(e.target.value)} />
             <Select value={filterType} onValueChange={setFilterType}>
               <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
@@ -91,6 +112,33 @@ const ExpenseList: React.FC = () => {
                 <SelectItem value="Unpaid">Unpaid</SelectItem>
               </SelectContent>
             </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("justify-start text-left font-normal", !fromDate && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {fromDate ? format(fromDate, "dd-MMM-yyyy") : "From Date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={fromDate} onSelect={setFromDate} initialFocus className={cn("p-3 pointer-events-auto")} />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("justify-start text-left font-normal", !toDate && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {toDate ? format(toDate, "dd-MMM-yyyy") : "To Date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={toDate} onSelect={setToDate} initialFocus className={cn("p-3 pointer-events-auto")} />
+              </PopoverContent>
+            </Popover>
+            {(fromDate || toDate) && (
+              <Button variant="ghost" size="sm" onClick={() => { setFromDate(undefined); setToDate(undefined); }}>
+                <X className="h-4 w-4 mr-1" /> Clear Dates
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
