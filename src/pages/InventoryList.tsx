@@ -10,12 +10,118 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertTriangle, Package, SlidersHorizontal, Droplet, Boxes } from 'lucide-react';
+import { AlertTriangle, Package, SlidersHorizontal, Droplet, Boxes, Pencil } from 'lucide-react';
 import { useInventoryStock, useAdjustStock } from '@/hooks/useInventory';
 import { useExpenseItems } from '@/hooks/useExpenses';
 import { toast } from 'sonner';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+
+// ============================================================
+// Shared: Set Stock Dialog (Yarn / Material / Oil)
+// ============================================================
+type SetStockTarget =
+  | { kind: 'yarn'; id: string; ref_key: string; label: string; current: number; unit: string }
+  | { kind: 'material'; id: string; ref_key: string; label: string; current: number; unit: string }
+  | { kind: 'oil'; id: string | null; ref_key: string; label: string; current: number; unit: string };
+
+const SetStockDialog: React.FC<{
+  target: SetStockTarget | null;
+  onClose: () => void;
+  onSaved: () => void;
+}> = ({ target, onClose, onSaved }) => {
+  const [value, setValue] = useState('');
+  const [reason, setReason] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  React.useEffect(() => {
+    if (target) { setValue(String(target.current)); setReason(''); }
+  }, [target]);
+
+  if (!target) return null;
+
+  const handleSave = async () => {
+    const newStock = parseFloat(value);
+    if (isNaN(newStock)) { toast.error('Enter a valid number'); return; }
+    const delta = newStock - Number(target.current);
+    setSaving(true);
+    try {
+      const nowIso = new Date().toISOString();
+      // 1. Update inventory table
+      if (target.kind === 'yarn') {
+        const { error } = await supabase.from('yarn_inventory')
+          .update({ current_stock: newStock, last_updated: nowIso }).eq('id', target.id);
+        if (error) throw error;
+      } else if (target.kind === 'material') {
+        const { error } = await supabase.from('material_inventory')
+          .update({ current_stock: newStock, last_updated: nowIso }).eq('id', target.id);
+        if (error) throw error;
+      } else {
+        if (target.id) {
+          const { error } = await supabase.from('oil_inventory')
+            .update({ current_stock: newStock, last_updated: nowIso }).eq('id', target.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from('oil_inventory')
+            .insert({ current_stock: newStock, last_updated: nowIso });
+          if (error) throw error;
+        }
+      }
+      // 2. Log ledger entry (only if there's an actual change)
+      if (delta !== 0) {
+        const { error: txErr } = await supabase.from('inventory_transactions_v2').insert({
+          inventory_kind: target.kind,
+          ref_key: target.ref_key,
+          delta,
+          source: 'Manual Set',
+          reference_id: null,
+          notes: reason || `Manually set to ${newStock} ${target.unit}`,
+        });
+        if (txErr) throw txErr;
+      }
+      toast.success(`Stock set to ${newStock} ${target.unit}`);
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update stock');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!target} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Set Stock — {target.label}</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <div className="text-sm text-muted-foreground">
+            Current stock: <span className="font-mono font-semibold">{Number(target.current).toFixed(3)} {target.unit}</span>
+          </div>
+          <div>
+            <Label>New Stock Value ({target.unit}) *</Label>
+            <Input type="number" step="any" value={value} onChange={(e) => setValue(e.target.value)} />
+          </div>
+          <div>
+            <Label>Reason / Notes</Label>
+            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2}
+              placeholder="e.g. Physical recount, opening balance reset..." />
+          </div>
+          {!isNaN(parseFloat(value)) && (
+            <div className="text-sm">
+              Delta: <span className={`font-mono font-semibold ${parseFloat(value) - target.current < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                {parseFloat(value) - target.current >= 0 ? '+' : ''}{(parseFloat(value) - target.current).toFixed(3)} {target.unit}
+              </span>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const InventoryList: React.FC = () => {
   return (
