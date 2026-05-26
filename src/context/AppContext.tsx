@@ -189,7 +189,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateRecipeDyes = useCallback(async (lotNo: string, dyes: RecipeDye[]) => {
     await supabase.from('recipe_dyes').delete().eq('lot_no', lotNo);
     if (dyes.length > 0) {
-      await supabase.from('recipe_dyes').insert(dyes.map(d => ({ lot_no: d.lot_no, dye_id: d.dye_id, percentage: d.percentage, qty_grams: d.qty_grams })));
+      const base = Date.now();
+      await supabase.from('recipe_dyes').insert(dyes.map((d, i) => ({
+        lot_no: d.lot_no, dye_id: d.dye_id, percentage: d.percentage, qty_grams: d.qty_grams,
+        created_at: new Date(base + i).toISOString(),
+      })));
     }
     await fetchAll();
   }, [fetchAll]);
@@ -197,7 +201,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateRecipeChemicals = useCallback(async (lotNo: string, chemicals: RecipeChemical[]) => {
     await supabase.from('recipe_chemicals').delete().eq('lot_no', lotNo);
     if (chemicals.length > 0) {
-      await supabase.from('recipe_chemicals').insert(chemicals.map(c => ({ lot_no: c.lot_no, chemical_id: c.chemical_id, qty: c.qty, ph_value: c.ph_value ?? null })));
+      const base = Date.now();
+      await supabase.from('recipe_chemicals').insert(chemicals.map((c, i) => ({
+        lot_no: c.lot_no, chemical_id: c.chemical_id, qty: c.qty, ph_value: c.ph_value ?? null,
+        created_at: new Date(base + i).toISOString(),
+      })));
     }
     await fetchAll();
   }, [fetchAll]);
