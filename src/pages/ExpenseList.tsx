@@ -93,7 +93,7 @@ const ExpenseList: React.FC = () => {
       <Card>
         <CardHeader><CardTitle>Search & Filter</CardTitle></CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <Input placeholder="Search supplier, category, notes..." value={search} onChange={e => setSearch(e.target.value)} />
             <Select value={filterType} onValueChange={setFilterType}>
               <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
@@ -112,6 +112,33 @@ const ExpenseList: React.FC = () => {
                 <SelectItem value="Unpaid">Unpaid</SelectItem>
               </SelectContent>
             </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("justify-start text-left font-normal", !fromDate && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {fromDate ? format(fromDate, "dd-MMM-yyyy") : "From Date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={fromDate} onSelect={setFromDate} initialFocus className={cn("p-3 pointer-events-auto")} />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("justify-start text-left font-normal", !toDate && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {toDate ? format(toDate, "dd-MMM-yyyy") : "To Date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={toDate} onSelect={setToDate} initialFocus className={cn("p-3 pointer-events-auto")} />
+              </PopoverContent>
+            </Popover>
+            {(fromDate || toDate) && (
+              <Button variant="ghost" size="sm" onClick={() => { setFromDate(undefined); setToDate(undefined); }}>
+                <X className="h-4 w-4 mr-1" /> Clear Dates
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
