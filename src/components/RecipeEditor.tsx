@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useMemo, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useApp } from '@/context/AppContext';
 import { calculateDyeGrams } from '@/lib/calculations';
 import { Plus, Trash2, Percent, Undo2 } from 'lucide-react';
@@ -58,6 +58,18 @@ const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, 
   const [localChemicals, setLocalChemicals] = useState<RecipeChemical[]>(initialChemicals);
   const [dirty, setDirty] = useState(false);
   const [prevDyes, setPrevDyes] = useState<RecipeDye[] | null>(null);
+
+  // Sync local state when underlying lot data (or master items) loads/changes,
+  // but only if the user hasn't started editing — prevents stale empty/default
+  // state from sticking when context data arrives after first render.
+  const dyesKey = useMemo(() => dyes.map(d => `${d.id}:${d.dye_id}:${d.percentage}`).join('|'), [dyes]);
+  const chemsKey = useMemo(() => chemicals.map(c => `${c.id}:${c.chemical_id}:${c.qty}:${c.ph_value ?? ''}`).join('|'), [chemicals]);
+  useEffect(() => {
+    if (dirty) return;
+    setLocalDyes(dyes);
+    setLocalChemicals(chemicals.length > 0 ? chemicals : defaultChemicals);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lotNo, dyesKey, chemsKey, defaultChemicals.length]);
 
   // Imperative API: stage a reference recipe into local state without saving.
   useImperativeHandle(ref, () => ({
