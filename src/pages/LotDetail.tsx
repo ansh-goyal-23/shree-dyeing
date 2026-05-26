@@ -86,6 +86,16 @@ const LotDetail: React.FC = () => {
     );
   }
 
+  const startEditing = () => {
+    setEditData({
+      date: lot.date, yarn_company_name: lot.yarn_company_name,
+      color_name: lot.color_name, denier: lot.denier,
+      number_of_chesses: lot.number_of_chesses, gross_weight: lot.gross_weight,
+    });
+    setEditing(true);
+  };
+
+
   const handleSaveEdit = async () => {
     const success = await updateLot(lot.lot_no, {
       date: editData.date,
