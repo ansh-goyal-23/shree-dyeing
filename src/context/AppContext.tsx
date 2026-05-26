@@ -92,12 +92,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const [lotsData, dyesData, chemsData, masterData, stepsData, stepDyesData, stepChemsData] = await Promise.all([
       fetchTableRows('lots', [{ column: 'created_at', ascending: false }]),
-      fetchTableRows('recipe_dyes', [{ column: 'id' }]),
-      fetchTableRows('recipe_chemicals', [{ column: 'id' }]),
+      fetchTableRows('recipe_dyes', [{ column: 'created_at' }, { column: 'id' }]),
+      fetchTableRows('recipe_chemicals', [{ column: 'created_at' }, { column: 'id' }]),
       fetchTableRows('master_items', [{ column: 'name' }]),
       fetchTableRows('process_steps', [{ column: 'step_number' }, { column: 'id' }]),
-      fetchTableRows('step_dyes', [{ column: 'id' }]),
-      fetchTableRows('step_chemicals', [{ column: 'id' }]),
+      fetchTableRows('step_dyes', [{ column: 'created_at' }, { column: 'id' }]),
+      fetchTableRows('step_chemicals', [{ column: 'created_at' }, { column: 'id' }]),
     ]);
 
     setState({
