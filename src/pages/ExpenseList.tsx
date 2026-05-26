@@ -27,6 +27,8 @@ const ExpenseList: React.FC = () => {
   const [sortField, setSortField] = useState<'date' | 'total_amount'>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
+  const [toDate, setToDate] = useState<Date | undefined>(undefined);
 
   const filtered = useMemo(() => {
     let result = expenses;
