@@ -43,24 +43,6 @@ const LotDetail: React.FC = () => {
   const [remarksDraft, setRemarksDraft] = useState('');
   const [savingRemarks, setSavingRemarks] = useState(false);
 
-  if (!lot) {
-    return (
-      <div className="text-center py-16 space-y-4">
-        <p className="text-muted-foreground">Lot not found.</p>
-        <button onClick={() => navigate('/shade-management/lots')} className="text-primary underline text-sm">Back to Lot List</button>
-      </div>
-    );
-  }
-
-  const startEditing = () => {
-    setEditData({
-      date: lot.date, yarn_company_name: lot.yarn_company_name,
-      color_name: lot.color_name, denier: lot.denier,
-      number_of_chesses: lot.number_of_chesses, gross_weight: lot.gross_weight,
-    });
-    setEditing(true);
-  };
-
   const triggerLotInventory = useCallback(async (lotForInv = lot) => {
     if (!lotForInv) return;
     await refreshData();
@@ -94,6 +76,15 @@ const LotDetail: React.FC = () => {
       masterItems,
     });
   }, [lot, refreshData, inv, masterItems]);
+
+  if (!lot) {
+    return (
+      <div className="text-center py-16 space-y-4">
+        <p className="text-muted-foreground">Lot not found.</p>
+        <button onClick={() => navigate('/shade-management/lots')} className="text-primary underline text-sm">Back to Lot List</button>
+      </div>
+    );
+  }
 
   const handleSaveEdit = async () => {
     const success = await updateLot(lot.lot_no, {
