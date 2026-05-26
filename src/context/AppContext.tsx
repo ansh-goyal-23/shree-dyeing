@@ -52,6 +52,29 @@ interface AppContextType extends AppState {
 
 const AppContext = createContext<AppContextType | null>(null);
 
+type TableOrder = { column: string; ascending?: boolean };
+
+const fetchTableRows = async (table: string, orders: TableOrder[] = []) => {
+  const pageSize = 1000;
+  const rows: any[] = [];
+
+  for (let from = 0; ; from += pageSize) {
+    let query = supabase.from(table as any).select('*').range(from, from + pageSize - 1);
+    orders.forEach(({ column, ascending = true }) => {
+      query = query.order(column, { ascending });
+    });
+
+    const { data, error } = await query;
+    if (error) {
+      console.error(`Failed to fetch ${table}:`, error);
+      return rows;
+    }
+
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) return rows;
+  }
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [state, setState] = useState<AppState>({
