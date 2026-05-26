@@ -43,6 +43,21 @@ const ExpenseList: React.FC = () => {
     if (filterType !== 'all') result = result.filter(e => e.expense_type === filterType);
     if (filterPayment !== 'all') result = result.filter(e => e.payment_status === filterPayment);
 
+    if (fromDate) {
+      const from = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+      result = result.filter(e => {
+        const d = parseISO(e.date);
+        return isAfter(d, from) || isEqual(d, from);
+      });
+    }
+    if (toDate) {
+      const to = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
+      result = result.filter(e => {
+        const d = parseISO(e.date);
+        return isBefore(d, to) || isEqual(d, to);
+      });
+    }
+
     result = [...result].sort((a, b) => {
       const valA = sortField === 'date' ? new Date(a.date).getTime() : a.total_amount;
       const valB = sortField === 'date' ? new Date(b.date).getTime() : b.total_amount;
