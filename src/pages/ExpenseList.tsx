@@ -64,7 +64,7 @@ const ExpenseList: React.FC = () => {
       return sortDir === 'asc' ? valA - valB : valB - valA;
     });
     return result;
-  }, [expenses, search, filterType, filterPayment, sortField, sortDir]);
+  }, [expenses, search, filterType, filterPayment, sortField, sortDir, fromDate, toDate]);
 
   const toggleSort = (field: 'date' | 'total_amount') => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
