@@ -245,13 +245,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     if (data.dyes.length > 0) {
+      const base = Date.now();
       await supabase.from('step_dyes').insert(
-        data.dyes.map(d => ({ step_id: stepId, dye_id: d.dye_id, percentage: d.percentage, qty_grams: d.qty_grams }))
+        data.dyes.map((d, i) => ({ id: createOrderedUuid(base + i), step_id: stepId, dye_id: d.dye_id, percentage: d.percentage, qty_grams: d.qty_grams }))
       );
     }
     if (data.chemicals.length > 0) {
+      const base = Date.now();
       await supabase.from('step_chemicals').insert(
-        data.chemicals.map(c => ({ step_id: stepId, chemical_id: c.chemical_id, qty: c.qty }))
+        data.chemicals.map((c, i) => ({ id: createOrderedUuid(base + i), step_id: stepId, chemical_id: c.chemical_id, qty: c.qty }))
       );
     }
     await fetchAll();
@@ -269,13 +271,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await supabase.from('step_dyes').delete().eq('step_id', stepId);
     await supabase.from('step_chemicals').delete().eq('step_id', stepId);
     if (data.dyes.length > 0) {
+      const base = Date.now();
       await supabase.from('step_dyes').insert(
-        data.dyes.map(d => ({ step_id: stepId, dye_id: d.dye_id, percentage: d.percentage, qty_grams: d.qty_grams }))
+        data.dyes.map((d, i) => ({ id: createOrderedUuid(base + i), step_id: stepId, dye_id: d.dye_id, percentage: d.percentage, qty_grams: d.qty_grams }))
       );
     }
     if (data.chemicals.length > 0) {
+      const base = Date.now();
       await supabase.from('step_chemicals').insert(
-        data.chemicals.map(c => ({ step_id: stepId, chemical_id: c.chemical_id, qty: c.qty }))
+        data.chemicals.map((c, i) => ({ id: createOrderedUuid(base + i), step_id: stepId, chemical_id: c.chemical_id, qty: c.qty }))
       );
     }
     await fetchAll();
