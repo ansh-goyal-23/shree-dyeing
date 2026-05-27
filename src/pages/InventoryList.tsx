@@ -10,118 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertTriangle, Package, SlidersHorizontal, Droplet, Boxes, Pencil } from 'lucide-react';
+import { AlertTriangle, Package, SlidersHorizontal, Droplet, Boxes } from 'lucide-react';
 import { useInventoryStock, useAdjustStock } from '@/hooks/useInventory';
 import { useExpenseItems } from '@/hooks/useExpenses';
 import { toast } from 'sonner';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-
-// ============================================================
-// Shared: Set Stock Dialog (Yarn / Material / Oil)
-// ============================================================
-type SetStockTarget =
-  | { kind: 'yarn'; id: string; ref_key: string; label: string; current: number; unit: string }
-  | { kind: 'material'; id: string; ref_key: string; label: string; current: number; unit: string }
-  | { kind: 'oil'; id: string | null; ref_key: string; label: string; current: number; unit: string };
-
-const SetStockDialog: React.FC<{
-  target: SetStockTarget | null;
-  onClose: () => void;
-  onSaved: () => void;
-}> = ({ target, onClose, onSaved }) => {
-  const [value, setValue] = useState('');
-  const [reason, setReason] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  React.useEffect(() => {
-    if (target) { setValue(String(target.current)); setReason(''); }
-  }, [target]);
-
-  if (!target) return null;
-
-  const handleSave = async () => {
-    const newStock = parseFloat(value);
-    if (isNaN(newStock)) { toast.error('Enter a valid number'); return; }
-    const delta = newStock - Number(target.current);
-    setSaving(true);
-    try {
-      const nowIso = new Date().toISOString();
-      // 1. Update inventory table
-      if (target.kind === 'yarn') {
-        const { error } = await supabase.from('yarn_inventory')
-          .update({ current_stock: newStock, last_updated: nowIso }).eq('id', target.id);
-        if (error) throw error;
-      } else if (target.kind === 'material') {
-        const { error } = await supabase.from('material_inventory')
-          .update({ current_stock: newStock, last_updated: nowIso }).eq('id', target.id);
-        if (error) throw error;
-      } else {
-        if (target.id) {
-          const { error } = await supabase.from('oil_inventory')
-            .update({ current_stock: newStock, last_updated: nowIso }).eq('id', target.id);
-          if (error) throw error;
-        } else {
-          const { error } = await supabase.from('oil_inventory')
-            .insert({ current_stock: newStock, last_updated: nowIso });
-          if (error) throw error;
-        }
-      }
-      // 2. Log ledger entry (only if there's an actual change)
-      if (delta !== 0) {
-        const { error: txErr } = await supabase.from('inventory_transactions_v2').insert({
-          inventory_kind: target.kind,
-          ref_key: target.ref_key,
-          delta,
-          source: 'Manual Set',
-          reference_id: null,
-          notes: reason || `Manually set to ${newStock} ${target.unit}`,
-        });
-        if (txErr) throw txErr;
-      }
-      toast.success(`Stock set to ${newStock} ${target.unit}`);
-      onSaved();
-      onClose();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to update stock');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Dialog open={!!target} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Set Stock — {target.label}</DialogTitle></DialogHeader>
-        <div className="space-y-4">
-          <div className="text-sm text-muted-foreground">
-            Current stock: <span className="font-mono font-semibold">{Number(target.current).toFixed(3)} {target.unit}</span>
-          </div>
-          <div>
-            <Label>New Stock Value ({target.unit}) *</Label>
-            <Input type="number" step="any" value={value} onChange={(e) => setValue(e.target.value)} />
-          </div>
-          <div>
-            <Label>Reason / Notes</Label>
-            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2}
-              placeholder="e.g. Physical recount, opening balance reset..." />
-          </div>
-          {!isNaN(parseFloat(value)) && (
-            <div className="text-sm">
-              Delta: <span className={`font-mono font-semibold ${parseFloat(value) - target.current < 0 ? 'text-destructive' : 'text-green-600'}`}>
-                {parseFloat(value) - target.current >= 0 ? '+' : ''}{(parseFloat(value) - target.current).toFixed(3)} {target.unit}
-              </span>
-            </div>
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
 
 const InventoryList: React.FC = () => {
   return (
@@ -310,7 +204,6 @@ const MaterialsTab: React.FC = () => {
 // YARN TAB
 // ============================================================
 const YarnTab: React.FC = () => {
-  const qc = useQueryClient();
   const { data = [], isLoading } = useQuery({
     queryKey: ['yarn_inventory'],
     queryFn: async () => {
@@ -320,50 +213,17 @@ const YarnTab: React.FC = () => {
     },
   });
   const [search, setSearch] = useState('');
-  const [target, setTarget] = useState<SetStockTarget | null>(null);
-  const [showAdd, setShowAdd] = useState(false);
-  const [newCompany, setNewCompany] = useState('');
-  const [newType, setNewType] = useState('');
-  const [newStock, setNewStock] = useState('');
-
   const filtered = data.filter((r: any) =>
     !search || r.yarn_company.toLowerCase().includes(search.toLowerCase()) || r.yarn_type.toLowerCase().includes(search.toLowerCase()));
-
-  const handleAddNew = async () => {
-    if (!newCompany.trim() || !newType.trim()) { toast.error('Company and type required'); return; }
-    const stockVal = parseFloat(newStock) || 0;
-    try {
-      const { error } = await supabase.from('yarn_inventory').insert({
-        yarn_company: newCompany.trim(), yarn_type: newType.trim(),
-        current_stock: stockVal, last_updated: new Date().toISOString(),
-      });
-      if (error) throw error;
-      if (stockVal !== 0) {
-        await supabase.from('inventory_transactions_v2').insert({
-          inventory_kind: 'yarn',
-          ref_key: `${newCompany.trim()}|${newType.trim()}`,
-          delta: stockVal, source: 'Manual Set', reference_id: null,
-          notes: `Opening / manual entry`,
-        });
-      }
-      toast.success('Yarn stock added');
-      setShowAdd(false); setNewCompany(''); setNewType(''); setNewStock('');
-      qc.invalidateQueries({ queryKey: ['yarn_inventory'] });
-    } catch (err: any) { toast.error(err?.message || 'Failed'); }
-  };
-
   return (
     <div className="space-y-4 mt-4">
-      <div className="flex justify-between gap-3 flex-wrap">
-        <Input placeholder="Search yarn company / type..." value={search} onChange={e => setSearch(e.target.value)} className="max-w-md" />
-        <Button onClick={() => setShowAdd(true)}><Boxes className="h-4 w-4 mr-2" /> Add Yarn Stock</Button>
-      </div>
+      <Input placeholder="Search yarn company / type..." value={search} onChange={e => setSearch(e.target.value)} className="max-w-md" />
       <Card>
         <CardContent className="p-0">
           {isLoading ? <div className="p-8 text-center text-muted-foreground">Loading...</div>
             : filtered.length === 0 ? <div className="p-8 text-center text-muted-foreground flex flex-col items-center gap-2"><Boxes className="h-10 w-10" /><p>No yarn stock yet. Stock appears as lots consume yarn.</p></div>
             : <Table>
-              <TableHeader><TableRow><TableHead>Company</TableHead><TableHead>Yarn Type</TableHead><TableHead className="text-right">Stock (kg)</TableHead><TableHead>Last Updated</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Company</TableHead><TableHead>Yarn Type</TableHead><TableHead className="text-right">Stock (kg)</TableHead><TableHead>Last Updated</TableHead></TableRow></TableHeader>
               <TableBody>
                 {filtered.map((r: any) => {
                   const negative = Number(r.current_stock) < 0;
@@ -373,14 +233,6 @@ const YarnTab: React.FC = () => {
                       <TableCell>{r.yarn_type}</TableCell>
                       <TableCell className={`text-right font-mono ${negative ? 'text-destructive font-semibold' : ''}`}>{Number(r.current_stock).toFixed(3)}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{new Date(r.last_updated).toLocaleString()}</TableCell>
-                      <TableCell className="text-right">
-                        <Button size="sm" variant="outline" onClick={() => setTarget({
-                          kind: 'yarn', id: r.id,
-                          ref_key: `${r.yarn_company}|${r.yarn_type}`,
-                          label: `${r.yarn_company} / ${r.yarn_type}`,
-                          current: Number(r.current_stock), unit: 'kg',
-                        })}><Pencil className="h-3 w-3 mr-1" /> Set</Button>
-                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -388,24 +240,6 @@ const YarnTab: React.FC = () => {
             </Table>}
         </CardContent>
       </Card>
-
-      <SetStockDialog target={target} onClose={() => setTarget(null)}
-        onSaved={() => qc.invalidateQueries({ queryKey: ['yarn_inventory'] })} />
-
-      <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Add Yarn Stock</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Yarn Company *</Label><Input value={newCompany} onChange={e => setNewCompany(e.target.value)} /></div>
-            <div><Label>Yarn Type *</Label><Input value={newType} onChange={e => setNewType(e.target.value)} /></div>
-            <div><Label>Opening Stock (kg)</Label><Input type="number" step="any" value={newStock} onChange={e => setNewStock(e.target.value)} /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
-            <Button onClick={handleAddNew}>Add</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
@@ -414,7 +248,6 @@ const YarnTab: React.FC = () => {
 // DYES & CHEMICALS TAB
 // ============================================================
 const DyeChemTab: React.FC = () => {
-  const qc = useQueryClient();
   const { data = [], isLoading } = useQuery({
     queryKey: ['material_inventory'],
     queryFn: async () => {
@@ -425,7 +258,6 @@ const DyeChemTab: React.FC = () => {
   });
   const [search, setSearch] = useState('');
   const [type, setType] = useState<'all' | 'dye' | 'chemical'>('all');
-  const [target, setTarget] = useState<SetStockTarget | null>(null);
   const filtered = data.filter((r: any) => {
     const mi = r.master_items;
     if (!mi) return false;
@@ -450,34 +282,24 @@ const DyeChemTab: React.FC = () => {
         {isLoading ? <div className="p-8 text-center text-muted-foreground">Loading...</div>
           : filtered.length === 0 ? <div className="p-8 text-center text-muted-foreground flex flex-col items-center gap-2"><Boxes className="h-10 w-10" /><p>No dye/chemical stock yet.</p></div>
           : <Table>
-            <TableHeader><TableRow><TableHead>Item</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Stock</TableHead><TableHead>Unit</TableHead><TableHead>Last Updated</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Item</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Stock</TableHead><TableHead>Unit</TableHead><TableHead>Last Updated</TableHead></TableRow></TableHeader>
             <TableBody>
               {filtered.map((r: any) => {
                 const mi = r.master_items;
                 const negative = Number(r.current_stock) < 0;
-                const unit = mi.type === 'dye' ? 'gm' : (mi.unit || '');
-                const label = mi.short_name ? `${mi.short_name} (${mi.name})` : mi.name;
                 return (
                   <TableRow key={r.id} className={negative ? 'bg-destructive/5' : ''}>
-                    <TableCell className="font-medium">{label}</TableCell>
+                    <TableCell className="font-medium">{mi.short_name ? `${mi.short_name} (${mi.name})` : mi.name}</TableCell>
                     <TableCell><Badge variant="outline">{mi.type}</Badge></TableCell>
                     <TableCell className={`text-right font-mono ${negative ? 'text-destructive font-semibold' : ''}`}>{Number(r.current_stock).toFixed(3)}</TableCell>
-                    <TableCell>{unit || '—'}</TableCell>
+                    <TableCell>{mi.type === 'dye' ? 'gm' : (mi.unit || '—')}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{new Date(r.last_updated).toLocaleString()}</TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" variant="outline" onClick={() => setTarget({
-                        kind: 'material', id: r.id, ref_key: r.master_item_id,
-                        label, current: Number(r.current_stock), unit: unit || 'units',
-                      })}><Pencil className="h-3 w-3 mr-1" /> Set</Button>
-                    </TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>}
       </CardContent></Card>
-      <SetStockDialog target={target} onClose={() => setTarget(null)}
-        onSaved={() => qc.invalidateQueries({ queryKey: ['material_inventory'] })} />
     </div>
   );
 };
@@ -486,7 +308,6 @@ const DyeChemTab: React.FC = () => {
 // OIL TAB
 // ============================================================
 const OilTab: React.FC = () => {
-  const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ['oil_inventory'],
     queryFn: async () => {
@@ -503,19 +324,14 @@ const OilTab: React.FC = () => {
       return data || [];
     },
   });
-  const [target, setTarget] = useState<SetStockTarget | null>(null);
   return (
     <div className="space-y-4 mt-4">
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><Droplet className="h-5 w-5" /> Oil Stock</CardTitle></CardHeader>
-        <CardContent className="flex items-center justify-between gap-4 flex-wrap">
+        <CardContent>
           {isLoading ? <p className="text-muted-foreground">Loading...</p> : (
             <div className="text-3xl font-bold font-mono">{Number(data?.current_stock || 0).toFixed(3)} <span className="text-base font-normal text-muted-foreground">kg</span></div>
           )}
-          <Button variant="outline" onClick={() => setTarget({
-            kind: 'oil', id: data?.id ?? null, ref_key: 'OIL',
-            label: 'Oil', current: Number(data?.current_stock || 0), unit: 'kg',
-          })}><Pencil className="h-4 w-4 mr-2" /> Set Stock</Button>
         </CardContent>
       </Card>
       <Card>
@@ -538,8 +354,6 @@ const OilTab: React.FC = () => {
             </Table>}
         </CardContent>
       </Card>
-      <SetStockDialog target={target} onClose={() => setTarget(null)}
-        onSaved={() => { qc.invalidateQueries({ queryKey: ['oil_inventory'] }); qc.invalidateQueries({ queryKey: ['oil_ledger'] }); }} />
     </div>
   );
 };
