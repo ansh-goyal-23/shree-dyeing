@@ -75,6 +75,15 @@ const fetchTableRows = async (table: string, orders: TableOrder[] = []) => {
   }
 };
 
+const createOrderedUuid = (timestamp: number) => {
+  const timeHex = Math.max(0, timestamp).toString(16).padStart(12, '0').slice(-12);
+  const bytes = new Uint8Array(10);
+  crypto.getRandomValues(bytes);
+  const rand = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+  const variant = ((parseInt(rand.slice(3, 5), 16) & 0x3f) | 0x80).toString(16).padStart(2, '0');
+  return `${timeHex.slice(0, 8)}-${timeHex.slice(8, 12)}-7${rand.slice(0, 3)}-${variant}${rand.slice(5, 7)}-${rand.slice(7, 19)}`;
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [state, setState] = useState<AppState>({
@@ -92,12 +101,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const [lotsData, dyesData, chemsData, masterData, stepsData, stepDyesData, stepChemsData] = await Promise.all([
       fetchTableRows('lots', [{ column: 'created_at', ascending: false }]),
-      fetchTableRows('recipe_dyes', [{ column: 'created_at' }, { column: 'id' }]),
-      fetchTableRows('recipe_chemicals', [{ column: 'created_at' }, { column: 'id' }]),
+      fetchTableRows('recipe_dyes', [{ column: 'lot_no' }, { column: 'id' }]),
+      fetchTableRows('recipe_chemicals', [{ column: 'lot_no' }, { column: 'id' }]),
       fetchTableRows('master_items', [{ column: 'name' }]),
       fetchTableRows('process_steps', [{ column: 'step_number' }, { column: 'id' }]),
-      fetchTableRows('step_dyes', [{ column: 'created_at' }, { column: 'id' }]),
-      fetchTableRows('step_chemicals', [{ column: 'created_at' }, { column: 'id' }]),
+      fetchTableRows('step_dyes', [{ column: 'step_id' }, { column: 'id' }]),
+      fetchTableRows('step_chemicals', [{ column: 'step_id' }, { column: 'id' }]),
     ]);
 
     setState({
@@ -191,8 +200,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (dyes.length > 0) {
       const base = Date.now();
       await supabase.from('recipe_dyes').insert(dyes.map((d, i) => ({
+        id: createOrderedUuid(base + i),
         lot_no: d.lot_no, dye_id: d.dye_id, percentage: d.percentage, qty_grams: d.qty_grams,
-        created_at: new Date(base + i).toISOString(),
       })));
     }
     await fetchAll();
@@ -203,8 +212,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (chemicals.length > 0) {
       const base = Date.now();
       await supabase.from('recipe_chemicals').insert(chemicals.map((c, i) => ({
+        id: createOrderedUuid(base + i),
         lot_no: c.lot_no, chemical_id: c.chemical_id, qty: c.qty, ph_value: c.ph_value ?? null,
-        created_at: new Date(base + i).toISOString(),
       })));
     }
     await fetchAll();
