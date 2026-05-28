@@ -27,6 +27,22 @@ const SAFE_KEYWORDS = [
 const matchAny = (text: string, list: string[]) =>
   list.some(k => text.includes(k));
 
+// Lucide icon class names that indicate a write/destructive action.
+const WRITE_ICON_CLASSES = [
+  'lucide-trash', 'lucide-trash-2', 'lucide-pencil', 'lucide-pen', 'lucide-edit',
+  'lucide-plus', 'lucide-plus-circle', 'lucide-save', 'lucide-x', 'lucide-x-circle',
+  'lucide-minus', 'lucide-upload', 'lucide-send',
+];
+
+const hasWriteIcon = (el: HTMLElement) => {
+  const svgs = el.querySelectorAll('svg');
+  for (const svg of Array.from(svgs)) {
+    const cls = (svg.getAttribute('class') || '').toLowerCase();
+    if (WRITE_ICON_CLASSES.some(c => cls.includes(c))) return true;
+  }
+  return false;
+};
+
 const apply = (root: ParentNode) => {
   // Buttons
   root.querySelectorAll<HTMLElement>('button, [role="button"]').forEach(el => {
@@ -38,15 +54,22 @@ const apply = (root: ParentNode) => {
     // Skip dropdown/select/popover/dialog triggers used for navigation/inspection
     const role = el.getAttribute('aria-haspopup') || el.getAttribute('data-state');
     const text = (el.textContent || '').trim().toLowerCase();
-    if (!text && el.querySelector('svg')) return; // icon-only triggers (chevrons, etc.)
+    // Destructive/write icon-only buttons (Trash, Pencil, Plus, etc.)
+    if (!text && hasWriteIcon(el)) {
+      el.style.display = 'none';
+      el.dataset.viewerProcessed = '1';
+      return;
+    }
+    if (!text && el.querySelector('svg')) return; // other icon-only triggers (chevrons, etc.)
     if (matchAny(text, SAFE_KEYWORDS) && !matchAny(text, WRITE_KEYWORDS)) return;
-    if (matchAny(text, WRITE_KEYWORDS)) {
+    if (matchAny(text, WRITE_KEYWORDS) || hasWriteIcon(el)) {
       el.style.display = 'none';
       el.dataset.viewerProcessed = '1';
       return;
     }
     if (role) return;
   });
+
 
   // Form inputs — disable text/number/date inputs and textareas outside allow zones.
   root.querySelectorAll<HTMLElement>('input, textarea, select').forEach(el => {
