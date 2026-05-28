@@ -14,7 +14,9 @@ import {
   Upload,
   IndianRupee,
   Droplet,
+  Users,
 } from 'lucide-react';
+import { useRole } from '@/context/RoleContext';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import {
@@ -71,6 +73,18 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
   const location = useLocation();
   const isShadeActive = location.pathname.startsWith('/shade-management');
+  const { isViewer, isAdmin } = useRole();
+
+  const writeUrlPatterns = ['/create', '/opening-stock', '/bulk-opening-stock'];
+  const isWriteItem = (url: string) => writeUrlPatterns.some(p => url.includes(p));
+  const filterForViewer = <T extends { url: string }>(items: T[]) =>
+    isViewer ? items.filter(i => !isWriteItem(i.url)) : items;
+
+  const shade = filterForViewer(shadeItems);
+  const sampling = filterForViewer(samplingItems);
+  const dispatch = filterForViewer(dispatchItems);
+  const expense = filterForViewer(expenseItems);
+  const inventory = filterForViewer(inventoryItems);
 
   return (
     <Sidebar collapsible="icon">
@@ -82,7 +96,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {shadeItems.map((item) => (
+              {shade.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
@@ -108,7 +122,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {samplingItems.map((item) => (
+              {sampling.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
@@ -134,7 +148,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {dispatchItems.map((item) => (
+              {dispatch.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
@@ -160,7 +174,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {expenseItems.map((item) => (
+              {expense.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
@@ -186,7 +200,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {inventoryItems.map((item) => (
+              {inventory.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
@@ -226,6 +240,31 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>
+              <Users className="mr-2 h-4 w-4" />
+              {!collapsed && 'Admin'}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to="/users"
+                      className="hover:bg-sidebar-accent/50"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                    >
+                      <Users className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>Users & Roles</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
     </Sidebar>
   );
