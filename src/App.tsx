@@ -4,6 +4,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { AppProvider } from "@/context/AppContext";
+import { RoleProvider } from "@/context/RoleContext";
+import ViewerGuard from "@/components/ViewerGuard";
+import WriteRoute from "@/components/WriteRoute";
 import Layout from "@/components/Layout";
 import Dashboard from "@/pages/Dashboard";
 import LotList from "@/pages/LotList";
@@ -28,6 +31,7 @@ import InventoryDetail from "@/pages/InventoryDetail";
 import OpeningStock from "@/pages/OpeningStock";
 import BulkOpeningStock from "@/pages/BulkOpeningStock";
 import ItemMaster from "@/pages/ItemMaster";
+import UserManagement from "@/pages/UserManagement";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -58,36 +62,40 @@ const App = () => (
             <Route path="/" element={<Navigate to="/shade-management" replace />} />
             <Route path="*" element={
               <ProtectedRoute>
-                <AppProvider>
-                  <Layout>
-                    <Routes>
-                      <Route path="/shade-management" element={<Dashboard />} />
-                      <Route path="/shade-management/lots" element={<LotList />} />
-                      <Route path="/shade-management/lots/create" element={<CreateLot />} />
-                      <Route path="/shade-management/compare" element={<CompareLots />} />
-                      <Route path="/shade-management/lots/:lotNo" element={<LotDetail />} />
-                      <Route path="/shade-management/master" element={<MasterData />} />
-                      <Route path="/sampling" element={<IntakeList />} />
-                      <Route path="/sampling/create" element={<CreateIntake />} />
-                      <Route path="/sampling/order/create" element={<CreateDirectOrder />} />
-                      <Route path="/sampling/:id" element={<IntakeDetail />} />
-                      <Route path="/production" element={<PlaceholderModule />} />
-                      <Route path="/expenses" element={<ExpenseList />} />
-                      <Route path="/expenses/create" element={<ExpenseCreatePage />} />
-                      <Route path="/dispatch" element={<ChallanList />} />
-                      <Route path="/dispatch/create" element={<CreateChallan />} />
-                      <Route path="/dispatch/client-rates" element={<ClientRateMaster />} />
-                      <Route path="/dispatch/oil-consumption" element={<OilConsumptionReport />} />
-                      <Route path="/dispatch/:id" element={<ChallanDetail />} />
-                      <Route path="/item-master" element={<ItemMaster />} />
-                      <Route path="/inventory" element={<InventoryList />} />
-                      <Route path="/inventory/opening-stock" element={<OpeningStock />} />
-                      <Route path="/inventory/bulk-opening-stock" element={<BulkOpeningStock />} />
-                      <Route path="/inventory/:itemId" element={<InventoryDetail />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Layout>
-                </AppProvider>
+                <RoleProvider>
+                  <AppProvider>
+                    <ViewerGuard />
+                    <Layout>
+                      <Routes>
+                        <Route path="/shade-management" element={<Dashboard />} />
+                        <Route path="/shade-management/lots" element={<LotList />} />
+                        <Route path="/shade-management/lots/create" element={<WriteRoute redirectTo="/shade-management/lots"><CreateLot /></WriteRoute>} />
+                        <Route path="/shade-management/compare" element={<CompareLots />} />
+                        <Route path="/shade-management/lots/:lotNo" element={<LotDetail />} />
+                        <Route path="/shade-management/master" element={<MasterData />} />
+                        <Route path="/sampling" element={<IntakeList />} />
+                        <Route path="/sampling/create" element={<WriteRoute redirectTo="/sampling"><CreateIntake /></WriteRoute>} />
+                        <Route path="/sampling/order/create" element={<WriteRoute redirectTo="/sampling"><CreateDirectOrder /></WriteRoute>} />
+                        <Route path="/sampling/:id" element={<IntakeDetail />} />
+                        <Route path="/production" element={<PlaceholderModule />} />
+                        <Route path="/expenses" element={<ExpenseList />} />
+                        <Route path="/expenses/create" element={<WriteRoute redirectTo="/expenses"><ExpenseCreatePage /></WriteRoute>} />
+                        <Route path="/dispatch" element={<ChallanList />} />
+                        <Route path="/dispatch/create" element={<WriteRoute redirectTo="/dispatch"><CreateChallan /></WriteRoute>} />
+                        <Route path="/dispatch/client-rates" element={<ClientRateMaster />} />
+                        <Route path="/dispatch/oil-consumption" element={<OilConsumptionReport />} />
+                        <Route path="/dispatch/:id" element={<ChallanDetail />} />
+                        <Route path="/item-master" element={<ItemMaster />} />
+                        <Route path="/inventory" element={<InventoryList />} />
+                        <Route path="/inventory/opening-stock" element={<WriteRoute redirectTo="/inventory"><OpeningStock /></WriteRoute>} />
+                        <Route path="/inventory/bulk-opening-stock" element={<WriteRoute redirectTo="/inventory"><BulkOpeningStock /></WriteRoute>} />
+                        <Route path="/inventory/:itemId" element={<InventoryDetail />} />
+                        <Route path="/users" element={<UserManagement />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </Layout>
+                  </AppProvider>
+                </RoleProvider>
               </ProtectedRoute>
             } />
           </Routes>
