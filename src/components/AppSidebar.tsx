@@ -239,6 +239,7 @@ export function AppSidebar() {
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
+        </SidebarGroup>
 
         {isAdmin && (
           <SidebarGroup>
@@ -264,7 +265,6 @@ export function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
         )}
-        </SidebarGroup>
       </SidebarContent>
     </Sidebar>
   );
