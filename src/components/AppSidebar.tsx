@@ -14,7 +14,9 @@ import {
   Upload,
   IndianRupee,
   Droplet,
+  Users,
 } from 'lucide-react';
+import { useRole } from '@/context/RoleContext';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import {
@@ -71,6 +73,18 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
   const location = useLocation();
   const isShadeActive = location.pathname.startsWith('/shade-management');
+  const { isViewer, isAdmin } = useRole();
+
+  const writeUrlPatterns = ['/create', '/opening-stock', '/bulk-opening-stock'];
+  const isWriteItem = (url: string) => writeUrlPatterns.some(p => url.includes(p));
+  const filterForViewer = <T extends { url: string }>(items: T[]) =>
+    isViewer ? items.filter(i => !isWriteItem(i.url)) : items;
+
+  const shade = filterForViewer(shadeItems);
+  const sampling = filterForViewer(samplingItems);
+  const dispatch = filterForViewer(dispatchItems);
+  const expense = filterForViewer(expenseItems);
+  const inventory = filterForViewer(inventoryItems);
 
   return (
     <Sidebar collapsible="icon">
