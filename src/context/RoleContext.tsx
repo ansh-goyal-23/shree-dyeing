@@ -2,12 +2,13 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 
-export type AppRole = 'admin' | 'viewer';
+export type AppRole = 'admin' | 'editor' | 'viewer';
 
 interface RoleContextType {
   role: AppRole | null;
   loading: boolean;
   isViewer: boolean;
+  isEditor: boolean;
   isAdmin: boolean;
   refresh: () => Promise<void>;
 }
@@ -30,8 +31,9 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
     else {
       const roles = (data || []).map(r => r.role as AppRole);
       if (roles.includes('admin')) setRole('admin');
+      else if (roles.includes('editor')) setRole('editor');
       else if (roles.includes('viewer')) setRole('viewer');
-      else setRole('viewer'); // default: viewer if no row
+      else setRole('viewer');
     }
     setLoading(false);
   }, [user]);
@@ -42,6 +44,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
     role,
     loading,
     isViewer: role === 'viewer',
+    isEditor: role === 'editor',
     isAdmin: role === 'admin',
     refresh: load,
   };
