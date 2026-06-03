@@ -11,6 +11,7 @@ export interface Challan {
   receiver_name: string;
   receiver_contact_number: string;
   created_at: string;
+  created_by?: string | null;
 }
 
 export interface ChallanItem {
@@ -25,4 +26,5 @@ export interface ChallanItem {
   net_weight: number;
   rate: number;
   amount: number;
+  created_by?: string | null;
 }

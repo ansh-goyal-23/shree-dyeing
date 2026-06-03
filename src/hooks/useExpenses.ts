@@ -219,6 +219,7 @@ export function useExpenses() {
         payment_status: r.payment_status || 'Unpaid',
         notes: r.notes || '',
         created_at: r.created_at,
+        created_by: r.created_by || null,
       }));
     },
   });
@@ -390,6 +391,7 @@ export function useExpenseDetail(expenseId: string | null) {
         payment_status: r.payment_status || 'Unpaid',
         notes: r.notes || '',
         created_at: r.created_at,
+        created_by: r.created_by || null,
         line_items: (lineItemsRes.data || []).map((li: any): ExpenseLineItem => ({
           id: li.id,
           expense_id: li.expense_id,

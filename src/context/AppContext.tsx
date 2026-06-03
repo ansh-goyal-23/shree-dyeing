@@ -330,6 +330,7 @@ const mapLot = (row: any): Lot => ({
   status: row.status || (row.is_approved ? 'Approved' : 'In Approval'),
   shade_number: row.shade_number || row.lot_no, source_lot_no: row.source_lot_no || null,
   remarks: row.remarks || '',
+  created_by: row.created_by || null,
 });
 
 const mapDye = (row: any): RecipeDye => ({
@@ -351,6 +352,7 @@ const mapMasterItem = (row: any): MasterItem => ({
 const mapProcessStep = (row: any): ProcessStep => ({
   id: row.id, lot_no: row.lot_no, step_number: Number(row.step_number),
   step_type: row.step_type, description: row.description || '', created_at: row.created_at,
+  created_by: row.created_by || null,
 });
 
 const mapStepDye = (row: any): StepDye => ({

@@ -60,6 +60,7 @@ export interface Expense {
   payment_status: PaymentStatus;
   notes: string;
   created_at: string;
+  created_by?: string | null;
   line_items?: ExpenseLineItem[];
 }
 

@@ -23,6 +23,7 @@ export interface Lot {
   shade_number: string;
   source_lot_no: string | null;
   remarks: string;
+  created_by?: string | null;
 }
 
 export interface RecipeDye {
@@ -52,6 +53,7 @@ export interface ProcessStep {
   step_type: ProcessStepType;
   description: string;
   created_at: string;
+  created_by?: string | null;
 }
 
 export interface StepDye {
