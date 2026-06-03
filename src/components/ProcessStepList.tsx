@@ -58,23 +58,24 @@ const ProcessStepList: React.FC<Props> = ({ steps, stepDyes, stepChemicals, mast
 
         if (isEditing && onUpdateStep) {
           return (
-            <ProcessStepForm
-              key={step.id}
-              netWeight={netWeight}
-              masterItems={masterItems}
-              editingData={{
-                step_type: step.step_type as ProcessStepType,
-                description: step.description,
-                dyes: dyes.map(d => ({ dye_id: d.dye_id, percentage: d.percentage, qty_grams: d.qty_grams })),
-                chemicals: chems.map(c => ({ chemical_id: c.chemical_id, qty: c.qty })),
-              }}
-              onSubmit={async (data) => {
-                await onUpdateStep(step.id, data);
-                toast.success('Step updated.');
-                setEditingStepId(null);
-              }}
-              onCancel={() => setEditingStepId(null)}
-            />
+            <div key={step.id} data-owner-id={(step as any).created_by || ''}>
+              <ProcessStepForm
+                netWeight={netWeight}
+                masterItems={masterItems}
+                editingData={{
+                  step_type: step.step_type as ProcessStepType,
+                  description: step.description,
+                  dyes: dyes.map(d => ({ dye_id: d.dye_id, percentage: d.percentage, qty_grams: d.qty_grams })),
+                  chemicals: chems.map(c => ({ chemical_id: c.chemical_id, qty: c.qty })),
+                }}
+                onSubmit={async (data) => {
+                  await onUpdateStep(step.id, data);
+                  toast.success('Step updated.');
+                  setEditingStepId(null);
+                }}
+                onCancel={() => setEditingStepId(null)}
+              />
+            </div>
           );
         }
 
