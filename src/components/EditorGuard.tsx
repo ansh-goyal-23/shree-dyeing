@@ -124,6 +124,10 @@ const hideForeignEdits = (root: ParentNode, userId: string) => {
     container.querySelectorAll<HTMLElement>('button, [role="button"]').forEach(el => {
       if (el.dataset.editorOwnerProcessed === '1') return;
       if (el.closest('[data-editor-allow]')) return;
+      // Respect nested ownership: if a more-specific [data-owner-id] ancestor
+      // exists (closer than this container) and it IS owned by the user, skip.
+      const nearest = el.closest('[data-owner-id]') as HTMLElement | null;
+      if (nearest && nearest !== container && nearest.getAttribute('data-owner-id') === userId) return;
       const text = (el.textContent || '').trim().toLowerCase();
       const looksEdit = matchAny(text, EDIT_KEYWORDS) || (!text && hasIcon(el, EDIT_ICON_CLASSES));
       const looksSafe = matchAny(text, SAFE_KEYWORDS) && !matchAny(text, EDIT_KEYWORDS);
