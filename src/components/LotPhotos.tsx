@@ -102,7 +102,7 @@ const LotPhotos: React.FC<LotPhotosProps> = ({ lotNo, stepId = null }) => {
       ) : (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {photos.map(photo => (
-            <button key={photo.id} onClick={() => setViewPhoto(photo)}
+            <button key={photo.id} data-owner-id={(photo as any).created_by || ''} onClick={() => setViewPhoto(photo)}
               className="group relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary btn-transition bg-secondary">
               <img src={getPublicUrl(photo.file_path)} alt={photo.label} className="w-full h-full object-cover" loading="lazy" />
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-1.5">
