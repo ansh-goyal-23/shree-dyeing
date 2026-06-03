@@ -27,6 +27,9 @@ const EDIT_KEYWORDS = [
   'edit', 'delete', 'remove', 'update', 'save', 'reset',
   'approve', 'reject', 'promote', 'demote', 'clone', 'duplicate',
   'reduce', 'reverse', 'finalize', 'finalise', 'mark', 'unassign',
+  // Inside a non-owned container, editors must not append either.
+  'add', 'new', 'create', 'upload', 'submit', 'insert', 'apply',
+  'dispatch', 'generate', 'pay', 'send', 'assign', 'copy',
 ];
 
 const SAFE_KEYWORDS = [
@@ -105,11 +108,17 @@ const hideAllWrites = (root: ParentNode) => {
 
 // Hide edit/delete controls inside not-owned [data-owner-id] containers.
 const hideForeignEdits = (root: ParentNode, userId: string) => {
-  const containers = (root instanceof Element && root.matches('[data-owner-id]'))
-    ? [root as HTMLElement, ...Array.from(root.querySelectorAll<HTMLElement>('[data-owner-id]'))]
-    : Array.from(root.querySelectorAll<HTMLElement>('[data-owner-id]'));
+  const containerSet = new Set<HTMLElement>();
 
-  containers.forEach(container => {
+  // 1) If root itself is/contains [data-owner-id] containers
+  if (root instanceof Element) {
+    if (root.matches('[data-owner-id]')) containerSet.add(root as HTMLElement);
+    const ancestor = (root as Element).closest('[data-owner-id]');
+    if (ancestor) containerSet.add(ancestor as HTMLElement);
+  }
+  root.querySelectorAll<HTMLElement>('[data-owner-id]').forEach(c => containerSet.add(c));
+
+  containerSet.forEach(container => {
     const owner = container.getAttribute('data-owner-id') || '';
     if (owner === userId) return; // owner can edit/delete
     container.querySelectorAll<HTMLElement>('button, [role="button"]').forEach(el => {
@@ -117,7 +126,7 @@ const hideForeignEdits = (root: ParentNode, userId: string) => {
       if (el.closest('[data-editor-allow]')) return;
       const text = (el.textContent || '').trim().toLowerCase();
       const looksEdit = matchAny(text, EDIT_KEYWORDS) || (!text && hasIcon(el, EDIT_ICON_CLASSES));
-      const looksSafe = !text || (matchAny(text, SAFE_KEYWORDS) && !matchAny(text, EDIT_KEYWORDS));
+      const looksSafe = matchAny(text, SAFE_KEYWORDS) && !matchAny(text, EDIT_KEYWORDS);
       if (looksEdit && !looksSafe) {
         el.style.display = 'none';
         el.dataset.editorOwnerProcessed = '1';
