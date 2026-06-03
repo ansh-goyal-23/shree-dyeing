@@ -63,7 +63,7 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
   const chemicalDisplay = useMemo(() =>
     refChemicals.map(c => {
       const item = masterItems.find(m => m.id === c.chemical_id);
-      return { label: item?.name || c.chemical_id, qty: (c as any).qty ?? (c as any).quantity ?? '' };
+      return { label: item?.name || c.chemical_id, qty: c.qty, ph_value: c.ph_value };
     }).sort((a, b) => a.label.localeCompare(b.label)),
     [refChemicals, masterItems]
   );
