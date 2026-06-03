@@ -56,8 +56,16 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
       const shortName = item?.short_name || '';
       const name = item?.name || d.dye_id;
       return { label: shortName ? `${shortName} (${name})` : name, percentage: d.percentage };
-    }).sort((a, b) => a.label.localeCompare(b.label)),
+    }),
     [dyes, masterItems]
+  );
+
+  const chemicalDisplay = useMemo(() =>
+    refChemicals.map(c => {
+      const item = masterItems.find(m => m.id === c.chemical_id);
+      return { label: item?.name || c.chemical_id, qty: c.qty, ph_value: c.ph_value };
+    }).sort((a, b) => a.label.localeCompare(b.label)),
+    [refChemicals, masterItems]
   );
 
   // Process steps for the selected lot
@@ -227,7 +235,31 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
             ) : (
               <p className="text-sm text-muted-foreground italic">No dyes in base recipe.</p>
             )}
+
+            {chemicalDisplay.length > 0 && (
+              <div className="rounded border bg-background mt-2">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-muted-foreground">
+                      <th className="text-left px-3 py-1.5 font-medium">Chemical</th>
+                      <th className="text-right px-3 py-1.5 font-medium">Qty</th>
+                      <th className="text-right px-3 py-1.5 font-medium">pH</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {chemicalDisplay.map((c, i) => (
+                      <tr key={i} className="border-b last:border-0">
+                        <td className="px-3 py-1.5">{c.label}</td>
+                        <td className="px-3 py-1.5 text-right font-data">{c.qty}</td>
+                        <td className="px-3 py-1.5 text-right font-data">{c.ph_value ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
+
 
           {/* Process Steps */}
           {stepsDisplay.length > 0 && (
