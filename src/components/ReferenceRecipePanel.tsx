@@ -56,8 +56,16 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
       const shortName = item?.short_name || '';
       const name = item?.name || d.dye_id;
       return { label: shortName ? `${shortName} (${name})` : name, percentage: d.percentage };
-    }).sort((a, b) => a.label.localeCompare(b.label)),
+    }),
     [dyes, masterItems]
+  );
+
+  const chemicalDisplay = useMemo(() =>
+    refChemicals.map(c => {
+      const item = masterItems.find(m => m.id === c.chemical_id);
+      return { label: item?.name || c.chemical_id, qty: (c as any).qty ?? (c as any).quantity ?? '' };
+    }).sort((a, b) => a.label.localeCompare(b.label)),
+    [refChemicals, masterItems]
   );
 
   // Process steps for the selected lot
