@@ -27,6 +27,9 @@ const EDIT_KEYWORDS = [
   'edit', 'delete', 'remove', 'update', 'save', 'reset',
   'approve', 'reject', 'promote', 'demote', 'clone', 'duplicate',
   'reduce', 'reverse', 'finalize', 'finalise', 'mark', 'unassign',
+  // Inside a non-owned container, editors must not append either.
+  'add', 'new', 'create', 'upload', 'submit', 'insert', 'apply',
+  'dispatch', 'generate', 'pay', 'send', 'assign', 'copy',
 ];
 
 const SAFE_KEYWORDS = [
