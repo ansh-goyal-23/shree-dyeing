@@ -15,6 +15,7 @@ import {
   IndianRupee,
   Droplet,
   Users,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useRole } from '@/context/RoleContext';
 import { NavLink } from '@/components/NavLink';
@@ -85,6 +86,10 @@ export function AppSidebar() {
   const dispatch = filterForViewer(dispatchItems);
   const expense = filterForViewer(expenseItems);
   const inventory = filterForViewer(inventoryItems);
+  const adminInventoryItems = isAdmin
+    ? [{ title: 'Change Logs', url: '/inventory/logs', icon: ClipboardCheck }]
+    : [];
+  const inventoryFull = [...inventory, ...adminInventoryItems];
 
   return (
     <Sidebar collapsible="icon">
@@ -200,7 +205,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {inventory.map((item) => (
+              {inventoryFull.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
