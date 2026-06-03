@@ -235,7 +235,31 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
             ) : (
               <p className="text-sm text-muted-foreground italic">No dyes in base recipe.</p>
             )}
+
+            {chemicalDisplay.length > 0 && (
+              <div className="rounded border bg-background mt-2">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-muted-foreground">
+                      <th className="text-left px-3 py-1.5 font-medium">Chemical</th>
+                      <th className="text-right px-3 py-1.5 font-medium">Qty</th>
+                      <th className="text-right px-3 py-1.5 font-medium">pH</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {chemicalDisplay.map((c, i) => (
+                      <tr key={i} className="border-b last:border-0">
+                        <td className="px-3 py-1.5">{c.label}</td>
+                        <td className="px-3 py-1.5 text-right font-data">{c.qty}</td>
+                        <td className="px-3 py-1.5 text-right font-data">{c.ph_value ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
+
 
           {/* Process Steps */}
           {stepsDisplay.length > 0 && (
