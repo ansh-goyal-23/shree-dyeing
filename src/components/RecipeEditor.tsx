@@ -77,7 +77,7 @@ const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, 
   useEffect(() => {
     if (dirty) return;
     setLocalDyes(dyes);
-    setLocalChemicals(chemicals.length > 0 ? chemicals : defaultChemicals);
+    setLocalChemicals(sortChemicalsByName(chemicals.length > 0 ? chemicals : defaultChemicals));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lotNo, dyesKey, chemsKey, defaultChemicals.length]);
 
