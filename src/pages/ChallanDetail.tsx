@@ -135,7 +135,7 @@ const ChallanDetail: React.FC = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6" data-owner-id={(challan as any).created_by || ''}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link to="/dispatch" className="p-2 hover:bg-secondary rounded btn-transition"><ArrowLeft className="w-4 h-4" /></Link>

@@ -37,7 +37,7 @@ const IntakeDetail: React.FC = () => {
   const totalQty = activeItems.reduce((sum, i) => sum + (parseFloat(i.order_quantity) || 0), 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-owner-id={(entry as any).created_by || ''}>
       <div className="flex items-center gap-3">
         <button onClick={() => navigate('/sampling')} className="p-2 hover:bg-secondary rounded-md btn-transition"><ArrowLeft className="w-4 h-4" /></button>
         <div>
