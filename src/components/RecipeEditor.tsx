@@ -165,13 +165,13 @@ const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, 
   };
 
   const addChemical = () => {
-    setLocalChemicals(prev => [...prev, {
+    setLocalChemicals(prev => sortChemicalsByName([...prev, {
       id: crypto.randomUUID(),
       lot_no: lotNo,
       chemical_id: '',
       qty: 0,
       ph_value: null,
-    }]);
+    }]));
     setDirty(true);
   };
 
@@ -184,7 +184,7 @@ const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, 
         chem.ph_value = isBufChemical(value as string) ? DEFAULT_PH_VALUE : null;
       }
       updated[idx] = chem;
-      return updated;
+      return sortChemicalsByName(updated);
     });
     setDirty(true);
   };
