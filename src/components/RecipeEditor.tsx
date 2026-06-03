@@ -60,8 +60,8 @@ const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, 
 
   // Initialize chemicals: use existing if any, otherwise use defaults
   const initialChemicals = useMemo(() => {
-    if (chemicals.length > 0) return chemicals;
-    return defaultChemicals;
+    if (chemicals.length > 0) return sortChemicalsByName(chemicals);
+    return sortChemicalsByName(defaultChemicals);
   }, [chemicals, defaultChemicals]);
 
   const [localDyes, setLocalDyes] = useState<RecipeDye[]>(dyes);
