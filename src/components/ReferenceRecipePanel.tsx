@@ -129,8 +129,8 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
 
 
   return (
-    <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+    <div className="rounded-lg border border-dashed border-muted-foreground/20 bg-muted/10 p-4 space-y-3">
+      <h3 className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wide">
         Reference Recipe
       </h3>
 
