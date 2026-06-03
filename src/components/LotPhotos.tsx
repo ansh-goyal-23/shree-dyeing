@@ -115,7 +115,7 @@ const LotPhotos: React.FC<LotPhotosProps> = ({ lotNo, stepId = null }) => {
 
       {viewPhoto && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setViewPhoto(null)}>
-          <div className="relative max-w-3xl max-h-[90vh] w-full" onClick={e => e.stopPropagation()}>
+          <div className="relative max-w-3xl max-h-[90vh] w-full" data-owner-id={(viewPhoto as any).created_by || ''} onClick={e => e.stopPropagation()}>
             <img src={getPublicUrl(viewPhoto.file_path)} alt={viewPhoto.label} className="w-full max-h-[80vh] object-contain rounded-lg" />
             <div className="mt-2 flex items-center justify-between text-white text-sm">
               <div>
