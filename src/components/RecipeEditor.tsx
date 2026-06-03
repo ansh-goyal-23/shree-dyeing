@@ -33,6 +33,16 @@ const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, 
   const dyeItems = masterItems.filter(m => m.type === 'dye' && m.is_active).sort((a, b) => (a.short_name || a.name).localeCompare(b.short_name || b.name));
   const chemicalItems = masterItems.filter(m => m.type === 'chemical' && m.is_active).sort((a, b) => a.name.localeCompare(b.name));
 
+  const sortChemicalsByName = (chems: RecipeChemical[]) => {
+    return [...chems].sort((a, b) => {
+      const nameA = masterItems.find(m => m.id === a.chemical_id)?.name || '';
+      const nameB = masterItems.find(m => m.id === b.chemical_id)?.name || '';
+      if (!nameA && nameB) return 1;
+      if (nameA && !nameB) return -1;
+      return nameA.localeCompare(nameB);
+    });
+  };
+
   // Build default chemicals list based on master items
   const defaultChemicals = useMemo(() => {
     return DEFAULT_CHEMICAL_NAMES.map(name => {
