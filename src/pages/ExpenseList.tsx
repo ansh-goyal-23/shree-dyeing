@@ -169,7 +169,7 @@ const ExpenseList: React.FC = () => {
               </TableHeader>
               <TableBody>
                 {filtered.map(e => (
-                  <TableRow key={e.id}>
+                  <TableRow key={e.id} data-owner-id={(e as any).created_by || ''}>
                     <TableCell>{e.date}</TableCell>
                     <TableCell className="font-medium">{e.supplier_name || '-'}</TableCell>
                     <TableCell>

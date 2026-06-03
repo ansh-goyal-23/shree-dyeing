@@ -79,7 +79,7 @@ const ProcessStepList: React.FC<Props> = ({ steps, stepDyes, stepChemicals, mast
         }
 
         return (
-          <div key={step.id} className="border border-border rounded-lg overflow-hidden">
+          <div key={step.id} data-owner-id={(step as any).created_by || ''} className="border border-border rounded-lg overflow-hidden">
             {/* Step header — always visible, no toggle */}
             <div className="flex items-center gap-3 py-3 px-4 bg-secondary/20">
               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">

@@ -1,152 +1,69 @@
 ## Goal
 
-Build a fully automated, **delta-safe** inventory system covering yarn, dyes, chemicals, oil and finished goods — with a single approval popup gating every inventory write triggered by lot saves and dispatch saves.
+Introduce a third role **`editor`** alongside existing `admin` and `viewer`.
+
+| Role | Read | Master data writes | Transactional writes |
+|------|------|--------------------|----------------------|
+| admin  | all | all                | all (any row)        |
+| editor | all | ❌ none            | ✅ insert; edit/delete **own** rows only |
+| viewer | all | ❌                 | ❌                   |
+
+Enforcement: **frontend-only** (per request). Backend RLS stays permissive.
 
 ---
 
-## 1. Database changes (one migration)
+## Changes
 
-### New tables
+### 1. DB migration — `sql_migrations/20260603_editor_role.sql`
+- Extend enum: `alter type public.app_role add value if not exists 'editor';`
+- Update `get_my_role()` precedence: admin > editor > viewer.
+- Add `created_by uuid` (nullable, default `auth.uid()`) to transactional tables:
+  `lots, recipe_dyes, recipe_chemicals, process_steps, step_dyes, step_chemicals, lot_photos, intake_entries, intake_items, expenses, expense_documents, expense_line_items, challans, challan_items, inventory_transactions`.
+- Leave master data tables untouched: `clients, client_rate_master, company_master, master_items, suppliers, expense_categories`.
+- No RLS changes (frontend-only enforcement, legacy rows remain unowned and treated as "not yours").
 
-**`yarn_inventory`** — keyed by `(yarn_company, yarn_type)`
-- `id` uuid pk, `yarn_company` text, `yarn_type` text, `current_stock` numeric (kg), `last_updated` timestamptz
-- unique(`yarn_company`, `yarn_type`); allow negative stock (no check)
+### 2. Role context — `src/context/RoleContext.tsx`
+- `AppRole = 'admin' | 'editor' | 'viewer'`
+- Add `isEditor`, keep `isAdmin`, `isViewer`. Precedence: admin > editor > viewer; default = viewer.
 
-**`material_inventory`** — for dyes & chemicals (separate from existing `inventory_stock`)
-- `id` uuid pk, `master_item_id` uuid fk → `master_items(id)`, `current_stock` numeric (gm), `last_updated` timestamptz
-- unique(`master_item_id`)
+### 3. New `EditorGuard` component — `src/components/EditorGuard.tsx`
+Runs only when `isEditor`. Two responsibilities via MutationObserver (same pattern as ViewerGuard):
 
-**`oil_inventory`** — single-row table
-- `id` uuid pk default gen_random_uuid(), `current_stock` numeric (kg), `last_updated`
-- seeded with one row at `0`
+- **Master-data lockdown**: on routes matching master-data paths (`/master-data`, `/clients`, `/dispatch/client-rates`, `/inventory/items`, `/companies`, `/suppliers`, etc.), hide all write controls (same keyword/icon rules as ViewerGuard).
+- **Ownership filter**: any element with `data-owner-id="<uuid>"` that does NOT match `user.id` gets its descendant edit/delete buttons (matched by WRITE_KEYWORDS + write icons) hidden. Rows without `data-owner-id` (legacy) are treated as not-owned → edit/delete hidden.
+- New-item buttons ("Add", "Create", "New") remain visible everywhere except master data.
 
-**`finished_goods_stock`** — one row per lot
-- `lot_no` text pk fk → lots, `original_cones` int, `original_net_weight` numeric, `remaining_cones` int, `remaining_net_weight` numeric, `last_updated`
+### 4. Tag rows with owner — minimal changes
+For each list/detail surface that exposes edit/delete on transactional records, add `data-owner-id={row.created_by}` to the row's container `<tr>` / card `<div>`. Files to touch:
+- `src/pages/LotList.tsx`, `src/pages/LotDetail.tsx`
+- `src/components/ProcessStepList.tsx`
+- `src/components/LotPhotos.tsx`
+- `src/pages/IntakeDetail.tsx` (intake_items)
+- `src/pages/CreateExpense.tsx` / expense lists
+- `src/pages/ChallanList.tsx`
+- `src/pages/InventoryList.tsx` (transactions list)
 
-**`inventory_transactions_v2`** — unified ledger for all four inventories
-- `id`, `inventory_kind` ('yarn'|'material'|'oil'|'fg'), `ref_key` text (yarn key / master_item_id / lot_no / 'OIL'), `delta` numeric, `source` text ('Lot Save'|'Dispatch'|'Lot Edit'|'Dispatch Edit'|'Lot Delete'|'Dispatch Delete'), `reference_id` text (lot_no or challan_id), `notes`, `created_at`
+Detail pages (single record like LotDetail) also wrap the page in `data-owner-id`.
 
-### Tracking columns (delta state)
+### 5. Populate `created_by` on insert
+Default is set DB-side via `default auth.uid()`, but to be safe & explicit, update insert call sites to include `created_by: user.id` for the tables listed in (1). Touch the existing create flows: `CreateLot`, `CreateIntake`, `CreateExpense`, lot recipe/process step inserts, photo uploads, challan create, inventory transactions.
 
-On `lots`:
-- `last_yarn_consumed` numeric default 0 (kg)
-- `last_dye_consumption` jsonb default '{}'  — `{ master_item_id: grams }`
-- `last_chemical_consumption` jsonb default '{}' — `{ master_item_id: qty }`
-- `inventory_synced` boolean default false
+### 6. User Management UI — `src/pages/UserManagement.tsx`
+- Add third button: **Make editor**.
+- Update role badge styles for editor (e.g. amber).
+- Row type now `'admin' | 'editor' | 'viewer'`.
 
-On `challans`:
-- `last_oil_by_lot` jsonb default '{}' — `{ lot_no: oil_kg }`
-- `last_fg_by_lot` jsonb default '{}' — `{ lot_no: { cones, net } }`
-- `inventory_synced` boolean default false
-
----
-
-## 2. Core engine — `src/lib/inventoryEngine.ts` (new)
-
-Pure functions, no UI:
-
-- `computeLotConsumption(lot, recipeDyes, recipeChemicals, processSteps, stepDyes, stepChemicals)` →
-  ```
-  { yarn: { key, delta_kg }, dyes: [{ master_item_id, delta_g }], chemicals: [{ master_item_id, delta }] }
-  ```
-  Reads `lots.last_*` columns to compute deltas (new_total − last_applied).
-
-- `computeDispatchConsumption(challan, items, lots)` →
-  ```
-  { fg: [{ lot_no, delta_cones, delta_net }], oil: [{ lot_no, delta_kg }] }
-  ```
-  Uses the existing oil formula. Deltas vs `challans.last_*`.
-
-- `previewToRows(preview)` → array of `{ label, prevStock, change, newStock, warn }` for the popup, after fetching current stocks.
-
-- `applyPreview(preview)` → writes all inventory rows + ledger entries + updates `last_*` columns + sets `inventory_synced = true`. All in a single Promise.all batch (Supabase has no client-side tx; we accept best-effort and log failures).
-
-- Auto-create on read: helpers `getOrCreateYarn(company, type)`, `getOrCreateMaterial(master_item_id)` — insert with `current_stock = 0` if missing.
+### 7. App wiring — `src/App.tsx`
+- Mount `<EditorGuard />` next to `<ViewerGuard />`.
+- `WriteRoute` (currently blocks viewers from create pages) → also block editors from **master-data create/edit routes** only; keep transactional create routes open.
 
 ---
 
-## 3. Approval popup — `src/components/InventoryApprovalDialog.tsx` (new)
+## Out of scope
+- No RLS changes (per "frontend only").
+- No backfill of `created_by` on existing rows.
+- Editors will see legacy (pre-migration) rows as not-editable; admin remains the escape hatch.
 
-- Props: `open`, `rows: ApprovalRow[]`, `onApprove()`, `onCancel()`
-- Renders one table grouped by section (Yarn / Dyes / Chemicals / Finished Goods / Oil) showing **Item · Prev · Change · New**
-- Rows where `newStock < 0` get a red badge + warning icon
-- Buttons: **Approve Changes** (primary) / **Cancel**
-- On Cancel: caller marks `inventory_synced=false` (record already saved), inventory untouched.
-
----
-
-## 4. Wiring into save flows
-
-### Lot create / edit (`CreateLot.tsx`)
-After the existing lot+recipe+steps save succeeds:
-1. `computeLotConsumption(...)` → preview
-2. Open `InventoryApprovalDialog` with rows
-3. On Approve → `applyPreview` + update `lots.last_*` + `inventory_synced=true`
-4. On Cancel → `inventory_synced=false`, toast "Lot saved, inventory not synced"
-
-### Process step add/edit (`ProcessStepForm.tsx`)
-Same flow — recompute total lot consumption (base + all steps) and trigger one popup.
-
-### Dispatch save (`CreateChallan.tsx` / `ChallanDetail.tsx` edit)
-After challan + items save succeeds:
-1. `computeDispatchConsumption(...)` → preview (FG + oil)
-2. Approval popup
-3. On Approve → write FG + oil + ledger + update `challans.last_*`
-
-### Lot/Dispatch delete
-Reverse last applied amounts (negate stored `last_*`) through the same popup → "Restore inventory?"
-
----
-
-## 5. Finished goods seeding
-
-When a lot is created and saved (regardless of inventory approval), insert/update `finished_goods_stock` with `original_*` = `remaining_*` = lot weights. This is structural, not stock-affecting, so it runs without approval.
-
----
-
-## 6. Inventory UI
-
-Extend `InventoryList.tsx` with **tabs**:
-- **Materials (Purchase)** — existing `inventory_stock` (unchanged)
-- **Yarn** — from `yarn_inventory`
-- **Dyes & Chemicals** — from `material_inventory` joined to `master_items`
-- **Oil** — single card with current stock + ledger
-- **Finished Goods** — from `finished_goods_stock` joined to `lots`
-
-Each tab: search + table; clicking a row shows its ledger from `inventory_transactions_v2`.
-
-Packing: no inventory deduction. Optionally compute and display `small_bags = cones`, `big_bags = ceil(cones/12)` on challan detail (display only). Out of scope for inventory writes.
-
----
-
-## 7. Order of implementation
-
-1. Migration (schema + seed oil row) — user runs SQL
-2. `inventoryEngine.ts` + types
-3. `InventoryApprovalDialog.tsx`
-4. Hook into `CreateLot` save
-5. Hook into `ProcessStepForm` save
-6. Hook into `CreateChallan` + `ChallanDetail` save
-7. Finished-goods seeding on lot save
-8. Inventory UI tabs + ledger drilldowns
-9. Delete-flow reversals (lots & challans)
-
----
-
-## Technical notes
-
-- All deltas computed against stored `last_*` JSON, so re-saves never double-deduct.
-- Auto-create everywhere: `getOrCreate*` runs inside `computeLotConsumption` so the popup already shows `Prev = 0` for brand-new items.
-- Negative stock allowed — no DB check; popup warns visually.
-- Single popup per save = batched preview rows from one engine call.
-- Existing `inventory_stock` (purchases/expenses) stays untouched — it's a different domain.
-- All numeric math uses the same precision rules already in the project (3dp weights, 2dp amounts).
-- No backend functions needed; engine runs client-side using the existing supabase-js client.
-
----
-
-## Out of scope (unless you ask)
-
-- Reorder alerts for new inventories (can reuse `minimum_stock_level` pattern later)
-- CSV bulk-upload for yarn/oil opening stock (use the existing Adjust Stock pattern after MVP)
-- Server-side enforcement / triggers (kept client-side per project's current Supabase-only architecture)
+## Risks / notes
+- Adding an enum value in Postgres must be committed before being referenced — the migration uses `add value if not exists` in its own statement; subsequent `set_user_role` calls work because they're invoked from the app, not the same transaction.
+- Frontend-only enforcement means a determined editor can still write via devtools. Acceptable per user direction.

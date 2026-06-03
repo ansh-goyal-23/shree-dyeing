@@ -6,7 +6,9 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { AppProvider } from "@/context/AppContext";
 import { RoleProvider } from "@/context/RoleContext";
 import ViewerGuard from "@/components/ViewerGuard";
+import EditorGuard from "@/components/EditorGuard";
 import WriteRoute from "@/components/WriteRoute";
+import AdminRoute from "@/components/AdminRoute";
 import Layout from "@/components/Layout";
 import Dashboard from "@/pages/Dashboard";
 import LotList from "@/pages/LotList";
@@ -65,6 +67,7 @@ const App = () => (
                 <RoleProvider>
                   <AppProvider>
                     <ViewerGuard />
+                    <EditorGuard />
                     <Layout>
                       <Routes>
                         <Route path="/shade-management" element={<Dashboard />} />
@@ -87,8 +90,8 @@ const App = () => (
                         <Route path="/dispatch/:id" element={<ChallanDetail />} />
                         <Route path="/item-master" element={<ItemMaster />} />
                         <Route path="/inventory" element={<InventoryList />} />
-                        <Route path="/inventory/opening-stock" element={<WriteRoute redirectTo="/inventory"><OpeningStock /></WriteRoute>} />
-                        <Route path="/inventory/bulk-opening-stock" element={<WriteRoute redirectTo="/inventory"><BulkOpeningStock /></WriteRoute>} />
+                        <Route path="/inventory/opening-stock" element={<AdminRoute redirectTo="/inventory"><OpeningStock /></AdminRoute>} />
+                        <Route path="/inventory/bulk-opening-stock" element={<AdminRoute redirectTo="/inventory"><BulkOpeningStock /></AdminRoute>} />
                         <Route path="/inventory/:itemId" element={<InventoryDetail />} />
                         <Route path="/users" element={<UserManagement />} />
                         <Route path="*" element={<NotFound />} />

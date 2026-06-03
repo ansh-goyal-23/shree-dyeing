@@ -102,7 +102,7 @@ const LotPhotos: React.FC<LotPhotosProps> = ({ lotNo, stepId = null }) => {
       ) : (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {photos.map(photo => (
-            <button key={photo.id} onClick={() => setViewPhoto(photo)}
+            <button key={photo.id} data-owner-id={(photo as any).created_by || ''} onClick={() => setViewPhoto(photo)}
               className="group relative aspect-square rounded-lg overflow-hidden border border-border hover:border-primary btn-transition bg-secondary">
               <img src={getPublicUrl(photo.file_path)} alt={photo.label} className="w-full h-full object-cover" loading="lazy" />
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-1.5">
@@ -115,7 +115,7 @@ const LotPhotos: React.FC<LotPhotosProps> = ({ lotNo, stepId = null }) => {
 
       {viewPhoto && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setViewPhoto(null)}>
-          <div className="relative max-w-3xl max-h-[90vh] w-full" onClick={e => e.stopPropagation()}>
+          <div className="relative max-w-3xl max-h-[90vh] w-full" data-owner-id={(viewPhoto as any).created_by || ''} onClick={e => e.stopPropagation()}>
             <img src={getPublicUrl(viewPhoto.file_path)} alt={viewPhoto.label} className="w-full max-h-[80vh] object-contain rounded-lg" />
             <div className="mt-2 flex items-center justify-between text-white text-sm">
               <div>
