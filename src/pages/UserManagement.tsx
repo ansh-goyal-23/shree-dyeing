@@ -8,7 +8,7 @@ interface Row {
   user_id: string;
   email: string;
   created_at: string;
-  role: 'admin' | 'viewer';
+  role: 'admin' | 'editor' | 'viewer';
 }
 
 const UserManagement: React.FC = () => {
@@ -34,7 +34,7 @@ const UserManagement: React.FC = () => {
     else { toast.success('You are now admin'); await refresh(); }
   };
 
-  const setUserRole = async (userId: string, newRole: 'admin' | 'viewer') => {
+  const setUserRole = async (userId: string, newRole: 'admin' | 'editor' | 'viewer') => {
     setSaving(userId);
     const { error } = await supabase.rpc('set_user_role', { _user_id: userId, _role: newRole });
     setSaving(null);
@@ -67,7 +67,7 @@ const UserManagement: React.FC = () => {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold">Users & Roles</h1>
-        <p className="text-sm text-muted-foreground">Admins have full access. Viewers can only view.</p>
+        <p className="text-sm text-muted-foreground">Admins have full access. Editors can append items and edit/delete only their own work. Viewers can only view.</p>
       </div>
       <div className="card-industrial overflow-hidden">
         <table className="w-full text-sm">
@@ -89,7 +89,11 @@ const UserManagement: React.FC = () => {
                 <td className="p-3">{r.email}{r.user_id === user?.id && <span className="ml-2 text-xs text-muted-foreground">(you)</span>}</td>
                 <td className="p-3 text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</td>
                 <td className="p-3">
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${r.role === 'admin' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                    r.role === 'admin' ? 'bg-primary text-primary-foreground'
+                    : r.role === 'editor' ? 'bg-amber-500 text-white'
+                    : 'bg-muted'
+                  }`}>
                     {r.role}
                   </span>
                 </td>
@@ -99,6 +103,11 @@ const UserManagement: React.FC = () => {
                     onClick={() => setUserRole(r.user_id, 'admin')}
                     className="h-8 px-3 text-xs rounded border hover:bg-muted disabled:opacity-40"
                   >Make admin</button>
+                  <button
+                    disabled={saving === r.user_id || r.role === 'editor'}
+                    onClick={() => setUserRole(r.user_id, 'editor')}
+                    className="h-8 px-3 text-xs rounded border hover:bg-muted disabled:opacity-40"
+                  >Make editor</button>
                   <button
                     disabled={saving === r.user_id || r.role === 'viewer'}
                     onClick={() => setUserRole(r.user_id, 'viewer')}
