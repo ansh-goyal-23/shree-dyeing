@@ -359,14 +359,6 @@ const LotDetail: React.FC = () => {
         </div>
       )}
 
-      {/* Base Photos */}
-      <div className="card-industrial p-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-          Base Result Photos
-        </h2>
-        <LotPhotos lotNo={lot.lot_no} />
-      </div>
-
       {/* Process Steps Timeline */}
       <div className="card-industrial p-4">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
@@ -382,6 +374,14 @@ const LotDetail: React.FC = () => {
           onUpdateStep={async (...args: Parameters<typeof updateProcessStep>) => { await updateProcessStep(...args); await triggerLotInventory(); }}
           onDeleteStep={async (...args: Parameters<typeof deleteProcessStep>) => { await deleteProcessStep(...args); await triggerLotInventory(); }}
         />
+      </div>
+
+      {/* Base Photos */}
+      <div className="card-industrial p-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+          Base Result Photos
+        </h2>
+        <LotPhotos lotNo={lot.lot_no} />
       </div>
 
       {/* Order History */}
