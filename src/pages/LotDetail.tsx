@@ -233,7 +233,7 @@ const LotDetail: React.FC = () => {
       </div>
 
       {/* Lot Info */}
-      <div className="card-industrial p-4">
+      <div className="card-industrial p-4 border-l-4 border-l-primary">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Lot Details</h2>
           {!editing ? (
@@ -360,7 +360,7 @@ const LotDetail: React.FC = () => {
       )}
 
       {/* Process Steps Timeline */}
-      <div className="card-industrial p-4">
+      <div className="card-industrial p-4 border-l-4 border-l-primary">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
           Process Steps {processSteps.length > 0 && `(${processSteps.length})`}
         </h2>
@@ -377,7 +377,7 @@ const LotDetail: React.FC = () => {
       </div>
 
       {/* Base Photos */}
-      <div className="card-industrial p-4">
+      <div className="card-industrial p-4 border-l-4 border-l-primary">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
           Base Result Photos
         </h2>
@@ -489,7 +489,7 @@ const RecipeEditorWithReference: React.FC<{
         }}
       />
 
-      <div className="card-industrial p-4">
+      <div className="card-industrial p-4 border-l-4 border-l-primary">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">
           Base Recipe (Initial Dyeing)
         </h2>
