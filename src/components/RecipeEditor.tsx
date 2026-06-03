@@ -99,7 +99,7 @@ const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, 
         ph_value: c.ph_value ?? null,
       }));
       setLocalDyes(stagedDyes);
-      if (stagedChems.length > 0) setLocalChemicals(stagedChems);
+      if (stagedChems.length > 0) setLocalChemicals(sortChemicalsByName(stagedChems));
       setDirty(true);
     },
   }), [lotNo, netWeight]);
