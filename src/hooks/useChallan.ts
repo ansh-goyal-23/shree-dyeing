@@ -13,6 +13,7 @@ const mapChallan = (r: any): Challan => ({
   receiver_name: r.receiver_name || '',
   receiver_contact_number: r.receiver_contact_number || '',
   created_at: r.created_at,
+  created_by: r.created_by || null,
 });
 
 const mapItem = (r: any): ChallanItem => ({
@@ -27,6 +28,7 @@ const mapItem = (r: any): ChallanItem => ({
   net_weight: Number(r.net_weight) || 0,
   rate: Number(r.rate) || 0,
   amount: Number(r.amount) || 0,
+  created_by: r.created_by || null,
 });
 
 export function useChallans() {
