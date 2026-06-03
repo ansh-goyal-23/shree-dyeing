@@ -33,6 +33,16 @@ const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, 
   const dyeItems = masterItems.filter(m => m.type === 'dye' && m.is_active).sort((a, b) => (a.short_name || a.name).localeCompare(b.short_name || b.name));
   const chemicalItems = masterItems.filter(m => m.type === 'chemical' && m.is_active).sort((a, b) => a.name.localeCompare(b.name));
 
+  const sortChemicalsByName = (chems: RecipeChemical[]) => {
+    return [...chems].sort((a, b) => {
+      const nameA = masterItems.find(m => m.id === a.chemical_id)?.name || '';
+      const nameB = masterItems.find(m => m.id === b.chemical_id)?.name || '';
+      if (!nameA && nameB) return 1;
+      if (nameA && !nameB) return -1;
+      return nameA.localeCompare(nameB);
+    });
+  };
+
   // Build default chemicals list based on master items
   const defaultChemicals = useMemo(() => {
     return DEFAULT_CHEMICAL_NAMES.map(name => {
@@ -50,8 +60,8 @@ const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, 
 
   // Initialize chemicals: use existing if any, otherwise use defaults
   const initialChemicals = useMemo(() => {
-    if (chemicals.length > 0) return chemicals;
-    return defaultChemicals;
+    if (chemicals.length > 0) return sortChemicalsByName(chemicals);
+    return sortChemicalsByName(defaultChemicals);
   }, [chemicals, defaultChemicals]);
 
   const [localDyes, setLocalDyes] = useState<RecipeDye[]>(dyes);
@@ -67,7 +77,7 @@ const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, 
   useEffect(() => {
     if (dirty) return;
     setLocalDyes(dyes);
-    setLocalChemicals(chemicals.length > 0 ? chemicals : defaultChemicals);
+    setLocalChemicals(sortChemicalsByName(chemicals.length > 0 ? chemicals : defaultChemicals));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lotNo, dyesKey, chemsKey, defaultChemicals.length]);
 
@@ -89,7 +99,7 @@ const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, 
         ph_value: c.ph_value ?? null,
       }));
       setLocalDyes(stagedDyes);
-      if (stagedChems.length > 0) setLocalChemicals(stagedChems);
+      if (stagedChems.length > 0) setLocalChemicals(sortChemicalsByName(stagedChems));
       setDirty(true);
     },
   }), [lotNo, netWeight]);
@@ -155,13 +165,13 @@ const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, 
   };
 
   const addChemical = () => {
-    setLocalChemicals(prev => [...prev, {
+    setLocalChemicals(prev => sortChemicalsByName([...prev, {
       id: crypto.randomUUID(),
       lot_no: lotNo,
       chemical_id: '',
       qty: 0,
       ph_value: null,
-    }]);
+    }]));
     setDirty(true);
   };
 
@@ -174,7 +184,7 @@ const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, 
         chem.ph_value = isBufChemical(value as string) ? DEFAULT_PH_VALUE : null;
       }
       updated[idx] = chem;
-      return updated;
+      return sortChemicalsByName(updated);
     });
     setDirty(true);
   };
