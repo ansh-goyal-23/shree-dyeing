@@ -3,6 +3,7 @@ import type { Lot, LotStatus, RecipeDye, RecipeChemical, MasterItem, ProcessStep
 import { calculateNetWeight } from '@/lib/calculations';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
+import { logActivity } from '@/lib/activityLog';
 
 interface AppState {
   lots: Lot[];
@@ -175,6 +176,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [state.lots, fetchAll]);
 
   const updateLotStatus = useCallback(async (lotNo: string, status: LotStatus) => {
+    const prev = state.lots.find(l => l.lot_no === lotNo)?.status || null;
     const isApproved = status === 'Approved';
     // Try updating status column; if it doesn't exist yet, just update is_approved
     const { error } = await supabase.from('lots').update({ status, is_approved: isApproved }).eq('lot_no', lotNo);
@@ -182,16 +184,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Fallback: status column may not exist yet
       await supabase.from('lots').update({ is_approved: isApproved }).eq('lot_no', lotNo);
     }
+    if (prev !== status) {
+      await logActivity({
+        action: 'Status Change', referenceType: 'lot', referenceId: lotNo,
+        section: 'Status', itemLabel: `Lot ${lotNo} status`, prev, next: status,
+      });
+    }
     await fetchAll();
-  }, [fetchAll]);
+  }, [fetchAll, state.lots]);
 
   const approveLot = useCallback(async (lotNo: string) => {
     await supabase.from('lots').update({ is_approved: true }).eq('lot_no', lotNo);
+    await logActivity({
+      action: 'Status Change', referenceType: 'lot', referenceId: lotNo,
+      section: 'Status', itemLabel: `Lot ${lotNo} approval`, prev: 'Unapproved', next: 'Approved',
+    });
     await fetchAll();
   }, [fetchAll]);
 
   const unapproveLot = useCallback(async (lotNo: string) => {
     await supabase.from('lots').update({ is_approved: false }).eq('lot_no', lotNo);
+    await logActivity({
+      action: 'Status Change', referenceType: 'lot', referenceId: lotNo,
+      section: 'Status', itemLabel: `Lot ${lotNo} approval`, prev: 'Approved', next: 'Unapproved',
+    });
     await fetchAll();
   }, [fetchAll]);
 
