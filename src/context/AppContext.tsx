@@ -157,8 +157,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ]);
       await supabase.from('process_steps').delete().eq('lot_no', lotNo);
     }
-    const { error } = await supabase.from('lots').delete().eq('lot_no', lotNo);
+    const { data: deleted, error } = await supabase.from('lots').delete().eq('lot_no', lotNo).select('lot_no');
     if (error) return false;
+    if (!deleted || deleted.length === 0) {
+      // RLS blocked the delete silently.
+      return false;
+    }
     await fetchAll();
     return true;
   }, [fetchAll]);
