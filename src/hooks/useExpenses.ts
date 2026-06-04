@@ -319,6 +319,16 @@ export function useCreateExpense() {
         }
       }
 
+      await logActivity({
+        action: 'Expense Create',
+        referenceType: 'expense',
+        referenceId: expense.id,
+        section: 'Expense',
+        itemLabel: `${payload.expense_type} • ${payload.line_items.length} item(s)`,
+        prev: null,
+        next: `₹${payload.total_amount.toFixed(2)} • ${payload.payment_status}`,
+      });
+
       return expense;
     },
     onSuccess: () => {
@@ -333,8 +343,18 @@ export function useUpdateExpensePayment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, payment_status }: { id: string; payment_status: string }) => {
+      const { data: prev } = await supabase.from('expenses').select('payment_status, total_amount').eq('id', id).single();
       const { error } = await supabase.from('expenses').update({ payment_status }).eq('id', id);
       if (error) throw error;
+      await logActivity({
+        action: 'Status Change',
+        referenceType: 'expense',
+        referenceId: id,
+        section: 'Payment',
+        itemLabel: `Expense payment${prev?.total_amount ? ` (₹${Number(prev.total_amount).toFixed(2)})` : ''}`,
+        prev: prev?.payment_status || null,
+        next: payment_status,
+      });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['expenses'] }),
   });
@@ -344,10 +364,21 @@ export function useDeleteExpense() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      const { data: prev } = await supabase.from('expenses').select('expense_type, total_amount, payment_status').eq('id', id).single();
       await supabase.from('expense_line_items').delete().eq('expense_id', id);
       await supabase.from('expense_documents').delete().eq('expense_id', id);
       const { error } = await supabase.from('expenses').delete().eq('id', id);
       if (error) throw error;
+      await logActivity({
+        action: 'Expense Delete',
+        referenceType: 'expense',
+        referenceId: id,
+        section: 'Expense',
+        itemLabel: `${prev?.expense_type || 'Expense'} deleted`,
+        prev: prev ? `₹${Number(prev.total_amount).toFixed(2)} • ${prev.payment_status}` : null,
+        next: 'deleted',
+        warn: true,
+      });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['expenses'] }),
   });
