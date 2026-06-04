@@ -362,7 +362,6 @@ export function useCreateExpense() {
               itemLabel: 'Coning Oil',
               unit: li.unit || 'kg',
               prev: prevOil,
-              change: Number(li.quantity),
               next: newOil,
             });
           }
