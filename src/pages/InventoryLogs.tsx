@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { AlertTriangle, ClipboardList } from 'lucide-react';
+import { AlertTriangle, ClipboardList, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface LogRow {
   id: string;
@@ -30,11 +30,11 @@ export default function InventoryLogs() {
   const [search, setSearch] = useState('');
   const [action, setAction] = useState<string>('all');
   const [section, setSection] = useState<string>('all');
+  const [openActions, setOpenActions] = useState<Record<string, boolean>>({});
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['inventory_change_logs'],
     queryFn: async () => {
-      // Best-effort purge of entries older than 1 month before reading.
       try { await supabase.rpc('purge_old_inventory_logs'); } catch { /* ignore */ }
       const { data, error } = await supabase
         .from('inventory_change_logs')
@@ -61,8 +61,22 @@ export default function InventoryLogs() {
     });
   }, [data, search, action, section]);
 
+  const grouped = useMemo(() => {
+    const map: Record<string, LogRow[]> = {};
+    for (const r of filtered) {
+      if (!map[r.action]) map[r.action] = [];
+      map[r.action].push(r);
+    }
+    const keys = Object.keys(map).sort();
+    return keys.map(k => ({ action: k, rows: map[k] }));
+  }, [filtered]);
+
   const actions = Array.from(new Set((data || []).map(r => r.action))).sort();
   const sections = Array.from(new Set((data || []).map(r => r.section))).sort();
+
+  const toggleAction = (action: string) => {
+    setOpenActions(prev => ({ ...prev, [action]: !prev[action] }));
+  };
 
   return (
     <div className="p-6 space-y-4">
@@ -96,7 +110,7 @@ export default function InventoryLogs() {
             {sections.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
           </SelectContent>
         </Select>
-        <div className="text-sm text-muted-foreground ml-auto">{filtered.length} rows</div>
+        <div className="text-sm text-muted-foreground ml-auto">{filtered.length} rows in {grouped.length} groups</div>
       </div>
 
       {isLoading && <div className="text-muted-foreground">Loading…</div>}
@@ -107,55 +121,80 @@ export default function InventoryLogs() {
       )}
 
       {!isLoading && !error && (
-        <div className="rounded-md border overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="text-left p-2 font-medium whitespace-nowrap">When</th>
-                <th className="text-left p-2 font-medium">User</th>
-                <th className="text-left p-2 font-medium">Action</th>
-                <th className="text-left p-2 font-medium">Reference</th>
-                <th className="text-left p-2 font-medium">Section</th>
-                <th className="text-left p-2 font-medium">Item</th>
-                <th className="text-right p-2 font-medium">Previous</th>
-                <th className="text-right p-2 font-medium">Change</th>
-                <th className="text-right p-2 font-medium">New</th>
-                <th className="text-left p-2 font-medium">Unit</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(r => (
-                <tr key={r.id} className={`border-t ${r.warn ? 'bg-destructive/5' : ''}`}>
-                  <td className="p-2 whitespace-nowrap text-muted-foreground">
-                    {new Date(r.created_at).toLocaleString('en-IN')}
-                  </td>
-                  <td className="p-2">{r.user_email || r.user_id?.slice(0, 8) || '—'}</td>
-                  <td className="p-2">{r.action}</td>
-                  <td className="p-2 font-mono text-xs">
-                    {r.reference_type}: {r.reference_id}
-                  </td>
-                  <td className="p-2">{r.section}</td>
-                  <td className="p-2">
-                    <span className="inline-flex items-center gap-1.5">
-                      {r.warn && <AlertTriangle className="h-3.5 w-3.5 text-destructive" />}
-                      {r.item_label}
+        <div className="space-y-3">
+          {grouped.map(({ action: groupAction, rows }) => {
+            const isOpen = openActions[groupAction] !== false;
+            const warningCount = rows.filter(r => r.warn).length;
+            return (
+              <div key={groupAction} className="rounded-md border bg-card">
+                <button
+                  onClick={() => toggleAction(groupAction)}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-accent/40 transition-colors"
+                >
+                  {isOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+                  <span className="font-semibold text-sm">{groupAction}</span>
+                  <span className="ml-2 text-xs bg-muted px-2 py-0.5 rounded-full">{rows.length}</span>
+                  {warningCount > 0 && (
+                    <span className="ml-1 text-xs bg-destructive/10 text-destructive px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      {warningCount} warning{warningCount > 1 ? 's' : ''}
                     </span>
-                  </td>
-                  <td className="p-2 text-right font-mono">{r.prev_stock}</td>
-                  <td className="p-2 text-right font-mono font-semibold">{r.change}</td>
-                  <td className={`p-2 text-right font-mono ${r.warn ? 'text-destructive font-semibold' : ''}`}>
-                    {r.new_stock}
-                  </td>
-                  <td className="p-2 text-muted-foreground">{r.unit || '—'}</td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">No log entries.</td></tr>
-              )}
-            </tbody>
-          </table>
+                  )}
+                </button>
+                {isOpen && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50">
+                        <tr>
+                          <th className="text-left p-2 font-medium whitespace-nowrap">When</th>
+                          <th className="text-left p-2 font-medium">User</th>
+                          <th className="text-left p-2 font-medium">Reference</th>
+                          <th className="text-left p-2 font-medium">Section</th>
+                          <th className="text-left p-2 font-medium">Item</th>
+                          <th className="text-right p-2 font-medium">Previous</th>
+                          <th className="text-right p-2 font-medium">Change</th>
+                          <th className="text-right p-2 font-medium">New</th>
+                          <th className="text-left p-2 font-medium">Unit</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map(r => (
+                          <tr key={r.id} className={`border-t ${r.warn ? 'bg-destructive/5' : ''}`}>
+                            <td className="p-2 whitespace-nowrap text-muted-foreground">
+                              {new Date(r.created_at).toLocaleString('en-IN')}
+                            </td>
+                            <td className="p-2">{r.user_email || r.user_id?.slice(0, 8) || '—'}</td>
+                            <td className="p-2 font-mono text-xs">
+                              {r.reference_type}: {r.reference_id}
+                            </td>
+                            <td className="p-2">{r.section}</td>
+                            <td className="p-2">
+                              <span className="inline-flex items-center gap-1.5">
+                                {r.warn && <AlertTriangle className="h-3.5 w-3.5 text-destructive" />}
+                                {r.item_label}
+                              </span>
+                            </td>
+                            <td className="p-2 text-right font-mono">{r.prev_stock}</td>
+                            <td className="p-2 text-right font-mono font-semibold">{r.change}</td>
+                            <td className={`p-2 text-right font-mono ${r.warn ? 'text-destructive font-semibold' : ''}`}>
+                              {r.new_stock}
+                            </td>
+                            <td className="p-2 text-muted-foreground">{r.unit || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {grouped.length === 0 && (
+            <div className="text-center text-muted-foreground py-8">No log entries.</div>
+          )}
         </div>
       )}
     </div>
   );
 }
+
