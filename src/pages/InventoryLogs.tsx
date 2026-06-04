@@ -34,6 +34,8 @@ export default function InventoryLogs() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['inventory_change_logs'],
     queryFn: async () => {
+      // Best-effort purge of entries older than 1 month before reading.
+      try { await supabase.rpc('purge_old_inventory_logs'); } catch { /* ignore */ }
       const { data, error } = await supabase
         .from('inventory_change_logs')
         .select('*')
