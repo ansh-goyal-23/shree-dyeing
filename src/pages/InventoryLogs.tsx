@@ -34,6 +34,8 @@ export default function InventoryLogs() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['inventory_change_logs'],
     queryFn: async () => {
+      // Best-effort purge of entries older than 1 month before reading.
+      try { await supabase.rpc('purge_old_inventory_logs'); } catch { /* ignore */ }
       const { data, error } = await supabase
         .from('inventory_change_logs')
         .select('*')
@@ -66,10 +68,11 @@ export default function InventoryLogs() {
     <div className="p-6 space-y-4">
       <div className="flex items-center gap-2">
         <ClipboardList className="w-5 h-5 text-primary" />
-        <h1 className="text-xl font-semibold">Inventory Change Logs</h1>
+        <h1 className="text-xl font-semibold">Activity & Inventory Logs</h1>
       </div>
       <p className="text-sm text-muted-foreground">
-        Every inventory adjustment is recorded automatically. Showing latest {PAGE_SIZE} entries.
+        Inventory adjustments, expense changes and status updates are recorded automatically.
+        Entries older than 1 month are purged. Showing latest {PAGE_SIZE} entries.
       </p>
 
       <div className="flex flex-wrap gap-3 items-center">
