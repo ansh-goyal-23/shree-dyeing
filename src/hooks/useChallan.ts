@@ -184,8 +184,11 @@ export function useDeleteChallan() {
   return useMutation({
     mutationFn: async (id: string) => {
       await supabase.from('challan_items').delete().eq('challan_id', id);
-      const { error } = await supabase.from('challans').delete().eq('id', id);
+      const { data: deleted, error } = await supabase.from('challans').delete().eq('id', id).select('id');
       if (error) throw error;
+      if (!deleted || deleted.length === 0) {
+        throw new Error('Delete blocked by row-level security. Apply the latest SQL migration (permissive_write_policies).');
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['challans'] }),
   });
