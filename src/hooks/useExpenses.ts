@@ -277,97 +277,6 @@ export function useCreateExpense() {
         }
       }
 
-      // Update inventory_stock + create inventory_transactions for Purchase / Asset
-      if (payload.expense_type !== 'Direct Expense') {
-        // Fetch category name once (for Coning Oil → oil_inventory routing)
-        let categoryName = '';
-        if (payload.category_id) {
-          const { data: cat } = await supabase
-            .from('expense_categories')
-            .select('category_name')
-            .eq('id', payload.category_id)
-            .maybeSingle();
-          categoryName = (cat?.category_name || '').trim();
-        }
-        const isOilsCategory = categoryName.toLowerCase() === 'oils & auxiliaries';
-
-        for (const li of line_items) {
-          if (!li.item_id || !li.quantity) continue;
-
-          // Create transaction record
-          await supabase.from('inventory_transactions').insert({
-            item_id: li.item_id,
-            type: 'IN',
-            source: 'Purchase',
-            quantity: li.quantity,
-            reference_id: expense.id,
-            date: payload.date,
-            notes: `From expense bill`,
-          });
-
-          // Update stock level
-          const { data: existing } = await supabase
-            .from('inventory_stock')
-            .select('*')
-            .eq('item_id', li.item_id)
-            .single();
-
-          if (existing) {
-            await supabase.from('inventory_stock')
-              .update({
-                current_stock: Number(existing.current_stock) + li.quantity,
-                last_updated: new Date().toISOString(),
-              })
-              .eq('id', existing.id);
-          } else {
-            await supabase.from('inventory_stock').insert({
-              item_id: li.item_id,
-              current_stock: li.quantity,
-              unit: li.unit || '',
-              item_type: payload.expense_type === 'Asset' ? 'Asset' : 'Consumable',
-              minimum_stock_level: 0,
-            });
-          }
-
-          // Auto-adjust Oil Inventory when item is "Coning Oil" in "Oils & Auxiliaries"
-          const isConingOil = li.item_name.trim().toLowerCase() === 'coning oil';
-          if (isOilsCategory && isConingOil) {
-            const { data: oilRow } = await supabase
-              .from('oil_inventory')
-              .select('*')
-              .limit(1)
-              .maybeSingle();
-            const prevOil = Number(oilRow?.current_stock || 0);
-            const newOil = prevOil + Number(li.quantity);
-            if (oilRow) {
-              await supabase.from('oil_inventory')
-                .update({ current_stock: newOil, last_updated: new Date().toISOString() })
-                .eq('id', oilRow.id);
-            } else {
-              await supabase.from('oil_inventory').insert({ current_stock: newOil });
-            }
-            await supabase.from('inventory_transactions_v2').insert({
-              inventory_kind: 'oil',
-              ref_key: 'OIL',
-              delta: Number(li.quantity),
-              source: 'Expense Purchase',
-              reference_id: expense.id,
-              notes: `Coning Oil purchase via expense (${li.quantity} ${li.unit || 'kg'})`,
-            });
-            await logActivity({
-              action: 'Expense Create',
-              referenceType: 'expense',
-              referenceId: expense.id,
-              section: 'Oil',
-              itemLabel: 'Coning Oil',
-              unit: li.unit || 'kg',
-              prev: prevOil,
-              next: newOil,
-            });
-          }
-        }
-      }
-
       await logActivity({
         action: 'Expense Create',
         referenceType: 'expense',
@@ -382,8 +291,6 @@ export function useCreateExpense() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['expenses'] });
-      qc.invalidateQueries({ queryKey: ['inventory_stock'] });
-      qc.invalidateQueries({ queryKey: ['inventory_transactions'] });
     },
   });
 }
