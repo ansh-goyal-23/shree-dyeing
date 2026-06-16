@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { calculateNetWeight, calculateDyeGrams } from '@/lib/calculations';
