@@ -3,7 +3,6 @@ import {
   Factory,
   DollarSign,
   Truck,
-  Package,
   LayoutDashboard,
   List,
   PlusCircle,
@@ -11,11 +10,8 @@ import {
   GitCompare,
   ClipboardList,
   ShoppingCart,
-  Upload,
   IndianRupee,
   Droplet,
-  Users,
-  ClipboardCheck,
 } from 'lucide-react';
 import { useRole } from '@/context/RoleContext';
 import { NavLink } from '@/components/NavLink';
