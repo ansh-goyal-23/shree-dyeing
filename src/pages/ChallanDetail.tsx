@@ -10,8 +10,6 @@ import { formatYmdLocal } from '@/lib/formatDate';
 import { useClientRates } from '@/hooks/useClientRates';
 import { toast } from 'sonner';
 import { PlusCircle, Loader2, Pencil, Trash2, ArrowLeft, Download, Share2 } from 'lucide-react';
-import InventoryApprovalDialog from '@/components/InventoryApprovalDialog';
-import { useInventoryApproval } from '@/hooks/useInventoryApproval';
 
 const emptyItem = (): ItemData => ({
   lot_no: '', shade_number: '', color_name: '', denier: '', packaging_type: 'paper_tube',
