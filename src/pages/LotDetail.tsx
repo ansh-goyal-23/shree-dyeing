@@ -93,7 +93,6 @@ const LotDetail: React.FC = () => {
     await addProcessStep(lot.lot_no, data);
     toast.success(`${data.step_type} step recorded.`);
     setShowStepForm(false);
-    await triggerLotInventory();
   };
 
   const startEditingRemarks = () => {
