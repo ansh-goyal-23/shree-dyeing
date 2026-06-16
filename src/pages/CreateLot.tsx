@@ -204,7 +204,8 @@ const CreateLot: React.FC = () => {
         masterItems,
       });
 
-      pendingNavRef.current = intakeId ? `/sampling/${intakeId}` : `/shade-management/lots/${newLotNo}`;
+      try { sessionStorage.removeItem(DRAFT_KEY); } catch {}
+      pendingNavRef.current = `/shade-management/lots/${newLotNo}`;
     } else {
       toast.error(`Failed to create lot. Lot No may already exist.`);
     }
