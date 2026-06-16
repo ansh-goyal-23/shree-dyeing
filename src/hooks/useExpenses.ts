@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { Expense, ExpenseItem, ExpenseDocument, InventoryEntry, Supplier, ExpenseCategory, ExpenseLineItem, Company } from '@/types/expense';
+import type { Expense, ExpenseItem, ExpenseDocument, Supplier, ExpenseCategory, ExpenseLineItem, Company } from '@/types/expense';
 import { logActivity } from '@/lib/activityLog';
 
 // ── Suppliers ──
