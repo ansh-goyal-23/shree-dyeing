@@ -85,11 +85,6 @@ const App = () => (
                         <Route path="/dispatch/oil-consumption" element={<OilConsumptionReport />} />
                         <Route path="/dispatch/:id" element={<ChallanDetail />} />
                         <Route path="/item-master" element={<ItemMaster />} />
-                        <Route path="/inventory" element={<InventoryList />} />
-                        <Route path="/inventory/opening-stock" element={<AdminRoute redirectTo="/inventory"><OpeningStock /></AdminRoute>} />
-                        <Route path="/inventory/bulk-opening-stock" element={<AdminRoute redirectTo="/inventory"><BulkOpeningStock /></AdminRoute>} />
-                        <Route path="/inventory/logs" element={<AdminRoute redirectTo="/inventory"><InventoryLogs /></AdminRoute>} />
-                        <Route path="/inventory/:itemId" element={<InventoryDetail />} />
                         <Route path="/users" element={<UserManagement />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
