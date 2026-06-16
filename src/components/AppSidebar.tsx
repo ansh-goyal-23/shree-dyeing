@@ -59,11 +59,6 @@ const expenseItems = [
   { title: 'Item Master', url: '/item-master', icon: Database },
 ];
 
-const inventoryItems = [
-  { title: 'Stock List', url: '/inventory', icon: Package },
-  { title: 'Opening Stock', url: '/inventory/opening-stock', icon: PlusCircle },
-  { title: 'CSV Upload', url: '/inventory/bulk-opening-stock', icon: Upload },
-];
 
 const modules = [
   { title: 'Production', url: '/production', icon: Factory },
