@@ -6,9 +6,6 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import LotFieldAutocomplete from '@/components/LotFieldAutocomplete';
 import DecimalInput from '@/components/DecimalInput';
-import InventoryApprovalDialog from '@/components/InventoryApprovalDialog';
-import { useInventoryApproval } from '@/hooks/useInventoryApproval';
-import { seedFinishedGoodsForLot } from '@/lib/inventoryEngine';
 
 
 const CreateLot: React.FC = () => {
