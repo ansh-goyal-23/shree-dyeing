@@ -262,7 +262,7 @@ const LotDetail: React.FC = () => {
         lotNo={lot.lot_no}
         netWeight={lot.net_weight}
         defaultReferenceLotNo={lot.shade_number !== lot.lot_no ? lot.shade_number : undefined}
-        onRecipeSaved={() => triggerLotInventory()}
+        onRecipeSaved={() => {}}
       />
 
       {/* Remarks (free-form notes for this lot) */}
