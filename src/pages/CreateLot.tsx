@@ -146,50 +146,10 @@ const CreateLot: React.FC = () => {
       }
       toast.success(`Lot ${form.lot_no} created successfully.`);
 
-      // Refresh state so engine sees the freshly inserted recipe rows
-      await refreshData();
-
-      // Build the freshly-saved lot snapshot for the engine
       const newLotNo = form.lot_no.trim();
-      const newNet = calculateNetWeight(form.gross_weight, form.number_of_chesses);
-      const newLot = {
-        lot_no: newLotNo,
-        date: form.date,
-        yarn_company_name: form.yarn_company_name.trim(),
-        color_name: form.color_name.trim(),
-        denier: form.denier.trim(),
-        number_of_chesses: form.number_of_chesses,
-        gross_weight: form.gross_weight,
-        net_weight: newNet,
-        is_approved: false,
-        status: (form.shade_number.trim() && form.shade_number.trim() !== newLotNo) ? 'Production' : 'In Approval' as any,
-        shade_number: form.shade_number.trim() || newLotNo,
-        source_lot_no: null,
-        remarks: '',
-      };
-
-      await seedFinishedGoodsForLot(newLot);
-
-      // Pull updated recipe snapshot (after potential clone) directly from supabase
-      const [{ data: rd }, { data: rc }] = await Promise.all([
-        supabase.from('recipe_dyes').select('*').eq('lot_no', newLotNo),
-        supabase.from('recipe_chemicals').select('*').eq('lot_no', newLotNo),
-      ]);
-      const freshDyes = (rd || []).map((r: any) => ({ id: r.id, lot_no: r.lot_no, dye_id: r.dye_id, percentage: Number(r.percentage)||0, qty_grams: Number(r.qty_grams)||0 }));
-      const freshChems = (rc || []).map((r: any) => ({ id: r.id, lot_no: r.lot_no, chemical_id: r.chemical_id, qty: Number(r.qty)||0, ph_value: r.ph_value!=null?Number(r.ph_value):null }));
-
-      await inv.openForLot({
-        lot: newLot,
-        recipeDyes: freshDyes,
-        recipeChemicals: freshChems,
-        steps: processSteps,
-        stepDyes,
-        stepChemicals,
-        masterItems,
-      });
-
+      await refreshData();
       try { sessionStorage.removeItem(DRAFT_KEY); } catch {}
-      pendingNavRef.current = `/shade-management/lots/${newLotNo}`;
+      navigate(`/shade-management/lots/${newLotNo}`);
     } else {
       toast.error(`Failed to create lot. Lot No may already exist.`);
     }
