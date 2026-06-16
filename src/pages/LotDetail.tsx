@@ -160,15 +160,9 @@ const LotDetail: React.FC = () => {
                   <AlertDialogAction
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     onClick={async () => {
-                      await inv.openForLotDelete({
-                        lot,
-                        masterItems,
-                        onAfterApprove: async () => {
-                          const success = await deleteLot(lot.lot_no);
-                          if (success) navigate('/shade-management/lots');
-                          else throw new Error('Failed to delete lot');
-                        },
-                      });
+                      const success = await deleteLot(lot.lot_no);
+                      if (success) navigate('/shade-management/lots');
+                      else toast.error('Failed to delete lot');
                     }}
                   >
                     Delete
