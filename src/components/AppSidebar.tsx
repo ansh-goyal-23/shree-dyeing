@@ -80,7 +80,6 @@ export function AppSidebar() {
   const sampling = filterForViewer(samplingItems);
   const dispatch = filterForViewer(dispatchItems);
   const expense = filterForViewer(expenseItems);
-  const inventory = filterForViewer(inventoryItems);
   const adminInventoryItems = isAdmin
     ? [{ title: 'Change Logs', url: '/inventory/logs', icon: ClipboardCheck }]
     : [];
