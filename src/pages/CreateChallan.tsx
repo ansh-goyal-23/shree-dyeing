@@ -21,16 +21,6 @@ const CreateChallan: React.FC = () => {
   const createChallan = useCreateChallan();
   const { lots } = useApp();
   const { data: footerOptions } = useChallanFooterOptions();
-  const inv = useInventoryApproval();
-  const pendingNavRef = useRef<string | null>(null);
-  const wasOpenRef = useRef(false);
-  useEffect(() => {
-    if (inv.open) wasOpenRef.current = true;
-    else if (wasOpenRef.current && pendingNavRef.current) {
-      const t = pendingNavRef.current; pendingNavRef.current = null; wasOpenRef.current = false;
-      navigate(t);
-    }
-  }, [inv.open, navigate]);
 
   const preparedByOptions = footerOptions?.preparedByOptions || [];
   const receiverOptions = footerOptions?.receiverOptions || [];
