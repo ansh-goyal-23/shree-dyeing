@@ -267,7 +267,8 @@ const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, 
         {localDyes.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4">No dyes added.</p>
         ) : (
-          <div className="space-y-2">
+          <div className="overflow-x-auto -mx-1">
+            <div className="space-y-2 min-w-[480px] px-1">
             <div className="grid grid-cols-[1fr_100px_120px_40px] gap-2 text-xs font-medium text-muted-foreground px-1">
               <span>Dye</span><span>%</span><span>Grams</span><span></span>
             </div>
@@ -296,7 +297,9 @@ const RecipeEditor = forwardRef<RecipeEditorHandle, Props>(({ lotNo, netWeight, 
                 )}
               </div>
             ))}
+            </div>
           </div>
+
         )}
       </div>
 
