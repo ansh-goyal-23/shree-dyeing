@@ -91,16 +91,10 @@ const ChallanDetail: React.FC = () => {
   };
 
   const handleDelete = async () => {
-    if (!confirm('Delete this challan? Inventory will be reversed.')) return;
+    if (!confirm('Delete this challan?')) return;
     try {
-      await inv.openForDispatchDelete({
-        challan: { id: id!, date: challan!.date },
-        lots,
-        onAfterApprove: async () => {
-          await deleteChallan.mutateAsync(id!);
-          navigate('/dispatch');
-        },
-      });
+      await deleteChallan.mutateAsync(id!);
+      navigate('/dispatch');
     } catch {
       toast.error('Failed to delete.');
     }
