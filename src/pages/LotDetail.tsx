@@ -17,8 +17,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import InventoryApprovalDialog from '@/components/InventoryApprovalDialog';
-import { useInventoryApproval } from '@/hooks/useInventoryApproval';
 import { supabase } from '@/integrations/supabase/client';
 
 const LotDetail: React.FC = () => {
