@@ -12,6 +12,7 @@ import {
   ShoppingCart,
   IndianRupee,
   Droplet,
+  Users,
 } from 'lucide-react';
 import { useRole } from '@/context/RoleContext';
 import { NavLink } from '@/components/NavLink';
