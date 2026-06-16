@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCreateChallan } from '@/hooks/useChallan';
 import { useApp } from '@/context/AppContext';
@@ -10,8 +10,6 @@ import { useChallanFooterOptions } from '@/hooks/useChallanFooterOptions';
 import { useClientRates } from '@/hooks/useClientRates';
 import FooterAutocomplete from '@/components/FooterAutocomplete';
 import { PlusCircle, Loader2 } from 'lucide-react';
-import InventoryApprovalDialog from '@/components/InventoryApprovalDialog';
-import { useInventoryApproval } from '@/hooks/useInventoryApproval';
 
 const emptyItem = (): ItemData => ({
   lot_no: '', shade_number: '', color_name: '', denier: '', packaging_type: 'paper_tube',
