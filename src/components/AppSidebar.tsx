@@ -80,10 +80,6 @@ export function AppSidebar() {
   const sampling = filterForViewer(samplingItems);
   const dispatch = filterForViewer(dispatchItems);
   const expense = filterForViewer(expenseItems);
-  const adminInventoryItems = isAdmin
-    ? [{ title: 'Change Logs', url: '/inventory/logs', icon: ClipboardCheck }]
-    : [];
-  const inventoryFull = [...inventory, ...adminInventoryItems];
 
   return (
     <Sidebar collapsible="icon">
