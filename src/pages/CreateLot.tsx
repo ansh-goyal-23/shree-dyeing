@@ -37,16 +37,39 @@ const CreateLot: React.FC = () => {
   const intakeItemId = searchParams.get('intake_item');
   const intakeId = searchParams.get('intake_id');
 
-  const [form, setForm] = useState({
-    lot_no: '',
-    date: new Date().toISOString().split('T')[0],
-    yarn_company_name: prefillYarn,
-    color_name: prefillColor,
-    denier: '',
-    shade_number: '',
-    number_of_chesses: 0,
-    gross_weight: 0,
+  const DRAFT_KEY = 'createLot:draft';
+  const [form, setForm] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return {
+          lot_no: parsed.lot_no ?? '',
+          date: parsed.date ?? new Date().toISOString().split('T')[0],
+          yarn_company_name: parsed.yarn_company_name ?? prefillYarn,
+          color_name: parsed.color_name ?? prefillColor,
+          denier: parsed.denier ?? '',
+          shade_number: parsed.shade_number ?? '',
+          number_of_chesses: parsed.number_of_chesses ?? 0,
+          gross_weight: parsed.gross_weight ?? 0,
+        };
+      }
+    } catch {}
+    return {
+      lot_no: '',
+      date: new Date().toISOString().split('T')[0],
+      yarn_company_name: prefillYarn,
+      color_name: prefillColor,
+      denier: '',
+      shade_number: '',
+      number_of_chesses: 0,
+      gross_weight: 0,
+    };
   });
+
+  useEffect(() => {
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(form)); } catch {}
+  }, [form]);
 
   // Build shade dropdown options: "lot_no (color_name)"
   const shadeOptions = useMemo(() => {
