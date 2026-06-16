@@ -28,11 +28,6 @@ import IntakeDetail from "@/pages/IntakeDetail";
 import CreateDirectOrder from "@/pages/CreateDirectOrder";
 import ExpenseList from "@/pages/ExpenseList";
 import ExpenseCreatePage from "@/pages/CreateExpense";
-import InventoryList from "@/pages/InventoryList";
-import InventoryDetail from "@/pages/InventoryDetail";
-import OpeningStock from "@/pages/OpeningStock";
-import BulkOpeningStock from "@/pages/BulkOpeningStock";
-import InventoryLogs from "@/pages/InventoryLogs";
 import ItemMaster from "@/pages/ItemMaster";
 import UserManagement from "@/pages/UserManagement";
 import Auth from "@/pages/Auth";
@@ -90,11 +85,6 @@ const App = () => (
                         <Route path="/dispatch/oil-consumption" element={<OilConsumptionReport />} />
                         <Route path="/dispatch/:id" element={<ChallanDetail />} />
                         <Route path="/item-master" element={<ItemMaster />} />
-                        <Route path="/inventory" element={<InventoryList />} />
-                        <Route path="/inventory/opening-stock" element={<AdminRoute redirectTo="/inventory"><OpeningStock /></AdminRoute>} />
-                        <Route path="/inventory/bulk-opening-stock" element={<AdminRoute redirectTo="/inventory"><BulkOpeningStock /></AdminRoute>} />
-                        <Route path="/inventory/logs" element={<AdminRoute redirectTo="/inventory"><InventoryLogs /></AdminRoute>} />
-                        <Route path="/inventory/:itemId" element={<InventoryDetail />} />
                         <Route path="/users" element={<UserManagement />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>

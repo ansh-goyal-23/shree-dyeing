@@ -72,12 +72,3 @@ export interface ExpenseDocument {
   upload_date: string;
 }
 
-export interface InventoryEntry {
-  id: string;
-  item_id: string;
-  item_name?: string;
-  quantity: number;
-  unit: string;
-  item_type: string;
-  updated_at: string;
-}

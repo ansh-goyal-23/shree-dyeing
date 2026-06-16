@@ -3,7 +3,6 @@ import {
   Factory,
   DollarSign,
   Truck,
-  Package,
   LayoutDashboard,
   List,
   PlusCircle,
@@ -11,11 +10,9 @@ import {
   GitCompare,
   ClipboardList,
   ShoppingCart,
-  Upload,
   IndianRupee,
   Droplet,
   Users,
-  ClipboardCheck,
 } from 'lucide-react';
 import { useRole } from '@/context/RoleContext';
 import { NavLink } from '@/components/NavLink';
@@ -59,11 +56,6 @@ const expenseItems = [
   { title: 'Item Master', url: '/item-master', icon: Database },
 ];
 
-const inventoryItems = [
-  { title: 'Stock List', url: '/inventory', icon: Package },
-  { title: 'Opening Stock', url: '/inventory/opening-stock', icon: PlusCircle },
-  { title: 'CSV Upload', url: '/inventory/bulk-opening-stock', icon: Upload },
-];
 
 const modules = [
   { title: 'Production', url: '/production', icon: Factory },
@@ -85,11 +77,6 @@ export function AppSidebar() {
   const sampling = filterForViewer(samplingItems);
   const dispatch = filterForViewer(dispatchItems);
   const expense = filterForViewer(expenseItems);
-  const inventory = filterForViewer(inventoryItems);
-  const adminInventoryItems = isAdmin
-    ? [{ title: 'Change Logs', url: '/inventory/logs', icon: ClipboardCheck }]
-    : [];
-  const inventoryFull = [...inventory, ...adminInventoryItems];
 
   return (
     <Sidebar collapsible="icon">
@@ -198,31 +185,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>
-            <Package className="mr-2 h-4 w-4" />
-            {!collapsed && 'Inventory'}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {inventoryFull.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.url === '/inventory'}
-                      className="hover:bg-sidebar-accent/50"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                    >
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
 
         <SidebarGroup>
           <SidebarGroupLabel>{!collapsed && 'Other Modules'}</SidebarGroupLabel>

@@ -65,8 +65,6 @@ const MASTER_DATA_PATTERNS = [
   /^\/shade-management\/master(\/|$)/,
   /^\/dispatch\/client-rates(\/|$)/,
   /^\/item-master(\/|$)/,
-  /^\/inventory\/opening-stock(\/|$)/,
-  /^\/inventory\/bulk-opening-stock(\/|$)/,
 ];
 
 const isMasterDataPath = (pathname: string) =>

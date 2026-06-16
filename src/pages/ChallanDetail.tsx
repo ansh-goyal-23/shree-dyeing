@@ -10,8 +10,6 @@ import { formatYmdLocal } from '@/lib/formatDate';
 import { useClientRates } from '@/hooks/useClientRates';
 import { toast } from 'sonner';
 import { PlusCircle, Loader2, Pencil, Trash2, ArrowLeft, Download, Share2 } from 'lucide-react';
-import InventoryApprovalDialog from '@/components/InventoryApprovalDialog';
-import { useInventoryApproval } from '@/hooks/useInventoryApproval';
 
 const emptyItem = (): ItemData => ({
   lot_no: '', shade_number: '', color_name: '', denier: '', packaging_type: 'paper_tube',
@@ -33,7 +31,7 @@ const ChallanDetail: React.FC = () => {
   const { lots } = useApp();
   const clientId = challan?.client_id || '';
   const { data: clientRates = [] } = useClientRates(clientId || undefined);
-  const inv = useInventoryApproval();
+  
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -83,11 +81,6 @@ const ChallanDetail: React.FC = () => {
       await updateChallan.mutateAsync({ id: id!, ...form, items: validItems });
       toast.success('Challan updated.');
       setEditing(false);
-      await inv.openForDispatch({
-        challan: { id: id!, date: form.date },
-        items: validItems.map(it => ({ lot_no: it.lot_no, num_of_units: it.num_of_units, net_weight: it.net_weight })),
-        lots,
-      });
     } catch (err: any) {
       if (err?.message?.includes('duplicate') || err?.code === '23505') {
         toast.error('Challan number already exists.');
@@ -98,16 +91,10 @@ const ChallanDetail: React.FC = () => {
   };
 
   const handleDelete = async () => {
-    if (!confirm('Delete this challan? Inventory will be reversed.')) return;
+    if (!confirm('Delete this challan?')) return;
     try {
-      await inv.openForDispatchDelete({
-        challan: { id: id!, date: challan!.date },
-        lots,
-        onAfterApprove: async () => {
-          await deleteChallan.mutateAsync(id!);
-          navigate('/dispatch');
-        },
-      });
+      await deleteChallan.mutateAsync(id!);
+      navigate('/dispatch');
     } catch {
       toast.error('Failed to delete.');
     }
@@ -315,14 +302,6 @@ const ChallanDetail: React.FC = () => {
         )
       )}
 
-      <InventoryApprovalDialog
-        open={inv.open}
-        rows={inv.rows}
-        title={inv.title}
-        busy={inv.busy}
-        onApprove={inv.handleApprove}
-        onCancel={inv.handleCancel}
-      />
     </div>
   );
 };
