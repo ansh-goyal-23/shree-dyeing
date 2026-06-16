@@ -81,11 +81,6 @@ const ChallanDetail: React.FC = () => {
       await updateChallan.mutateAsync({ id: id!, ...form, items: validItems });
       toast.success('Challan updated.');
       setEditing(false);
-      await inv.openForDispatch({
-        challan: { id: id!, date: form.date },
-        items: validItems.map(it => ({ lot_no: it.lot_no, num_of_units: it.num_of_units, net_weight: it.net_weight })),
-        lots,
-      });
     } catch (err: any) {
       if (err?.message?.includes('duplicate') || err?.code === '23505') {
         toast.error('Challan number already exists.');
