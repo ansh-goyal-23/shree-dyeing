@@ -241,8 +241,8 @@ const LotList: React.FC = () => {
         <p className="text-xs text-muted-foreground">{filtered.length} lot{filtered.length !== 1 ? 's' : ''} found</p>
       )}
 
-      <div className="card-industrial overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="card-industrial overflow-x-auto">
+        <table className="w-full text-sm min-w-[720px]">
           <thead>
             <tr className="bg-secondary/50">
               <SortHeader field="lot_no" className="text-left">Lot No</SortHeader>
@@ -264,17 +264,17 @@ const LotList: React.FC = () => {
             ) : (
               filtered.map(lot => (
                 <tr key={lot.lot_no} className="row-separator hover:bg-secondary/30 btn-transition">
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <Link to={`/shade-management/lots/${lot.lot_no}`} className="font-data font-semibold text-primary hover:underline">
                       {lot.lot_no}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 font-data text-muted-foreground">{lot.date}</td>
-                  <td className="px-4 py-3">{lot.denier || '—'}</td>
-                  <td className="px-4 py-3">{lot.color_name || '—'}</td>
-                  <td className="px-4 py-3 text-right font-data">{lot.net_weight}</td>
-                  <td className="px-4 py-3 font-data">{lot.shade_number}</td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-3 font-data text-muted-foreground whitespace-nowrap">{lot.date}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{lot.denier || '—'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{lot.color_name || '—'}</td>
+                  <td className="px-4 py-3 text-right font-data whitespace-nowrap">{lot.net_weight}</td>
+                  <td className="px-4 py-3 font-data whitespace-nowrap">{lot.shade_number}</td>
+                  <td className="px-4 py-3 text-center whitespace-nowrap">
                     <Badge
                       variant={STATUS_VARIANT[lot.status] || 'outline'}
                       className="cursor-pointer select-none"
@@ -289,6 +289,7 @@ const LotList: React.FC = () => {
           </tbody>
         </table>
       </div>
+
     </div>
   );
 };
