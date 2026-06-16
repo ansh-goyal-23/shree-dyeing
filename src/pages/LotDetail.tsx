@@ -313,8 +313,8 @@ const LotDetail: React.FC = () => {
           masterItems={masterItems}
           netWeight={lot.net_weight}
           lotNo={lot.lot_no}
-          onUpdateStep={async (...args: Parameters<typeof updateProcessStep>) => { await updateProcessStep(...args); await triggerLotInventory(); }}
-          onDeleteStep={async (...args: Parameters<typeof deleteProcessStep>) => { await deleteProcessStep(...args); await triggerLotInventory(); }}
+          onUpdateStep={updateProcessStep}
+          onDeleteStep={deleteProcessStep}
         />
       </div>
 
