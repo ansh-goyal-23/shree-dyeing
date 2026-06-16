@@ -70,19 +70,6 @@ const LotDetail: React.FC = () => {
     if (success) {
       toast.success('Lot details updated.');
       setEditing(false);
-      // Re-fetch updated lot for inventory calc (gross/denier/company may have changed)
-      const { data: updated } = await supabase.from('lots').select('*').eq('lot_no', lot.lot_no).single();
-      if (updated) {
-        const lotSnap = {
-          ...lot,
-          date: updated.date, yarn_company_name: updated.yarn_company_name,
-          color_name: updated.color_name || '', denier: updated.denier || '',
-          number_of_chesses: Number(updated.number_of_chesses)||0,
-          gross_weight: Number(updated.gross_weight)||0,
-          net_weight: Number(updated.net_weight)||0,
-        };
-        await triggerLotInventory(lotSnap as any);
-      }
     } else {
       toast.error('Failed to update lot.');
     }
