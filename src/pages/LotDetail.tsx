@@ -28,8 +28,6 @@ const LotDetail: React.FC = () => {
     getProcessStepsForLot, stepDyes, stepChemicals, getDyesForLot, getChemicalsForLot, refreshData,
   } = useApp();
 
-  const inv = useInventoryApproval();
-
   const lot = getLot(lotNo || '');
   const [showStepForm, setShowStepForm] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -40,40 +38,6 @@ const LotDetail: React.FC = () => {
   const [editingRemarks, setEditingRemarks] = useState(false);
   const [remarksDraft, setRemarksDraft] = useState('');
   const [savingRemarks, setSavingRemarks] = useState(false);
-
-  const triggerLotInventory = useCallback(async (lotForInv = lot) => {
-    if (!lotForInv) return;
-    await refreshData();
-    const [{ data: rd }, { data: rc }, { data: ps }] = await Promise.all([
-      supabase.from('recipe_dyes').select('*').eq('lot_no', lotForInv.lot_no),
-      supabase.from('recipe_chemicals').select('*').eq('lot_no', lotForInv.lot_no),
-      supabase.from('process_steps').select('id').eq('lot_no', lotForInv.lot_no),
-    ]);
-    const stepIds = (ps || []).map((s: any) => s.id);
-    let sd: any[] = []; let sc: any[] = [];
-    if (stepIds.length) {
-      const [{ data: sdd }, { data: scc }] = await Promise.all([
-        supabase.from('step_dyes').select('*').in('step_id', stepIds),
-        supabase.from('step_chemicals').select('*').in('step_id', stepIds),
-      ]);
-      sd = sdd || []; sc = scc || [];
-    }
-    const recipeDyes = (rd || []).map((r: any) => ({ id: r.id, lot_no: r.lot_no, dye_id: r.dye_id, percentage: Number(r.percentage)||0, qty_grams: Number(r.qty_grams)||0 }));
-    const recipeChemicals = (rc || []).map((r: any) => ({ id: r.id, lot_no: r.lot_no, chemical_id: r.chemical_id, qty: Number(r.qty)||0, ph_value: r.ph_value!=null?Number(r.ph_value):null }));
-    const stepDyesArr = sd.map((r: any) => ({ id: r.id, step_id: r.step_id, dye_id: r.dye_id, percentage: Number(r.percentage)||0, qty_grams: Number(r.qty_grams)||0 }));
-    const stepChemArr = sc.map((r: any) => ({ id: r.id, step_id: r.step_id, chemical_id: r.chemical_id, qty: Number(r.qty)||0 }));
-    const stepObjs = (ps || []).map((s: any) => ({ id: s.id, lot_no: lotForInv.lot_no, step_number: 0, step_type: '' as any, description: '', created_at: '' }));
-
-    await inv.openForLot({
-      lot: lotForInv,
-      recipeDyes,
-      recipeChemicals,
-      steps: stepObjs as any,
-      stepDyes: stepDyesArr as any,
-      stepChemicals: stepChemArr as any,
-      masterItems,
-    });
-  }, [lot, refreshData, inv, masterItems]);
 
   if (!lot) {
     return (
