@@ -6,7 +6,6 @@ const moduleNames: Record<string, string> = {
   '/production': 'Production',
   '/expenses': 'Expenses',
   '/dispatch': 'Dispatch',
-  '/inventory': 'Inventory',
 };
 
 const PlaceholderModule: React.FC = () => {
