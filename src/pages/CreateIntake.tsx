@@ -1,4 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+
+const DRAFT_KEY = 'createIntake:draft';
 import { useNavigate } from 'react-router-dom';
 import { useCreateIntakeEntry } from '@/hooks/useSampling';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,13 +15,23 @@ const CreateIntake: React.FC = () => {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
-  const [form, setForm] = useState({
+  const defaultForm = {
     intake_type: 'Sheet' as IntakeType,
     received_date: new Date().toISOString().split('T')[0],
     client_id: '',
     notes: '',
     reference_photo_path: null as string | null,
+  };
+  const [form, setForm] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem(DRAFT_KEY);
+      if (raw) return { ...defaultForm, ...JSON.parse(raw) };
+    } catch {}
+    return defaultForm;
   });
+  useEffect(() => {
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(form)); } catch {}
+  }, [form]);
 
   const update = (field: string, value: any) => setForm(prev => ({ ...prev, [field]: value }));
 
@@ -49,6 +61,7 @@ const CreateIntake: React.FC = () => {
         notes: form.notes.trim(),
         reference_photo_path: form.reference_photo_path,
       });
+      try { sessionStorage.removeItem(DRAFT_KEY); } catch {}
       toast.success('Intake entry created.');
       navigate(`/sampling/${entry.id}`);
     } catch {

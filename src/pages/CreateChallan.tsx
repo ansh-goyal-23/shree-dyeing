@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+
+const DRAFT_KEY = 'createChallan:draft';
 import { useNavigate } from 'react-router-dom';
 import { useCreateChallan } from '@/hooks/useChallan';
 import { useApp } from '@/context/AppContext';
@@ -33,7 +35,7 @@ const CreateChallan: React.FC = () => {
     }
   };
 
-  const [form, setForm] = useState({
+  const defaultForm = {
     challan_number: '',
     date: new Date().toISOString().split('T')[0],
     client_id: '',
@@ -41,8 +43,24 @@ const CreateChallan: React.FC = () => {
     prepared_by_name: '',
     receiver_name: '',
     receiver_contact_number: '',
+  };
+  const [form, setForm] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem(DRAFT_KEY);
+      if (raw) { const p = JSON.parse(raw); return { ...defaultForm, ...(p.form || {}) }; }
+    } catch {}
+    return defaultForm;
   });
-  const [items, setItems] = useState<ItemData[]>([emptyItem()]);
+  const [items, setItems] = useState<ItemData[]>(() => {
+    try {
+      const raw = sessionStorage.getItem(DRAFT_KEY);
+      if (raw) { const p = JSON.parse(raw); if (Array.isArray(p.items) && p.items.length) return p.items; }
+    } catch {}
+    return [emptyItem()];
+  });
+  useEffect(() => {
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form, items })); } catch {}
+  }, [form, items]);
   const { data: clientRates = [] } = useClientRates(form.client_id || undefined);
 
   const updateItem = (index: number, updated: ItemData) => {
@@ -75,6 +93,7 @@ const CreateChallan: React.FC = () => {
         receiver_contact_number: form.receiver_contact_number.trim(),
         items: validItems,
       });
+      try { sessionStorage.removeItem(DRAFT_KEY); } catch {}
       toast.success('Challan created successfully.');
       navigate('/dispatch');
     } catch (err: any) {
