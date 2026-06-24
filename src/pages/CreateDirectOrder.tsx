@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
+const DRAFT_KEY = 'createDirectOrder:draft';
 import { useNavigate } from 'react-router-dom';
 import { useCreateIntakeItem } from '@/hooks/useSampling';
 import { useApp } from '@/context/AppContext';
@@ -11,13 +13,23 @@ const CreateDirectOrder: React.FC = () => {
   const createItem = useCreateIntakeItem();
   const { lots } = useApp();
 
-  const [form, setForm] = useState({
+  const defaultForm = {
     client_id: '',
     linked_lot_no: '',
     yarn_type: '',
     order_quantity: '',
     notes: '',
+  };
+  const [form, setForm] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem(DRAFT_KEY);
+      if (raw) return { ...defaultForm, ...JSON.parse(raw) };
+    } catch {}
+    return defaultForm;
   });
+  useEffect(() => {
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(form)); } catch {}
+  }, [form]);
 
   const update = (f: string, v: string) => setForm(prev => ({ ...prev, [f]: v }));
 
@@ -44,6 +56,7 @@ const CreateDirectOrder: React.FC = () => {
         is_direct_order: true,
         client_id: form.client_id,
       });
+      try { sessionStorage.removeItem(DRAFT_KEY); } catch {}
       toast.success('Direct order created.');
       navigate('/sampling');
     } catch {
