@@ -1,4 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+
+const DRAFT_KEY = 'createExpense:draft';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,22 +46,37 @@ const ExpenseCreatePage: React.FC = () => {
   const createExpense = useCreateExpense();
   const { lots = [] } = useApp();
 
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [expenseType, setExpenseType] = useState<ExpenseType>('Purchase');
-  const [categoryId, setCategoryId] = useState('');
-  const [supplierId, setSupplierId] = useState('');
-  const [linkedLotNo, setLinkedLotNo] = useState('');
-  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('Unpaid');
-  const [notes, setNotes] = useState('');
+  const draft = (() => {
+    try { const raw = sessionStorage.getItem(DRAFT_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
+  })();
+
+  const [date, setDate] = useState<string>(draft?.date ?? new Date().toISOString().split('T')[0]);
+  const [expenseType, setExpenseType] = useState<ExpenseType>(draft?.expenseType ?? 'Purchase');
+  const [categoryId, setCategoryId] = useState<string>(draft?.categoryId ?? '');
+  const [supplierId, setSupplierId] = useState<string>(draft?.supplierId ?? '');
+  const [linkedLotNo, setLinkedLotNo] = useState<string>(draft?.linkedLotNo ?? '');
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(draft?.paymentStatus ?? 'Unpaid');
+  const [notes, setNotes] = useState<string>(draft?.notes ?? '');
   const [files, setFiles] = useState<File[]>([]);
-  const [gstPercent, setGstPercent] = useState<number>(0);
-  const [freight, setFreight] = useState<number>(0);
+  const [gstPercent, setGstPercent] = useState<number>(draft?.gstPercent ?? 0);
+  const [freight, setFreight] = useState<number>(draft?.freight ?? 0);
 
   // For Direct Expense: single total amount, no line items
-  const [directTotal, setDirectTotal] = useState<number>(0);
+  const [directTotal, setDirectTotal] = useState<number>(draft?.directTotal ?? 0);
 
   // For Purchase / Asset: multi-item line items
-  const [lineItems, setLineItems] = useState<LineItem[]>([newLine()]);
+  const [lineItems, setLineItems] = useState<LineItem[]>(
+    Array.isArray(draft?.lineItems) && draft.lineItems.length ? draft.lineItems : [newLine()]
+  );
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
+        date, expenseType, categoryId, supplierId, linkedLotNo, paymentStatus,
+        notes, gstPercent, freight, directTotal, lineItems,
+      }));
+    } catch {}
+  }, [date, expenseType, categoryId, supplierId, linkedLotNo, paymentStatus, notes, gstPercent, freight, directTotal, lineItems]);
 
   const isPurchaseType = expenseType === 'Purchase' || expenseType === 'Asset';
 
