@@ -1,6 +1,4 @@
 import React, { useState, useCallback, useEffect } from 'react';
-
-const DRAFT_KEY = 'createExpense:draft';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,6 +16,9 @@ import ItemSelect from '@/components/ItemSelect';
 import { useCreateExpense } from '@/hooks/useExpenses';
 import { useApp } from '@/context/AppContext';
 import type { ExpenseType, PaymentStatus, ExpenseItem } from '@/types/expense';
+import { getDraft, setDraft, clearDraft } from '@/lib/draftCache';
+
+const DRAFT_KEY = 'createExpense:draft';
 
 const EMPTY_LOT = '__no_lot__';
 
@@ -46,9 +47,7 @@ const ExpenseCreatePage: React.FC = () => {
   const createExpense = useCreateExpense();
   const { lots = [] } = useApp();
 
-  const draft = (() => {
-    try { const raw = sessionStorage.getItem(DRAFT_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
-  })();
+  const draft = getDraft<any>(DRAFT_KEY);
 
   const [date, setDate] = useState<string>(draft?.date ?? new Date().toISOString().split('T')[0]);
   const [expenseType, setExpenseType] = useState<ExpenseType>(draft?.expenseType ?? 'Purchase');
@@ -70,12 +69,10 @@ const ExpenseCreatePage: React.FC = () => {
   );
 
   useEffect(() => {
-    try {
-      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
-        date, expenseType, categoryId, supplierId, linkedLotNo, paymentStatus,
-        notes, gstPercent, freight, directTotal, lineItems,
-      }));
-    } catch {}
+    setDraft(DRAFT_KEY, {
+      date, expenseType, categoryId, supplierId, linkedLotNo, paymentStatus,
+      notes, gstPercent, freight, directTotal, lineItems,
+    });
   }, [date, expenseType, categoryId, supplierId, linkedLotNo, paymentStatus, notes, gstPercent, freight, directTotal, lineItems]);
 
   const isPurchaseType = expenseType === 'Purchase' || expenseType === 'Asset';
@@ -147,7 +144,7 @@ const ExpenseCreatePage: React.FC = () => {
           : [],
         files: files.length > 0 ? files : undefined,
       });
-      try { sessionStorage.removeItem(DRAFT_KEY); } catch {}
+      clearDraft(DRAFT_KEY);
       toast.success('Expense saved');
       navigate('/expenses');
     } catch (err: any) {

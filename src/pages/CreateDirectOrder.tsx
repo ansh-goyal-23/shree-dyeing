@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-
-const DRAFT_KEY = 'createDirectOrder:draft';
 import { useNavigate } from 'react-router-dom';
 import { useCreateIntakeItem } from '@/hooks/useSampling';
 import { useApp } from '@/context/AppContext';
 import { toast } from 'sonner';
 import ClientSelect from '@/components/ClientSelect';
 import type { IntakeItemStatus } from '@/types/sampling';
+import { getDraft, setDraft, clearDraft } from '@/lib/draftCache';
+
+const DRAFT_KEY = 'createDirectOrder:draft';
 
 const CreateDirectOrder: React.FC = () => {
   const navigate = useNavigate();
@@ -21,15 +22,10 @@ const CreateDirectOrder: React.FC = () => {
     notes: '',
   };
   const [form, setForm] = useState(() => {
-    try {
-      const raw = sessionStorage.getItem(DRAFT_KEY);
-      if (raw) return { ...defaultForm, ...JSON.parse(raw) };
-    } catch {}
-    return defaultForm;
+    const saved = getDraft<typeof defaultForm>(DRAFT_KEY);
+    return saved ? { ...defaultForm, ...saved } : defaultForm;
   });
-  useEffect(() => {
-    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(form)); } catch {}
-  }, [form]);
+  useEffect(() => { setDraft(DRAFT_KEY, form); }, [form]);
 
   const update = (f: string, v: string) => setForm(prev => ({ ...prev, [f]: v }));
 
@@ -56,7 +52,7 @@ const CreateDirectOrder: React.FC = () => {
         is_direct_order: true,
         client_id: form.client_id,
       });
-      try { sessionStorage.removeItem(DRAFT_KEY); } catch {}
+      clearDraft(DRAFT_KEY);
       toast.success('Direct order created.');
       navigate('/sampling');
     } catch {

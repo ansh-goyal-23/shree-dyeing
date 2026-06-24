@@ -1,6 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-
-const DRAFT_KEY = 'createIntake:draft';
 import { useNavigate } from 'react-router-dom';
 import { useCreateIntakeEntry } from '@/hooks/useSampling';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +6,9 @@ import { toast } from 'sonner';
 import { Loader2, Camera } from 'lucide-react';
 import ClientSelect from '@/components/ClientSelect';
 import type { IntakeType } from '@/types/sampling';
+import { getDraft, setDraft, clearDraft } from '@/lib/draftCache';
+
+const DRAFT_KEY = 'createIntake:draft';
 
 const CreateIntake: React.FC = () => {
   const navigate = useNavigate();
@@ -23,15 +24,10 @@ const CreateIntake: React.FC = () => {
     reference_photo_path: null as string | null,
   };
   const [form, setForm] = useState(() => {
-    try {
-      const raw = sessionStorage.getItem(DRAFT_KEY);
-      if (raw) return { ...defaultForm, ...JSON.parse(raw) };
-    } catch {}
-    return defaultForm;
+    const saved = getDraft<typeof defaultForm>(DRAFT_KEY);
+    return saved ? { ...defaultForm, ...saved } : defaultForm;
   });
-  useEffect(() => {
-    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(form)); } catch {}
-  }, [form]);
+  useEffect(() => { setDraft(DRAFT_KEY, form); }, [form]);
 
   const update = (field: string, value: any) => setForm(prev => ({ ...prev, [field]: value }));
 
@@ -61,7 +57,7 @@ const CreateIntake: React.FC = () => {
         notes: form.notes.trim(),
         reference_photo_path: form.reference_photo_path,
       });
-      try { sessionStorage.removeItem(DRAFT_KEY); } catch {}
+      clearDraft(DRAFT_KEY);
       toast.success('Intake entry created.');
       navigate(`/sampling/${entry.id}`);
     } catch {
