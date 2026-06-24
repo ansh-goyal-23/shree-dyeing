@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import LotFieldAutocomplete from '@/components/LotFieldAutocomplete';
 import DecimalInput from '@/components/DecimalInput';
+import { getDraft, setDraft, clearDraft } from '@/lib/draftCache';
 
 
 const CreateLot: React.FC = () => {
@@ -143,7 +144,7 @@ const CreateLot: React.FC = () => {
 
       const newLotNo = form.lot_no.trim();
       await refreshData();
-      try { sessionStorage.removeItem(DRAFT_KEY); } catch {}
+      clearDraft(DRAFT_KEY);
       navigate(`/shade-management/lots/${newLotNo}`);
     } else {
       toast.error(`Failed to create lot. Lot No may already exist.`);
