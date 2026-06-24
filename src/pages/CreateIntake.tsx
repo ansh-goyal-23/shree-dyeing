@@ -57,7 +57,7 @@ const CreateIntake: React.FC = () => {
         notes: form.notes.trim(),
         reference_photo_path: form.reference_photo_path,
       });
-      try { sessionStorage.removeItem(DRAFT_KEY); } catch {}
+      clearDraft(DRAFT_KEY);
       toast.success('Intake entry created.');
       navigate(`/sampling/${entry.id}`);
     } catch {

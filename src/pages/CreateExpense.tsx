@@ -144,7 +144,7 @@ const ExpenseCreatePage: React.FC = () => {
           : [],
         files: files.length > 0 ? files : undefined,
       });
-      try { sessionStorage.removeItem(DRAFT_KEY); } catch {}
+      clearDraft(DRAFT_KEY);
       toast.success('Expense saved');
       navigate('/expenses');
     } catch (err: any) {

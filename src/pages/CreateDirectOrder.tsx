@@ -52,7 +52,7 @@ const CreateDirectOrder: React.FC = () => {
         is_direct_order: true,
         client_id: form.client_id,
       });
-      try { sessionStorage.removeItem(DRAFT_KEY); } catch {}
+      clearDraft(DRAFT_KEY);
       toast.success('Direct order created.');
       navigate('/sampling');
     } catch {
