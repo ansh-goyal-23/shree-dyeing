@@ -46,22 +46,14 @@ const CreateChallan: React.FC = () => {
     receiver_contact_number: '',
   };
   const [form, setForm] = useState(() => {
-    try {
-      const raw = sessionStorage.getItem(DRAFT_KEY);
-      if (raw) { const p = JSON.parse(raw); return { ...defaultForm, ...(p.form || {}) }; }
-    } catch {}
-    return defaultForm;
+    const saved = getDraft<{ form?: typeof defaultForm }>(DRAFT_KEY);
+    return saved?.form ? { ...defaultForm, ...saved.form } : defaultForm;
   });
   const [items, setItems] = useState<ItemData[]>(() => {
-    try {
-      const raw = sessionStorage.getItem(DRAFT_KEY);
-      if (raw) { const p = JSON.parse(raw); if (Array.isArray(p.items) && p.items.length) return p.items; }
-    } catch {}
-    return [emptyItem()];
+    const saved = getDraft<{ items?: ItemData[] }>(DRAFT_KEY);
+    return saved?.items && saved.items.length ? saved.items : [emptyItem()];
   });
-  useEffect(() => {
-    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form, items })); } catch {}
-  }, [form, items]);
+  useEffect(() => { setDraft(DRAFT_KEY, { form, items }); }, [form, items]);
   const { data: clientRates = [] } = useClientRates(form.client_id || undefined);
 
   const updateItem = (index: number, updated: ItemData) => {
@@ -94,7 +86,7 @@ const CreateChallan: React.FC = () => {
         receiver_contact_number: form.receiver_contact_number.trim(),
         items: validItems,
       });
-      try { sessionStorage.removeItem(DRAFT_KEY); } catch {}
+      clearDraft(DRAFT_KEY);
       toast.success('Challan created successfully.');
       navigate('/dispatch');
     } catch (err: any) {
