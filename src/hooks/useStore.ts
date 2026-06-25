@@ -12,6 +12,8 @@ import type {
   StoreInternalIssueLineInput,
   StoreFinishedGoodsReceipt,
   StoreFGCurrentStockRow,
+  StoreExternalDyedYarnReceipt,
+  StoreEDYCurrentStockRow,
 } from '@/types/store';
 
 // Re-use the project's supabase client

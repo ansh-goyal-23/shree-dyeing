@@ -162,6 +162,45 @@ export interface StoreFinishedGoodsReceipt {
   created_by: string | null;
 }
 
+export interface StoreExternalDyedYarnReceipt {
+  id: string;
+  receipt_number: string;
+  receipt_date: string;
+  supplier: string | null;
+  challan_number: string | null;
+  yarn_type: string | null;
+  shade: string | null;
+  net_weight: number;
+  rate: number | null;
+  amount: number | null;
+  rack_id: string | null;
+  item_id: string | null;
+  remarks: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+}
+
+export interface StoreEDYCurrentStockRow {
+  receipt_id: string;
+  receipt_number: string;
+  receipt_date: string;
+  supplier: string | null;
+  challan_number: string | null;
+  yarn_type: string | null;
+  shade: string | null;
+  received_weight: number;
+  rate: number | null;
+  amount: number | null;
+  rack_id: string | null;
+  rack_code: string | null;
+  rack_name: string | null;
+  item_id: string | null;
+  item_code: string | null;
+  unit: string | null;
+  current_balance: number;
+}
+
 export interface StoreFGCurrentStockRow {
   receipt_id: string;
   receipt_number: string;
