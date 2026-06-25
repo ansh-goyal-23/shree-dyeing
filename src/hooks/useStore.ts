@@ -1062,13 +1062,6 @@ export const useCreateAsset = () => {
           condition: payload.condition || null,
           status,
           remarks: payload.remarks || null,
-          current_holder: payload.current_holder || null,
-          department: payload.department || null,
-          rack_id: payload.rack_id || null,
-          purchase_date: payload.purchase_date || null,
-          condition: payload.condition || null,
-          status,
-          remarks: payload.remarks || null,
         })
         .select()
         .single();
@@ -1079,14 +1072,14 @@ export const useCreateAsset = () => {
         const { data: itemRow } = await sb
           .from('store_items')
           .select('unit')
-          .eq('id', payload.item_id)
+          .eq('id', itemId)
           .single();
         const { data: txnNum } = await sb.rpc('next_store_txn_number');
         await sb.from('store_stock_transactions').insert({
           transaction_number: txnNum,
           transaction_date: new Date().toISOString().slice(0, 10),
           transaction_type: 'stock_in',
-          item_id: payload.item_id,
+          item_id: itemId,
           quantity: 1,
           unit: itemRow?.unit || 'pcs',
           rack_id: payload.rack_id || null,
