@@ -12,6 +12,8 @@ import type {
   StoreInternalIssueLineInput,
   StoreFinishedGoodsReceipt,
   StoreFGCurrentStockRow,
+  StoreExternalDyedYarnReceipt,
+  StoreEDYCurrentStockRow,
 } from '@/types/store';
 
 // Re-use the project's supabase client
@@ -627,3 +629,134 @@ export const useCreateFGReceipt = () => {
     },
   });
 };
+
+// ---------- External Dyed Yarn Receipts ----------
+
+export const useEDYReceiptList = () =>
+  useQuery({
+    queryKey: ['edy_receipt_list'],
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('store_external_dyed_yarn_receipts')
+        .select('*')
+        .order('receipt_date', { ascending: false })
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as StoreExternalDyedYarnReceipt[];
+    },
+  });
+
+export const useEDYCurrentStock = () =>
+  useQuery({
+    queryKey: ['edy_current_stock'],
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('store_edy_current_stock')
+        .select('*')
+        .order('receipt_date', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as StoreEDYCurrentStockRow[];
+    },
+  });
+
+interface CreateEDYReceiptPayload {
+  receipt_date: string;
+  supplier?: string | null;
+  challan_number?: string | null;
+  yarn_type?: string | null;
+  shade?: string | null;
+  net_weight: number;
+  rate?: number | null;
+  rack_id?: string | null;
+  remarks?: string | null;
+}
+
+export const useCreateEDYReceipt = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateEDYReceiptPayload) => {
+      if (!(payload.net_weight > 0)) throw new Error('Net weight must be positive');
+
+      const { data: rcptNum, error: rcptErr } = await sb.rpc('next_store_edy_number');
+      if (rcptErr) throw rcptErr;
+      const receiptNumber: string = rcptNum;
+
+      const itemCode = `EDY-${receiptNumber}`;
+      const itemName = `${receiptNumber}${payload.shade ? ' — ' + payload.shade : ''}${payload.supplier ? ' (' + payload.supplier + ')' : ''}`;
+      const { data: newItem, error: itemErr } = await sb
+        .from('store_items')
+        .insert({
+          item_code: itemCode,
+          item_name: itemName,
+          category: 'external_dyed_yarn',
+          sub_category: null,
+          unit: 'kg',
+          is_asset: false,
+          is_active: true,
+          default_rack: payload.rack_id || null,
+          remarks: `Auto-created for external dyed yarn receipt ${receiptNumber}`,
+        })
+        .select('id')
+        .single();
+      if (itemErr) throw itemErr;
+      const itemId: string = newItem.id;
+
+      const amount =
+        payload.rate != null
+          ? Number(payload.rate) * Number(payload.net_weight)
+          : null;
+
+      const { data: header, error: headerErr } = await sb
+        .from('store_external_dyed_yarn_receipts')
+        .insert({
+          receipt_number: receiptNumber,
+          receipt_date: payload.receipt_date,
+          supplier: payload.supplier || null,
+          challan_number: payload.challan_number || null,
+          yarn_type: payload.yarn_type || null,
+          shade: payload.shade || null,
+          net_weight: payload.net_weight,
+          rate: payload.rate ?? null,
+          amount,
+          rack_id: payload.rack_id || null,
+          item_id: itemId,
+          remarks: payload.remarks || null,
+        })
+        .select()
+        .single();
+      if (headerErr) throw headerErr;
+
+      const { data: txnNum, error: txnNumErr } = await sb.rpc('next_store_txn_number');
+      if (txnNumErr) throw txnNumErr;
+      const { error: txnErr } = await sb.from('store_stock_transactions').insert({
+        transaction_number: txnNum,
+        transaction_date: payload.receipt_date,
+        transaction_type: 'external_dyed_yarn_receipt',
+        item_id: itemId,
+        quantity: Math.abs(Number(payload.net_weight)),
+        unit: 'kg',
+        rack_id: payload.rack_id || null,
+        reference_type: 'edy_receipt',
+        reference_number: receiptNumber,
+        supplier: payload.supplier || null,
+        rate: payload.rate ?? null,
+        amount,
+        remarks: payload.remarks || null,
+      });
+      if (txnErr) {
+        await sb.from('store_external_dyed_yarn_receipts').delete().eq('id', header.id);
+        throw txnErr;
+      }
+
+      return header as StoreExternalDyedYarnReceipt;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['edy_receipt_list'] });
+      qc.invalidateQueries({ queryKey: ['edy_current_stock'] });
+      qc.invalidateQueries({ queryKey: ['store_items'] });
+      qc.invalidateQueries({ queryKey: ['store_transactions'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+    },
+  });
+};
+
