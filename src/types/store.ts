@@ -49,6 +49,7 @@ export interface StoreItem {
   is_active: boolean;
   default_rack: string | null;
   remarks: string | null;
+  first_received_at: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
