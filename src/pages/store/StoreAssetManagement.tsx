@@ -117,7 +117,9 @@ const AssetManagement: React.FC = () => {
 
   const openCreate = () => {
     setForm({
-      asset_id: '', item_id: '', current_holder: '', department: '',
+      asset_id: '', item_id: '',
+      new_item_name: '', new_item_unit: 'pcs', use_new_item: true,
+      current_holder: '', department: '',
       rack_id: '', purchase_date: '', condition: 'Good',
       status: 'available', remarks: '', add_stock: true,
     });
@@ -125,7 +127,12 @@ const AssetManagement: React.FC = () => {
   };
 
   const submitCreate = async () => {
-    if (!form.item_id) { toast.error('Pick the Item (must be marked as Asset)'); return; }
+    if (form.use_new_item) {
+      if (!form.new_item_name.trim()) { toast.error('Item name is required'); return; }
+    } else if (!form.item_id) {
+      toast.error('Pick an existing asset item or switch to New Item');
+      return;
+    }
     try {
       await createAsset.mutateAsync({
         asset_id: form.asset_id || null,
