@@ -361,7 +361,12 @@ interface CreateInwardPayload {
   invoice_number?: string | null;
   grn_number?: string | null;
   remarks?: string | null;
-  lines: StoreStockInwardLineInput[];
+  bill_url?: string | null;
+  bill_path?: string | null;
+  lines: (StoreStockInwardLineInput & {
+    /** If item_id is empty, create catalogue item from these fields. */
+    new_item?: UpsertCatalogueInput;
+  })[];
 }
 
 export const useCreateStoreInward = () => {
