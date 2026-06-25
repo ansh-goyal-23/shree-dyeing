@@ -375,12 +375,24 @@ export const useCreateStoreInward = () => {
     mutationFn: async (payload: CreateInwardPayload) => {
       if (!payload.lines.length) throw new Error('Add at least one line item');
 
+      // 0. Resolve any new_item entries into store_items rows first.
+      const resolvedLines = await Promise.all(payload.lines.map(async (l) => {
+        let itemId = l.item_id;
+        let unit = l.unit;
+        if (!itemId && l.new_item) {
+          itemId = await upsertCatalogueItem(l.new_item);
+          unit = unit || l.new_item.unit;
+        }
+        if (!itemId) throw new Error('Each line must reference an item');
+        return { ...l, item_id: itemId, unit };
+      }));
+
       // 1. Generate inward number
       const { data: numData, error: numErr } = await sb.rpc('next_store_inward_number');
       if (numErr) throw numErr;
       const inwardNumber: string = numData;
 
-      const totalAmount = payload.lines.reduce(
+      const totalAmount = resolvedLines.reduce(
         (s, l) => s + Number(l.amount ?? (Number(l.rate || 0) * Number(l.quantity || 0))),
         0,
       );
@@ -395,6 +407,8 @@ export const useCreateStoreInward = () => {
           invoice_number: payload.invoice_number || null,
           grn_number: payload.grn_number || null,
           remarks: payload.remarks || null,
+          bill_url: payload.bill_url || null,
+          bill_path: payload.bill_path || null,
           total_amount: totalAmount,
         })
         .select()
@@ -403,7 +417,7 @@ export const useCreateStoreInward = () => {
 
       // 3. Build transaction rows (positive quantities; stock_in type)
       const txnRows = await Promise.all(
-        payload.lines.map(async (l) => {
+        resolvedLines.map(async (l) => {
           const { data: txnNum, error: txnErr } = await sb.rpc('next_store_txn_number');
           if (txnErr) throw txnErr;
           const amt = l.amount ?? Number(l.rate || 0) * Number(l.quantity || 0);
