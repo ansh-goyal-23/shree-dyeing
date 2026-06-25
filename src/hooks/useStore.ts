@@ -8,6 +8,8 @@ import type {
   StoreItemCategory,
   StoreStockInward,
   StoreStockInwardLineInput,
+  StoreInternalIssue,
+  StoreInternalIssueLineInput,
 } from '@/types/store';
 
 // Re-use the project's supabase client
