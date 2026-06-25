@@ -1374,3 +1374,51 @@ export const useApproveVerificationSession = () => {
   });
 };
 
+// ---------- Stock Ledger (read-only) ----------
+
+export interface StockLedgerRow {
+  id: string;
+  transaction_number: string;
+  transaction_date: string;
+  transaction_type: import('@/types/store').StoreTransactionType;
+  item_id: string;
+  item_code: string;
+  item_name: string;
+  category: StoreItemCategory;
+  sub_category: string | null;
+  item_unit: string;
+  is_asset: boolean;
+  quantity: number;
+  qty_in: number;
+  qty_out: number;
+  unit: string;
+  rack_id: string | null;
+  rack_code: string | null;
+  rack_name: string | null;
+  reference_type: string | null;
+  reference_number: string | null;
+  person: string | null;
+  supplier: string | null;
+  department: string | null;
+  remarks: string | null;
+  created_by: string | null;
+  created_at: string;
+  running_balance: number;
+}
+
+export const useStockLedger = () =>
+  useQuery({
+    queryKey: ['store_stock_ledger'],
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('store_stock_ledger')
+        .select('*')
+        .order('transaction_date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(20000);
+      if (error) throw error;
+      return (data ?? []) as StockLedgerRow[];
+    },
+  });
+
+
