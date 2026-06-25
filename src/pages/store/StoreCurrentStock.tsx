@@ -198,13 +198,14 @@ const CurrentStockPage: React.FC = () => {
               <TableHead>Unit</TableHead>
               <TableHead>Rack</TableHead>
               <TableHead>Last Transaction</TableHead>
+              <TableHead className="text-right">Timeline</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>
             ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">No items match the filters.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">No items match the filters.</TableCell></TableRow>
             ) : filtered.map(r => {
               const qty = Number(r.current_quantity);
               return (
@@ -232,6 +233,16 @@ const CurrentStockPage: React.FC = () => {
                   <TableCell>{r.unit}</TableCell>
                   <TableCell>{r.default_rack_code ? `${r.default_rack_code} — ${r.default_rack_name}` : '—'}</TableCell>
                   <TableCell className="text-xs">{r.last_transaction_date || '—'}</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="View Timeline"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/store/timeline/${r.item_id}`); }}
+                    >
+                      <Activity className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               );
             })}
