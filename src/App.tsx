@@ -43,6 +43,8 @@ import StoreExternalDyedYarnList from "@/pages/store/StoreExternalDyedYarnList";
 import StoreExternalDyedYarnReceive from "@/pages/store/StoreExternalDyedYarnReceive";
 import StoreAssetManagement from "@/pages/store/StoreAssetManagement";
 import StoreCurrentStock from "@/pages/store/StoreCurrentStock";
+import StoreVerificationList from "@/pages/store/StoreVerificationList";
+import StoreVerificationDetail from "@/pages/store/StoreVerificationDetail";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
