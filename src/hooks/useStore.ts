@@ -1036,11 +1036,32 @@ export const useCreateAsset = () => {
       }
       const status = payload.status ?? 'available';
 
+      // Resolve item_id — auto-create catalogue entry when only new_item is supplied.
+      let itemId = payload.item_id || '';
+      if (!itemId) {
+        if (!payload.new_item) throw new Error('Either item_id or new_item is required');
+        itemId = await upsertCatalogueItem({
+          item_name: payload.new_item.item_name,
+          category: payload.new_item.category || 'tool_equipment',
+          sub_category: payload.new_item.sub_category || null,
+          unit: payload.new_item.unit || 'pcs',
+          is_asset: true,
+          remarks: payload.new_item.remarks || `Auto-created for asset ${assetCode}`,
+        });
+      }
+
       const { data: asset, error: insErr } = await sb
         .from('store_assets')
         .insert({
           asset_id: assetCode,
-          item_id: payload.item_id,
+          item_id: itemId,
+          current_holder: payload.current_holder || null,
+          department: payload.department || null,
+          rack_id: payload.rack_id || null,
+          purchase_date: payload.purchase_date || null,
+          condition: payload.condition || null,
+          status,
+          remarks: payload.remarks || null,
           current_holder: payload.current_holder || null,
           department: payload.department || null,
           rack_id: payload.rack_id || null,
