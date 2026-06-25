@@ -821,12 +821,18 @@ export const useCreateEDYReceipt = () => {
 
       return header as StoreExternalDyedYarnReceipt;
     },
-    onSuccess: () => {
+    onSuccess: (header, vars) => {
       qc.invalidateQueries({ queryKey: ['edy_receipt_list'] });
       qc.invalidateQueries({ queryKey: ['edy_current_stock'] });
       qc.invalidateQueries({ queryKey: ['store_items'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+      logBusinessEvent({
+        module: 'store', eventType: 'external_dyed_yarn.received', severity: 'success',
+        entityType: 'edy_receipt', entityId: header.id, referenceNumber: header.receipt_number,
+        summary: `Received external dyed yarn ${header.receipt_number} — ${Number(vars.net_weight).toFixed(3)} kg${vars.supplier ? ` (${vars.supplier})` : ''}`,
+        details: { supplier: vars.supplier, shade: vars.shade, yarn_type: vars.yarn_type },
+      });
     },
   });
 };
