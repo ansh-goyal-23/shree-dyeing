@@ -218,6 +218,21 @@ export function useUpdateChallan() {
       receiver_contact_number: string;
       items: Omit<ChallanItem, 'id' | 'challan_id'>[];
     }) => {
+      // Snapshot previous items + previous challan_number/date so we can
+      // post the correct reversal even if the user just edited the header.
+      const { data: prevChallan } = await sb
+        .from('challans')
+        .select('challan_number, date')
+        .eq('id', payload.id)
+        .single();
+      const { data: prevItemsRaw } = await sb
+        .from('challan_items')
+        .select('lot_no, net_weight')
+        .eq('challan_id', payload.id);
+      const prevItems: AggLine[] = (prevItemsRaw ?? []).map((r: any) => ({
+        lot_no: r.lot_no, net_weight: Number(r.net_weight) || 0,
+      }));
+
       const { error: cErr } = await supabase
         .from('challans')
         .update({
@@ -250,8 +265,27 @@ export function useUpdateChallan() {
         );
         if (iErr) throw iErr;
       }
+
+      // Reverse old stock impact (under previous challan number) and apply new.
+      if (prevChallan && (prevChallan.challan_number !== payload.challan_number)) {
+        await applyChallanStockDelta(prevChallan.challan_number, prevChallan.date, prevItems, []);
+        await applyChallanStockDelta(
+          payload.challan_number, payload.date, [],
+          payload.items.map(i => ({ lot_no: i.lot_no, net_weight: i.net_weight })),
+        );
+      } else {
+        await applyChallanStockDelta(
+          payload.challan_number, payload.date, prevItems,
+          payload.items.map(i => ({ lot_no: i.lot_no, net_weight: i.net_weight })),
+        );
+      }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['challans'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['challans'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock_by_item'] });
+      qc.invalidateQueries({ queryKey: ['store_transactions'] });
+    },
   });
 }
 
@@ -259,13 +293,31 @@ export function useDeleteChallan() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      // Snapshot challan + items, post reversal transactions, then delete.
+      const { data: prevChallan } = await sb
+        .from('challans').select('challan_number, date').eq('id', id).single();
+      const { data: prevItemsRaw } = await sb
+        .from('challan_items').select('lot_no, net_weight').eq('challan_id', id);
+      const prevItems: AggLine[] = (prevItemsRaw ?? []).map((r: any) => ({
+        lot_no: r.lot_no, net_weight: Number(r.net_weight) || 0,
+      }));
+
       await supabase.from('challan_items').delete().eq('challan_id', id);
       const { data: deleted, error } = await supabase.from('challans').delete().eq('id', id).select('id');
       if (error) throw error;
       if (!deleted || deleted.length === 0) {
         throw new Error('Delete blocked by row-level security. Apply the latest SQL migration (permissive_write_policies).');
       }
+
+      if (prevChallan) {
+        await applyChallanStockDelta(prevChallan.challan_number, prevChallan.date, prevItems, []);
+      }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['challans'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['challans'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock_by_item'] });
+      qc.invalidateQueries({ queryKey: ['store_transactions'] });
+    },
   });
 }
