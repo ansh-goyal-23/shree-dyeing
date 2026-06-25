@@ -137,3 +137,119 @@ export const RAW_MATERIAL_SUBCATEGORIES: { value: string; label: string }[] = [
 ];
 
 export const STORE_UNITS = ['kg', 'gm', 'mg', 'ltr', 'ml', 'pcs', 'mtr', 'set', 'box', 'roll'];
+
+// ---------- Stock Inward (GRN) ----------
+
+export const useStoreInwardList = () =>
+  useQuery({
+    queryKey: ['store_inward_list'],
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('store_stock_inward')
+        .select('*')
+        .order('inward_date', { ascending: false })
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as StoreStockInward[];
+    },
+  });
+
+export const useStoreInwardLines = (inwardNumber: string | undefined) =>
+  useQuery({
+    queryKey: ['store_inward_lines', inwardNumber],
+    enabled: !!inwardNumber,
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('store_stock_transactions')
+        .select('*')
+        .eq('reference_type', 'stock_inward')
+        .eq('reference_number', inwardNumber);
+      if (error) throw error;
+      return (data ?? []) as StoreStockTransaction[];
+    },
+  });
+
+interface CreateInwardPayload {
+  inward_date: string;
+  supplier?: string | null;
+  invoice_number?: string | null;
+  grn_number?: string | null;
+  remarks?: string | null;
+  lines: StoreStockInwardLineInput[];
+}
+
+export const useCreateStoreInward = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateInwardPayload) => {
+      if (!payload.lines.length) throw new Error('Add at least one line item');
+
+      // 1. Generate inward number
+      const { data: numData, error: numErr } = await sb.rpc('next_store_inward_number');
+      if (numErr) throw numErr;
+      const inwardNumber: string = numData;
+
+      const totalAmount = payload.lines.reduce(
+        (s, l) => s + Number(l.amount ?? (Number(l.rate || 0) * Number(l.quantity || 0))),
+        0,
+      );
+
+      // 2. Insert header
+      const { data: header, error: headerErr } = await sb
+        .from('store_stock_inward')
+        .insert({
+          inward_number: inwardNumber,
+          inward_date: payload.inward_date,
+          supplier: payload.supplier || null,
+          invoice_number: payload.invoice_number || null,
+          grn_number: payload.grn_number || null,
+          remarks: payload.remarks || null,
+          total_amount: totalAmount,
+        })
+        .select()
+        .single();
+      if (headerErr) throw headerErr;
+
+      // 3. Build transaction rows (positive quantities; stock_in type)
+      const txnRows = await Promise.all(
+        payload.lines.map(async (l) => {
+          const { data: txnNum, error: txnErr } = await sb.rpc('next_store_txn_number');
+          if (txnErr) throw txnErr;
+          const amt = l.amount ?? Number(l.rate || 0) * Number(l.quantity || 0);
+          return {
+            transaction_number: txnNum,
+            transaction_date: payload.inward_date,
+            transaction_type: 'stock_in',
+            item_id: l.item_id,
+            quantity: Math.abs(Number(l.quantity)),
+            unit: l.unit,
+            rack_id: l.rack_id || null,
+            reference_type: 'stock_inward',
+            reference_number: inwardNumber,
+            supplier: payload.supplier || null,
+            rate: l.rate ?? null,
+            amount: amt || null,
+            remarks: l.remarks || null,
+          };
+        }),
+      );
+
+      const { error: txInsErr } = await sb
+        .from('store_stock_transactions')
+        .insert(txnRows);
+
+      if (txInsErr) {
+        // Best-effort cleanup if line insert fails
+        await sb.from('store_stock_inward').delete().eq('id', header.id);
+        throw txInsErr;
+      }
+
+      return header as StoreStockInward;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['store_inward_list'] });
+      qc.invalidateQueries({ queryKey: ['store_transactions'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+    },
+  });
+};
