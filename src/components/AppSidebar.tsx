@@ -71,7 +71,7 @@ const expenseItems = [
 
 const storeItems = [
   { title: 'Dashboard', url: '/store', icon: LayoutDashboard },
-  { title: 'Item Master', url: '/store/items', icon: Package },
+  { title: 'Inventory Catalogue', url: '/store/items', icon: Package },
   { title: 'Stock Inward', url: '/store/stock-inward', icon: ArrowDownToLine },
   { title: 'Internal Issues', url: '/store/internal-issues', icon: ArrowUpFromLine },
   { title: 'Finished Goods', url: '/store/finished-goods', icon: PackageCheck },
