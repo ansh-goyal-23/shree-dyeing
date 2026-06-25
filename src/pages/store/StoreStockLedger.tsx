@@ -526,16 +526,24 @@ const StockLedgerPage: React.FC = () => {
                   <div><div className="text-muted-foreground text-xs">Issued To / Person</div><div>{active.person || '—'}</div></div>
                   <div><div className="text-muted-foreground text-xs">Department</div><div>{active.department || '—'}</div></div>
                 </div>
-                {activeRefRoute && (
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {activeRefRoute && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { navigate(activeRefRoute); setActive(null); }}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-1" /> Open Reference
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
-                    className="mt-2"
-                    onClick={() => { navigate(activeRefRoute); setActive(null); }}
+                    onClick={() => { navigate(`/store/timeline/${active.item_id}`); setActive(null); }}
                   >
-                    <ExternalLink className="h-4 w-4 mr-1" /> Open Reference
+                    <ExternalLink className="h-4 w-4 mr-1" /> View Timeline
                   </Button>
-                )}
+                </div>
               </section>
 
               <section>
