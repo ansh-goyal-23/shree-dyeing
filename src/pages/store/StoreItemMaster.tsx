@@ -259,6 +259,9 @@ const StoreItemMaster: React.FC = () => {
                       : <Badge variant="outline">Inactive</Badge>}
                   </TableCell>
                   <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" title="View Timeline" onClick={() => navigate(`/store/timeline/${item.id}`)}>
+                      <Activity className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => openEdit(item)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
