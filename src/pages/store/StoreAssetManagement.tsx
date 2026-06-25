@@ -18,7 +18,8 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Wrench, Plus, Search, ArrowUpFromLine, ArrowDownToLine, History } from 'lucide-react';
+import { Wrench, Plus, Search, ArrowUpFromLine, ArrowDownToLine, History, Activity } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { StoreAssetView, StoreAssetStatus } from '@/types/store';
 
