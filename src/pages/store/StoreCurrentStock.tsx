@@ -28,6 +28,7 @@ import { toast } from 'sonner';
 const ALL = 'all';
 
 const CurrentStockPage: React.FC = () => {
+  const navigate = useNavigate();
   const { data: rows = [], isLoading } = useStoreCurrentStockByItem();
   const { data: racks = [] } = useStoreRacks();
 
