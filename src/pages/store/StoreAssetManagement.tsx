@@ -42,6 +42,7 @@ const STATUS_LABEL: Record<StoreAssetStatus, string> = {
 const today = () => new Date().toISOString().slice(0, 10);
 
 const AssetManagement: React.FC = () => {
+  const navigate = useNavigate();
   const { data: assets = [], isLoading } = useAssets();
   const { data: assetItems = [] } = useAssetItems();
   const { data: racks = [] } = useStoreRacks();
