@@ -68,7 +68,7 @@ const StoreVerificationList: React.FC = () => {
             Physical stock counting sessions. Approval creates stock adjustment transactions.
           </p>
         </div>
-        <WriteGuard>
+        
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4 mr-2" /> New Session</Button>
@@ -120,7 +120,7 @@ const StoreVerificationList: React.FC = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </WriteGuard>
+        
       </div>
 
       <Card>
