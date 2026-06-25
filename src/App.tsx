@@ -114,7 +114,8 @@ const App = () => (
                         <Route path="/store/external-dyed-yarn/receive" element={<WriteRoute redirectTo="/store/external-dyed-yarn"><StoreExternalDyedYarnReceive /></WriteRoute>} />
                         <Route path="/store/assets" element={<StoreAssetManagement />} />
                         <Route path="/store/current-stock" element={<StoreCurrentStock />} />
-                        <Route path="/store/stock-verification" element={<StoreComingSoon title="Stock Verification" />} />
+                        <Route path="/store/stock-verification" element={<StoreVerificationList />} />
+                        <Route path="/store/stock-verification/:id" element={<StoreVerificationDetail />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Layout>
