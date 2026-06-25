@@ -25,7 +25,8 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Plus, Pencil, Search, Package, PlusCircle } from 'lucide-react';
+import { Plus, Pencil, Search, Package, PlusCircle, Activity } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { StoreItem, StoreItemCategory } from '@/types/store';
 
@@ -44,6 +45,7 @@ const emptyForm = {
 };
 
 const StoreItemMaster: React.FC = () => {
+  const navigate = useNavigate();
   const { data: items = [], isLoading } = useStoreItems({ activeOnly: false });
   const { data: racks = [] } = useStoreRacks();
   const createItem = useCreateStoreItem();
@@ -257,6 +259,9 @@ const StoreItemMaster: React.FC = () => {
                       : <Badge variant="outline">Inactive</Badge>}
                   </TableCell>
                   <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" title="View Timeline" onClick={() => navigate(`/store/timeline/${item.id}`)}>
+                      <Activity className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => openEdit(item)}>
                       <Pencil className="h-4 w-4" />
                     </Button>

@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { PackageCheck, Plus, Search } from 'lucide-react';
+import { PackageCheck, Plus, Search, Activity } from 'lucide-react';
 
 const FinishedGoodsList: React.FC = () => {
   const { data: receipts = [], isLoading } = useFGReceiptList();
@@ -86,13 +86,14 @@ const FinishedGoodsList: React.FC = () => {
                     <TableHead>Rack</TableHead>
                     <TableHead className="text-right">Current Balance</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Timeline</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {stockLoading ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>
                   ) : filteredStock.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">No finished goods in stock.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">No finished goods in stock.</TableCell></TableRow>
                   ) : filteredStock.map(s => (
                     <TableRow key={s.receipt_id}>
                       <TableCell className="font-mono text-xs">{s.lot_no}</TableCell>
@@ -105,6 +106,13 @@ const FinishedGoodsList: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         {s.lot_status ? <Badge variant="secondary">{s.lot_status}</Badge> : '—'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button asChild variant="ghost" size="icon" title="View Timeline">
+                          <Link to={`/store/timeline?code=${encodeURIComponent('FG-' + s.lot_no)}`}>
+                            <Activity className="h-4 w-4" />
+                          </Link>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

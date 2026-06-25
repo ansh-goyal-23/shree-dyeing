@@ -18,7 +18,8 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Wrench, Plus, Search, ArrowUpFromLine, ArrowDownToLine, History } from 'lucide-react';
+import { Wrench, Plus, Search, ArrowUpFromLine, ArrowDownToLine, History, Activity } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { StoreAssetView, StoreAssetStatus } from '@/types/store';
 
@@ -41,6 +42,7 @@ const STATUS_LABEL: Record<StoreAssetStatus, string> = {
 const today = () => new Date().toISOString().slice(0, 10);
 
 const AssetManagement: React.FC = () => {
+  const navigate = useNavigate();
   const { data: assets = [], isLoading } = useAssets();
   const { data: assetItems = [] } = useAssetItems();
   const { data: racks = [] } = useStoreRacks();
@@ -316,8 +318,16 @@ const AssetManagement: React.FC = () => {
                       <ArrowDownToLine className="h-3.5 w-3.5 mr-1" /> Return
                     </Button>
                   )}
-                  <Button size="sm" variant="ghost" onClick={() => setHistoryTarget(a)}>
+                  <Button size="sm" variant="ghost" onClick={() => setHistoryTarget(a)} title="Movements">
                     <History className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    title="View Timeline"
+                    onClick={() => a.item_id && navigate(`/store/timeline/${a.item_id}`)}
+                  >
+                    <Activity className="h-3.5 w-3.5" />
                   </Button>
                 </TableCell>
               </TableRow>

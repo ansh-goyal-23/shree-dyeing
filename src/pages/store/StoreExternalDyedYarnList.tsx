@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Globe2, Plus, Search } from 'lucide-react';
+import { Globe2, Plus, Search, Activity } from 'lucide-react';
 
 const ExternalDyedYarnList: React.FC = () => {
   const { data: receipts = [], isLoading } = useEDYReceiptList();
@@ -88,13 +88,14 @@ const ExternalDyedYarnList: React.FC = () => {
                     <TableHead>Challan #</TableHead>
                     <TableHead>Rack</TableHead>
                     <TableHead className="text-right">Current Balance</TableHead>
+                    <TableHead className="text-right">Timeline</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {stockLoading ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>
                   ) : filteredStock.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">No external dyed yarn in stock.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">No external dyed yarn in stock.</TableCell></TableRow>
                   ) : filteredStock.map(s => (
                     <TableRow key={s.receipt_id}>
                       <TableCell className="font-mono text-xs">{s.receipt_number}</TableCell>
@@ -105,6 +106,13 @@ const ExternalDyedYarnList: React.FC = () => {
                       <TableCell>{s.rack_code ? `${s.rack_code} — ${s.rack_name}` : '—'}</TableCell>
                       <TableCell className="text-right font-medium">
                         {Number(s.current_balance).toFixed(3)} {s.unit || 'kg'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button asChild variant="ghost" size="icon" title="View Timeline">
+                          <Link to={`/store/timeline?code=${encodeURIComponent('EDY-' + s.receipt_number)}`}>
+                            <Activity className="h-4 w-4" />
+                          </Link>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

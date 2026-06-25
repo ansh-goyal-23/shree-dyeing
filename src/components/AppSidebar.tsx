@@ -23,6 +23,7 @@ import {
   Boxes,
   ClipboardCheck,
   BookOpenCheck,
+  Activity,
 } from 'lucide-react';
 
 import { useRole } from '@/context/RoleContext';
@@ -79,6 +80,7 @@ const storeItems = [
   { title: 'Current Stock', url: '/store/current-stock', icon: Boxes },
   { title: 'Stock Verification', url: '/store/stock-verification', icon: ClipboardCheck },
   { title: 'Stock Ledger', url: '/store/stock-ledger', icon: BookOpenCheck },
+  { title: 'Inventory Timeline', url: '/store/timeline', icon: Activity },
 ];
 
 const modules = [
