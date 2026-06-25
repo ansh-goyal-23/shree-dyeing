@@ -130,9 +130,14 @@ export interface StoreCurrentStockByItemRow {
   sub_category: string | null;
   unit: string;
   is_asset: boolean;
+  item_created_at: string | null;
+  first_received_date: string | null;
   default_rack_id: string | null;
   default_rack_code: string | null;
   default_rack_name: string | null;
+  latest_rack_id: string | null;
+  latest_rack_code: string | null;
+  latest_rack_name: string | null;
   current_quantity: number;
   last_transaction_date: string | null;
   last_transaction_at: string | null;
@@ -148,6 +153,129 @@ export const useStoreCurrentStockByItem = () =>
         .order('item_name', { ascending: true });
       if (error) throw error;
       return (data ?? []) as StoreCurrentStockByItemRow[];
+    },
+  });
+
+// ---------- Catalogue helpers (auto-create items from transactions) ----
+
+export interface UpsertCatalogueInput {
+  item_name: string;
+  category: StoreItemCategory;
+  sub_category?: string | null;
+  unit: string;
+  is_asset?: boolean;
+  remarks?: string | null;
+  /** Force a specific item_code (used by FG / EDY for deterministic dedupe). */
+  item_code?: string | null;
+}
+
+/**
+ * Find-or-create an inventory catalogue item.
+ * Dedupe rules:
+ *  - If item_code is provided, dedupe on item_code (exact).
+ *  - Otherwise dedupe on (lower(item_name), category).
+ * Never throws on duplicate; always returns the existing row's id.
+ */
+export const upsertCatalogueItem = async (input: UpsertCatalogueInput): Promise<string> => {
+  const name = input.item_name.trim();
+  if (!name) throw new Error('Item name is required');
+  if (!input.unit) throw new Error('Unit is required');
+
+  if (input.item_code) {
+    const { data: byCode } = await sb
+      .from('store_items')
+      .select('id')
+      .eq('item_code', input.item_code)
+      .maybeSingle();
+    if (byCode?.id) return byCode.id as string;
+  }
+
+  const { data: byName } = await sb
+    .from('store_items')
+    .select('id')
+    .ilike('item_name', name)
+    .eq('category', input.category)
+    .limit(1);
+  if (byName && byName.length) return byName[0].id as string;
+
+  const code = input.item_code
+    || `${input.category.toUpperCase().slice(0, 3)}-${Date.now().toString(36).toUpperCase()}`;
+
+  const { data: created, error } = await sb
+    .from('store_items')
+    .insert({
+      item_code: code,
+      item_name: name,
+      category: input.category,
+      sub_category: input.sub_category || null,
+      unit: input.unit,
+      is_asset: input.is_asset ?? false,
+      is_active: true,
+      remarks: input.remarks || null,
+    })
+    .select('id')
+    .single();
+  if (error) throw error;
+  return created.id as string;
+};
+
+export const useUpsertCatalogueItem = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpsertCatalogueInput) => upsertCatalogueItem(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['store_items'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock_by_item'] });
+    },
+  });
+};
+
+/**
+ * Find similar existing items by name (fuzzy token match).
+ * Used to warn user before creating a near-duplicate item.
+ */
+export const useFindSimilarItems = (name: string, category?: StoreItemCategory) =>
+  useQuery({
+    queryKey: ['store_items_similar', name.trim().toLowerCase(), category ?? ''],
+    enabled: name.trim().length >= 2,
+    queryFn: async () => {
+      const tokens = name.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(t => t.length >= 2);
+      if (!tokens.length) return [] as StoreItem[];
+      let q = sb.from('store_items').select('*').eq('is_active', true);
+      if (category) q = q.eq('category', category);
+      q = q.ilike('item_name', `%${tokens[0]}%`);
+      const { data, error } = await q.limit(50);
+      if (error) throw error;
+      const lcName = name.trim().toLowerCase();
+      return ((data ?? []) as StoreItem[])
+        .map((it: StoreItem) => {
+          const lc = it.item_name.toLowerCase();
+          let score = 0;
+          for (const t of tokens) if (lc.includes(t)) score++;
+          if (lc === lcName) score += 5;
+          else if (lc.startsWith(lcName)) score += 2;
+          return { it, score };
+        })
+        .filter(x => x.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5)
+        .map(x => x.it);
+    },
+  });
+
+/** Upload an invoice file to the `inward-bills` bucket. */
+export const useUploadInwardBill = () =>
+  useMutation({
+    mutationFn: async (file: File) => {
+      const ext = file.name.split('.').pop() || 'bin';
+      const path = `${new Date().getFullYear()}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await sb.storage.from('inward-bills').upload(path, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+      if (error) throw error;
+      const { data } = sb.storage.from('inward-bills').getPublicUrl(path);
+      return { path, url: data.publicUrl as string };
     },
   });
 
