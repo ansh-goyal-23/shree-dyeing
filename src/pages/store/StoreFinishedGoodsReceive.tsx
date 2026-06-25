@@ -1,0 +1,219 @@
+import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  useLotsForFG, useStoreRacks, useCreateFGReceipt,
+} from '@/hooks/useStore';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { PackageCheck, Save, Check, ChevronsUpDown } from 'lucide-react';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+
+const NO_RACK = '__no_rack__';
+
+const FinishedGoodsReceive: React.FC = () => {
+  const navigate = useNavigate();
+  const { data: lots = [], isLoading: lotsLoading } = useLotsForFG();
+  const { data: racks = [] } = useStoreRacks();
+  const createFG = useCreateFGReceipt();
+
+  const today = new Date().toISOString().slice(0, 10);
+  const [open, setOpen] = useState(false);
+  const [selectedLotNo, setSelectedLotNo] = useState<string>('');
+  const [form, setForm] = useState({
+    receipt_date: today,
+    shade: '',
+    client: '',
+    yarn_type: '',
+    net_weight: '',
+    rack_id: '',
+    remarks: '',
+  });
+
+  const selectedLot = useMemo(
+    () => (lots as any[]).find(l => l.lot_no === selectedLotNo),
+    [lots, selectedLotNo],
+  );
+
+  const pickLot = (lotNo: string) => {
+    const l = (lots as any[]).find(x => x.lot_no === lotNo);
+    setSelectedLotNo(lotNo);
+    setOpen(false);
+    if (l) {
+      setForm(f => ({
+        ...f,
+        shade: l.color_name || l.shade_number || '',
+        client: l.yarn_company_name || '',
+        yarn_type: l.denier || '',
+        net_weight: l.net_weight != null ? String(l.net_weight) : '',
+      }));
+    }
+  };
+
+  const handleSave = async () => {
+    if (!selectedLotNo) { toast.error('Select a lot'); return; }
+    const nw = parseFloat(form.net_weight);
+    if (!(nw > 0)) { toast.error('Enter a valid net weight'); return; }
+    try {
+      const r = await createFG.mutateAsync({
+        receipt_date: form.receipt_date,
+        lot_no: selectedLotNo,
+        shade: form.shade,
+        client: form.client,
+        yarn_type: form.yarn_type,
+        net_weight: nw,
+        rack_id: form.rack_id || null,
+        remarks: form.remarks,
+      });
+      toast.success(`Receipt ${r.receipt_number} saved — finished goods stock updated`);
+      navigate('/store/finished-goods');
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to receive lot');
+    }
+  };
+
+  return (
+    <div className="p-6 space-y-4 max-w-4xl">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <PackageCheck className="h-6 w-6" /> Receive Finished Lot
+        </h1>
+        <Button variant="outline" onClick={() => navigate('/store/finished-goods')}>Back</Button>
+      </div>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Lot Selection</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div>
+            <Label>Search & Select Lot *</Label>
+            <Popover open={open} onOpenChange={setOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className="w-full justify-between font-normal"
+                >
+                  {selectedLotNo
+                    ? `${selectedLotNo}${selectedLot?.color_name ? ` — ${selectedLot.color_name}` : ''}`
+                    : (lotsLoading ? 'Loading lots…' : 'Search by lot no, shade, client…')}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command
+                  filter={(value, search) => value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0}
+                >
+                  <CommandInput placeholder="Search lots…" />
+                  <CommandList>
+                    <CommandEmpty>
+                      {(lots as any[]).length === 0
+                        ? 'No eligible lots — all have already been received or none exist.'
+                        : 'No matches.'}
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {(lots as any[]).map(l => {
+                        const label = `${l.lot_no} ${l.color_name || ''} ${l.yarn_company_name || ''} ${l.denier || ''}`;
+                        return (
+                          <CommandItem key={l.lot_no} value={label} onSelect={() => pickLot(l.lot_no)}>
+                            <Check className={cn('mr-2 h-4 w-4', selectedLotNo === l.lot_no ? 'opacity-100' : 'opacity-0')} />
+                            <div className="flex flex-col">
+                              <span className="font-medium">{l.lot_no}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {l.color_name || '—'} · {l.yarn_company_name || '—'} · {l.denier || '—'} · {Number(l.net_weight || 0).toFixed(3)} kg · {l.status}
+                              </span>
+                            </div>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Receipt Details</CardTitle></CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <Label>Date *</Label>
+            <Input
+              type="date"
+              value={form.receipt_date}
+              onChange={(e) => setForm(f => ({ ...f, receipt_date: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label>Lot Number</Label>
+            <Input value={selectedLotNo} disabled />
+          </div>
+          <div>
+            <Label>Shade</Label>
+            <Input value={form.shade} onChange={(e) => setForm(f => ({ ...f, shade: e.target.value }))} />
+          </div>
+          <div>
+            <Label>Client</Label>
+            <Input value={form.client} onChange={(e) => setForm(f => ({ ...f, client: e.target.value }))} />
+          </div>
+          <div>
+            <Label>Yarn Type</Label>
+            <Input value={form.yarn_type} onChange={(e) => setForm(f => ({ ...f, yarn_type: e.target.value }))} />
+          </div>
+          <div>
+            <Label>Net Weight (kg) *</Label>
+            <Input
+              type="number" step="any"
+              value={form.net_weight}
+              onChange={(e) => setForm(f => ({ ...f, net_weight: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label>Rack</Label>
+            <Select
+              value={form.rack_id || NO_RACK}
+              onValueChange={(v) => setForm(f => ({ ...f, rack_id: v === NO_RACK ? '' : v }))}
+            >
+              <SelectTrigger><SelectValue placeholder="Select rack" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_RACK}>None</SelectItem>
+                {racks.filter(r => r.is_active).map(r => (
+                  <SelectItem key={r.id} value={r.id}>{r.rack_code} — {r.rack_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="md:col-span-2">
+            <Label>Remarks</Label>
+            <Textarea
+              rows={2}
+              value={form.remarks}
+              onChange={(e) => setForm(f => ({ ...f, remarks: e.target.value }))}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" onClick={() => navigate('/store/finished-goods')}>Cancel</Button>
+        <Button onClick={handleSave} disabled={createFG.isPending}>
+          <Save className="h-4 w-4 mr-1" />
+          {createFG.isPending ? 'Saving…' : 'Receive Lot'}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+export default FinishedGoodsReceive;

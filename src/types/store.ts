@@ -144,3 +144,39 @@ export const STORE_TXN_SIGN: Record<StoreTransactionType, 1 | -1> = {
   asset_issue: -1,
   stock_adjustment: 1, // caller decides sign for adjustments
 };
+
+export interface StoreFinishedGoodsReceipt {
+  id: string;
+  receipt_number: string;
+  receipt_date: string;
+  lot_no: string;
+  shade: string | null;
+  client: string | null;
+  yarn_type: string | null;
+  net_weight: number;
+  rack_id: string | null;
+  item_id: string | null;
+  remarks: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+}
+
+export interface StoreFGCurrentStockRow {
+  receipt_id: string;
+  receipt_number: string;
+  receipt_date: string;
+  lot_no: string;
+  shade: string | null;
+  client: string | null;
+  yarn_type: string | null;
+  received_weight: number;
+  rack_id: string | null;
+  rack_code: string | null;
+  rack_name: string | null;
+  item_id: string | null;
+  item_code: string | null;
+  unit: string | null;
+  current_balance: number;
+  lot_status: string | null;
+}

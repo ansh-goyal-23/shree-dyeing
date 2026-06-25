@@ -37,6 +37,8 @@ import StoreInwardList from "@/pages/store/StoreInwardList";
 import StoreInwardCreate from "@/pages/store/StoreInwardCreate";
 import StoreIssueList from "@/pages/store/StoreIssueList";
 import StoreIssueForm from "@/pages/store/StoreIssueForm";
+import StoreFinishedGoodsList from "@/pages/store/StoreFinishedGoodsList";
+import StoreFinishedGoodsReceive from "@/pages/store/StoreFinishedGoodsReceive";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -100,7 +102,8 @@ const App = () => (
                         <Route path="/store/internal-issues" element={<StoreIssueList />} />
                         <Route path="/store/internal-issues/create" element={<WriteRoute redirectTo="/store/internal-issues"><StoreIssueForm mode="create" /></WriteRoute>} />
                         <Route path="/store/internal-issues/:id/edit" element={<WriteRoute redirectTo="/store/internal-issues"><StoreIssueForm mode="edit" /></WriteRoute>} />
-                        <Route path="/store/finished-goods" element={<StoreComingSoon title="Finished Goods" />} />
+                        <Route path="/store/finished-goods" element={<StoreFinishedGoodsList />} />
+                        <Route path="/store/finished-goods/receive" element={<WriteRoute redirectTo="/store/finished-goods"><StoreFinishedGoodsReceive /></WriteRoute>} />
                         <Route path="/store/external-dyed-yarn" element={<StoreComingSoon title="External Dyed Yarn" />} />
                         <Route path="/store/assets" element={<StoreComingSoon title="Assets" />} />
                         <Route path="/store/current-stock" element={<StoreComingSoon title="Current Stock" description="Live derived stock view — UI coming next." />} />
