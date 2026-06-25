@@ -267,19 +267,23 @@ export function AppSidebar() {
           <SidebarGroup>
             <SidebarGroupLabel>
               <Users className="mr-2 h-4 w-4" />
-              {!collapsed && 'Admin'}
+              {!collapsed && 'Administration'}
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
-                    <NavLink
-                      to="/users"
-                      className="hover:bg-sidebar-accent/50"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                    >
+                    <NavLink to="/users" className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
                       <Users className="mr-2 h-4 w-4" />
                       {!collapsed && <span>Users & Roles</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink to="/activity" className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+                      <Activity className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>Activity Center</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

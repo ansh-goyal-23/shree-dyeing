@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Client, IntakeEntry, IntakeItem } from '@/types/sampling';
+import { logBusinessEvent } from '@/lib/activityCenter';
 
 // ── Clients ──
 
@@ -72,7 +73,14 @@ export function useCreateIntakeEntry() {
       if (error) throw error;
       return mapEntry(data);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['intake_entries'] }),
+    onSuccess: (entry) => {
+      qc.invalidateQueries({ queryKey: ['intake_entries'] });
+      logBusinessEvent({
+        module: 'sampling', eventType: 'intake.created', severity: 'success',
+        entityType: 'intake', entityId: entry.id, entityName: entry.client_name,
+        summary: `Created ${entry.intake_type} intake for ${entry.client_name || 'client'}`,
+      });
+    },
   });
 }
 
