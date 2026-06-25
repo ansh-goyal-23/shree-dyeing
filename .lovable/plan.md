@@ -1,128 +1,165 @@
+# ERP Activity Center — Implementation Plan
 
-# Plan: Software Requirements Specification (SRS) Document
+Replaces the existing "Inventory Logs / Audit Logs" surface with a unified **Activity Center** that answers three questions:
+1. What happened in the factory? (Business Events)
+2. What are employees doing? (User Activity)
+3. Is the ERP healthy? (System Events)
 
-## Goal
-Deliver an in-depth, lean-modern SRS for the Yarn Dyeing Factory Management System (the app currently in this repo). The document will be written for a **mixed audience** — readable business sections up front, technical detail in later sections — and shipped in **two formats**:
-
-1. `docs/SRS.md` — versioned source of truth, lives in the repo.
-2. `/mnt/documents/SRS.docx` — downloadable Word copy generated from the same content using `docx-js`, validated, and rendered as images for QA before delivery.
-
-No application code will change. Only documentation files will be added.
+Admin-only. Read-only UI. Logging is fire-and-forget so it never slows ERP operations.
 
 ---
 
-## Deliverables
+## 1. Database (new migration `sql_migrations/20260625_activity_center.sql`)
 
-- `docs/SRS.md` (new)
-- `/mnt/documents/SRS.docx` (new, exposed via `<presentation-artifact>`)
-- A short build script under `/tmp/` (not committed) used only to generate the .docx
+Three append-only tables in `public`, each with GRANTs + RLS (admin read, authenticated insert via helpers, service_role all).
 
----
+### `business_events`
+```
+id uuid pk, event_timestamp timestamptz default now(),
+module text, event_type text, severity text default 'info',
+user_id uuid, user_name text, user_role text,
+entity_type text, entity_id text, entity_name text,
+reference_number text,
+summary text not null,
+details jsonb,            -- arbitrary structured payload
+change_summary jsonb,     -- [{field, before, after}] meaningful diffs only
+created_at timestamptz default now()
+```
+Indexes: `event_timestamp desc`, `module`, `event_type`, `user_id`, `entity_type+entity_id`, `reference_number`.
 
-## Document Structure (Lean Modern SRS)
+### `user_activity`
+```
+id uuid pk, user_id uuid, user_name text, role text,
+login_time timestamptz, logout_time timestamptz,
+last_activity timestamptz, session_duration_seconds int,
+device text, browser text, os text, ip_address text,
+modules_accessed jsonb default '[]', actions_count int default 0,
+created_at timestamptz default now()
+```
+Indexes: `user_id`, `login_time desc`. One row per session; heartbeat updates `last_activity`/`session_duration_seconds`/`modules_accessed`.
 
-The SRS will have the following sections. Each is sized to give real depth without padding.
+### `system_events`
+```
+id uuid pk, ts timestamptz default now(),
+severity text check in (information|warning|error|critical),
+event_type text, module text,
+description text, technical_details jsonb,
+resolved boolean default false, resolved_by uuid, resolved_at timestamptz
+```
+Indexes: `ts desc`, `severity`, `resolved`.
 
-### 1. Introduction
-- 1.1 Purpose of the document
-- 1.2 Product overview — what the system is (factory-floor dyeing operations: lots, recipes, sampling, dispatch, expenses, inventory)
-- 1.3 Intended audience & how to read this document
-- 1.4 Glossary (Lot, Shade, Base Recipe, Reference Recipe, Intake, Challan, RC, Leveling, Color Addition, Demand, Dye %, etc.)
-- 1.5 References (Supabase docs, Render, repo, SQL migrations)
+RLS: all three readable only by admins (`public.has_role(auth.uid(),'admin')`). Insert allowed for `authenticated` so client helpers can write. `system_events` UPDATE allowed for admins (to mark resolved).
 
-### 2. Overall Description
-- 2.1 Product perspective — single-tenant internal factory tool, React SPA on Render, Supabase backend
-- 2.2 User classes & personas — Admin, Editor, Viewer, plus business roles (factory owner, lab/dyeing operator, dispatch clerk, accountant)
-- 2.3 Operating environment — desktop + mobile browsers, factory-floor friendly UI
-- 2.4 Design & implementation constraints (manual SQL migrations only, permissive RLS, transaction-based inventory, decimal precision rules, Radix Select sentinel pattern, raw DB errors surfaced in toasts)
-- 2.5 Assumptions & dependencies
-
-### 3. Personas & Role Model
-- Role matrix (Admin / Editor / Viewer / Guest) mapped to capability (read, create, edit, delete, admin functions)
-- How roles are stored (`user_roles` table, `has_role` security-definer function), why roles are separated from profiles
-- Route-level guards: `ViewerGuard`, `EditorGuard`, `WriteRoute`, `AdminRoute`
-
-### 4. Functional Requirements — Module by Module
-Each module follows the same template:
-*Purpose → Primary users → Key entities → Workflows / use cases → Business rules → Validation & edge cases → Screens / routes*
-
-Modules covered:
-- 4.1 **Authentication** (`/auth`, Supabase email+password, session in `localStorage`, no app-generated session id)
-- 4.2 **Dashboard / Shade Management home** (`/shade-management`)
-- 4.3 **Lot Management** — Lot list (DESC), Create Lot, Lot Detail, 4-state status workflow (In Approval → Approved → Production / Rejected), shade numbers, source lot cloning, remarks, `created_by`
-- 4.4 **Recipe Editor & Reference Recipes** — Base Recipe vs Reference Recipe, dye % (up to 6 decimals), chemical qty, pH, cloning Base Recipes, recipe math (net weight, dye grams)
-- 4.5 **Process Steps** — Color Addition, RC, Leveling; sequencing after initial dyeing; step-level dyes/chemicals
-- 4.6 **Lot Photos** — base/step/general categories, mandatory preview, Supabase Storage bucket
-- 4.7 **Compare Lots**
-- 4.8 **Master Data** (ASC sort) — dyes & chemicals (Item Master, `short_name` formatting, standard chemicals BUF/CDFT/CWS pre-fills, pH-only fields)
-- 4.9 **Sampling / Intake** — Loose Samples vs Sheets, auto-IDs, Yarn Type autocomplete, Direct Order creation
-- 4.10 **Client Management** — master list constraint, inline client creation, Company autocomplete
-- 4.11 **Order Tracking** — demand in kg, `ORD-` identifiers, workflow statuses
-- 4.12 **Dispatch / Challan Management** — packaging deductions, auto-billing, challan items, footer options
-- 4.13 **Dispatch PDF** — formatting rules, "Rs." units, decimal precision, Web Share API
-- 4.14 **Client Rate Master** — dynamic Production vs Sampling pricing by Yarn Type
-- 4.15 **Expense Management** — multi-type billing, auto-tax, stock integration
-- 4.16 **Inventory Management** — strictly transaction-based, bulk CSV upload, low-stock alerts, change logs, forbidden direct stock edits
-- 4.17 **Recipe Adjustments** — Reduce 10% / Reverse 10% behavior on dye %
-- 4.18 **Reports** — Oil Consumption Report
-- 4.19 **User Management** (Admin) — assign roles, list users
-- 4.20 **Placeholder modules** (Production) — declared scope-out
-
-### 5. Non-Functional Requirements
-- 5.1 Usability — factory-floor layout, explicit `(kg)`/`(g)` labels, `DecimalInput`, large hit targets, mobile responsiveness
-- 5.2 Performance — React Query caching defaults, separate-queries-over-JOINs pattern, expected list sizes
-- 5.3 Reliability & data integrity — transactional inventory, manual SQL migrations, permissive RLS with app-side guards, `created_by` audit fields, `inventory_change_logs`, log purge policy
-- 5.4 Security — Supabase auth, role separation, security-definer functions, no client-side role checks, JWT in `localStorage`, no service-role key in client
-- 5.5 Availability & deployment — Render hosting, Supabase managed Postgres + Storage + Auth
-- 5.6 Maintainability — Radix Select sentinel pattern, raw DB error toasts, data-mapping query pattern
-- 5.7 Compatibility — modern Chromium/Safari/Firefox, desktop + mobile
-- 5.8 Math limits — 3 dp for weights (mg), 2 dp for amounts, up to 6 dp for dye %
-
-### 6. External Interface Requirements
-- 6.1 UI principles (factory floor layout, sort directions, autocomplete patterns)
-- 6.2 Supabase JS client interface (`src/integrations/supabase/client.ts`)
-- 6.3 Supabase Storage buckets (lot photos)
-- 6.4 PDF generation (jspdf + jspdf-autotable, Web Share API)
-- 6.5 No third-party payment/SMS/email integrations
-
-### 7. Data Model
-- 7.1 Entity-Relationship overview (diagram in ASCII)
-- 7.2 Table-by-table summary derived from `sql_migrations/*.sql` and `src/types/*`:
-  lots, recipe_dyes, recipe_chemicals, process_steps, step_dyes, step_chemicals, lot_photos, master_items, clients, intakes, orders, challans, challan_items, expenses, inventory_items, inventory_transactions, inventory_change_logs, user_roles, client_rates, footer_options
-- 7.3 Key constraints, defaults, decimal precision (incl. `20260624_widen_dye_percentage.sql`)
-- 7.4 RLS posture — permissive write policies, viewer read-all, admin delete, editor role
-- 7.5 GRANT policy summary for `public` schema tables
-
-### 8. Technology Stack & Infrastructure
-- 8.1 Frontend — React 18, Vite 5, TypeScript 5, Tailwind v3, shadcn/Radix, React Router, React Query, react-hook-form + zod, sonner toasts, lucide icons, recharts, jspdf, date-fns
-- 8.2 Backend — Supabase (Postgres + Auth + Storage); no edge functions in repo
-- 8.3 Hosting — Render (frontend)
-- 8.4 Build/test — Vite, Vitest, Playwright, ESLint
-- 8.5 Migration workflow — manual SQL files under `sql_migrations/`, applied in order
-
-### 9. Cross-Cutting Constraints (from project memory)
-Consolidated list of the rules the system intentionally enforces (decimal limits, sort directions, sentinel patterns, transactional stock, raw DB error toasts, no JOIN-heavy queries, etc.) so future contributors have a single reference.
-
-### 10. Out of Scope / Known Limitations
-- No production module yet, no real-time multi-user collaboration, no offline mode, no edge functions, draft form state intentionally not persisted (in-memory only), tab discard caveats.
-
-### 11. Appendices
-- A. Route map (full table of routes from `App.tsx` + required role)
-- B. SQL migration index with one-line purpose for each file
-- C. Glossary (extended)
-- D. Change log (initial v1.0)
+The existing `inventory_change_logs` table is left in place (legacy); the sidebar link is moved to Activity Center and inventory logs become one source feeding `business_events` going forward.
 
 ---
 
-## Method
+## 2. Logging helpers (`src/lib/activityCenter.ts`)
 
-1. Read the files I haven't already opened to fill in detail: `AuthContext`, `RoleContext`, `AppContext`, all `sql_migrations/*.sql`, key pages (`CreateLot`, `LotDetail`, `RecipeEditor`, `CreateChallan`, `CreateExpense`, `ItemMaster`, `UserManagement`, `useChallan`, `useExpenses`, `useSampling`, `useClientRates`). Batch reads in parallel.
-2. Write `docs/SRS.md` with the structure above, ~25–40 pages of content.
-3. Write `/tmp/build_srs_docx.js` using `docx-js` (US Letter, Arial, proper heading styles, real bullet/number lists via `LevelFormat`, real tables with dual widths, no unicode bullets, no `\n`).
-4. Run the build script, validate the resulting docx, render each page to JPEG, inspect every page for clipped/overflowing text or broken tables, fix and re-run until clean.
-5. Place the final file at `/mnt/documents/SRS.docx` and surface it with a `<presentation-artifact>` tag in the closing message.
+Three small async functions, all fire-and-forget (`void supabase.from(...).insert(...)`, swallow errors):
 
-## Out of scope for this task
-- No code changes to `src/**`.
-- No new migrations.
-- No security findings remediation — the SRS will *describe* the current posture, not change it.
+- `logBusinessEvent({ module, eventType, severity?, entityType?, entityId?, entityName?, referenceNumber?, summary, details?, changeSummary? })`
+  Pulls `user_id`, name, role from `AuthContext`/`RoleContext` cache.
+- `logUserActivity` — session bookkeeping (start, heartbeat, end). Helper exposes `startSession`, `heartbeat(module)`, `endSession`.
+- `logSystemEvent({ severity, eventType, module, description, technicalDetails? })`
+  Also installed as a global `window.onerror` / `unhandledrejection` handler in `main.tsx` to capture frontend errors as `error` severity.
+
+Helpers must:
+- Never throw.
+- Never block the caller (`void` the promise).
+- Skip when no auth session.
+
+### Diff utility
+`buildChangeSummary(before, after, fields)` → `[{field, before, after}]`, ignoring unchanged values. Used by recipe/expense/role flows so logs store *business* diffs only, never raw rows.
+
+---
+
+## 3. Instrumentation (minimal, surgical)
+
+Add `logBusinessEvent` calls inside existing mutation hooks/handlers only at meaningful boundaries — no CRUD spam:
+
+| Module | Where | Event |
+|---|---|---|
+| Auth | `AuthContext` sign-in / sign-out | `user.logged_in`, `user.logged_out` + start/end session |
+| User Mgmt | `UserManagement.tsx` create/role change/disable | `user.created`, `user.role_changed` (with change_summary) |
+| Sampling | `useSampling` create/cancel, order create/complete | `sampling.intake_created` etc |
+| Shade | `AppContext` lot create/approve/reject/delete, recipe save (with diff), process step add, recipe clone | `lot.*`, `recipe.*`, `process_step.added` |
+| Store | `useStore` inward create, issue create, FG receive, EDY receive, verification approve, asset issue/return | `store.*` |
+| Dispatch | `useChallan` create/dispatch/cancel/delete | `challan.*` |
+| Expenses | `useExpenses` create/delete | `expense.*` |
+
+Each call is one extra line in code already running the mutation — no refactor.
+
+---
+
+## 4. UI
+
+### Routing & sidebar
+- New route `/activity` (admin-only via `AdminRoute`).
+- `src/components/AppSidebar.tsx`: add **Administration → Activity Center** (Activity icon). Remove/replace old "Inventory Logs" link (keep page but link from Activity Center as a sub-view if needed).
+
+### `src/pages/ActivityCenter.tsx`
+Top-level page with shadcn `Tabs`: **Business Events | User Activity | System Events**. Sticky filter bar per tab. URL query `?tab=...` preserved.
+
+### Tab 1 — `components/activity/BusinessEventsTab.tsx`
+- Filters: date range, module (multi), event type (multi), user, role, free-text (matches `entity_name`, `reference_number`, `summary`).
+- Table: Date · Time · User · Module (icon+label) · Event (badge) · Reference · Summary. Newest first, 100/page, cursor pagination (`event_timestamp < lastSeen`).
+- Row click → right `Sheet` drawer: full summary, who/when, JSON `details`, formatted `change_summary` (before → after lines), "Open Record" button that routes by `entity_type` (lot → `/lots/:id`, challan → `/challans/:id`, expense → expense dialog, issue → `/store/issues/:id`, etc.).
+- "Timeline" toggle inside drawer when `entity_type+entity_id` set: fetch all events for that entity, render chronological vertical timeline.
+
+### Tab 2 — `components/activity/UserActivityTab.tsx`
+- Cards: Users Online (sessions with `last_activity > now()-5min`), Today's Logins, Avg Session, Most Active User, Most Used Module, Failed Logins (from `system_events` where `event_type='auth.failed'`).
+- Recent Activity table (login/logout/timeout).
+- User profile drawer: last login/logout, session history, daily-usage sparkline, modules used (from `modules_accessed` aggregation), business events count.
+- Charts (Recharts already in stack): Daily Active Users (bar), Hourly Logins (line), Module Usage (pie), Session Duration (histogram).
+- Filters: date, role, user.
+
+### Tab 3 — `components/activity/SystemEventsTab.tsx`
+- Dashboard cards: Recent Errors (24h), Pending (unresolved), Resolved, Storage Usage (from Supabase storage size where available — otherwise hide), Database Status (simple `select 1` ping).
+- Severity badges: information=blue, warning=orange, error=red, critical=dark red — tokens added in `index.css`.
+- Table with severity filter, "Mark resolved" admin action (updates row).
+- Drawer shows `technical_details` JSON.
+
+### Shared
+- `components/activity/SeverityBadge.tsx`, `ModuleIcon.tsx`, `EventTypeBadge.tsx`.
+- All data hooks in `src/hooks/useActivityCenter.ts` using React Query with `keepPreviousData` and 30s stale time. No realtime subscriptions (polling on tab focus only) to keep it cheap.
+
+### Session tracking
+- On login: `logUserActivity.startSession()` inserts a row, stores `session_id` in memory.
+- Heartbeat: a single `setInterval` in `Layout.tsx` every 60s updates `last_activity`, `session_duration_seconds`, and appends current route's module to `modules_accessed` (dedup).
+- On logout / `beforeunload`: set `logout_time`.
+
+---
+
+## 5. Performance & safety
+- All inserts are `void`-promised; failures only `console.warn`, never surfaced to user.
+- Indexes on every filter column.
+- 100/page cursor pagination, lazy drawer detail fetches.
+- No logging of: page views, searches, sorting, filtering, typing, hovers, PDF prints.
+- Admin-only RLS so non-admins cannot even read.
+
+---
+
+## 6. Files to create / edit
+
+**Create**
+- `sql_migrations/20260625_activity_center.sql`
+- `src/lib/activityCenter.ts`
+- `src/hooks/useActivityCenter.ts`
+- `src/pages/ActivityCenter.tsx`
+- `src/components/activity/BusinessEventsTab.tsx`
+- `src/components/activity/UserActivityTab.tsx`
+- `src/components/activity/SystemEventsTab.tsx`
+- `src/components/activity/EventDrawer.tsx`
+- `src/components/activity/SeverityBadge.tsx`
+- `src/components/activity/ModuleIcon.tsx`
+
+**Edit (one-line instrumentation only)**
+- `src/App.tsx` (route), `src/components/AppSidebar.tsx` (link), `src/components/Layout.tsx` (heartbeat)
+- `src/context/AuthContext.tsx` (login/logout events + session)
+- `src/main.tsx` (global error → `logSystemEvent`)
+- `src/hooks/useChallan.ts`, `src/hooks/useExpenses.ts`, `src/hooks/useSampling.ts`, `src/hooks/useStore.ts`
+- `src/context/AppContext.tsx` (lot/recipe events)
+- `src/pages/UserManagement.tsx` (user/role events)
+
+No existing behavior changes; only additive logging calls.

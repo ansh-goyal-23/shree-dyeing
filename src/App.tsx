@@ -47,6 +47,7 @@ import StoreVerificationList from "@/pages/store/StoreVerificationList";
 import StoreVerificationDetail from "@/pages/store/StoreVerificationDetail";
 import StoreStockLedger from "@/pages/store/StoreStockLedger";
 import StoreInventoryTimeline from "@/pages/store/StoreInventoryTimeline";
+import ActivityCenter from "@/pages/ActivityCenter";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -121,6 +122,7 @@ const App = () => (
                         <Route path="/store/stock-ledger" element={<StoreStockLedger />} />
                         <Route path="/store/timeline" element={<StoreInventoryTimeline />} />
                         <Route path="/store/timeline/:itemId" element={<StoreInventoryTimeline />} />
+                        <Route path="/activity" element={<AdminRoute><ActivityCenter /></AdminRoute>} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Layout>

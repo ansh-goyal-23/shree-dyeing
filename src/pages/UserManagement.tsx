@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useRole } from '@/context/RoleContext';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+import { logBusinessEvent } from '@/lib/activityCenter';
 
 interface Row {
   user_id: string;
@@ -36,10 +37,17 @@ const UserManagement: React.FC = () => {
 
   const setUserRole = async (userId: string, newRole: 'admin' | 'editor' | 'viewer') => {
     setSaving(userId);
+    const prevRow = rows.find(r => r.user_id === userId);
     const { error } = await supabase.rpc('set_user_role', { _user_id: userId, _role: newRole });
     setSaving(null);
     if (error) { toast.error(error.message); return; }
     toast.success('Role updated');
+    logBusinessEvent({
+      module: 'admin', eventType: 'user.role_changed', severity: 'warning',
+      entityType: 'user', entityId: userId, entityName: prevRow?.email,
+      summary: `Changed ${prevRow?.email || 'user'} role: ${prevRow?.role || '—'} → ${newRole}`,
+      changeSummary: [{ field: 'role', before: prevRow?.role || null, after: newRole }],
+    });
     if (userId === user?.id) await refresh();
     await load();
   };

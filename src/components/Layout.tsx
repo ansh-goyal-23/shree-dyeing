@@ -1,13 +1,40 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { LogOut } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useRole } from '@/context/RoleContext';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
+import { heartbeatSession, setActivityUserContext, endUserSession } from '@/lib/activityCenter';
+
+const moduleFromPath = (p: string): string => {
+  if (p.startsWith('/shade-management')) return 'shade';
+  if (p.startsWith('/sampling')) return 'sampling';
+  if (p.startsWith('/dispatch')) return 'dispatch';
+  if (p.startsWith('/expenses')) return 'expense';
+  if (p.startsWith('/store')) return 'store';
+  if (p.startsWith('/users') || p.startsWith('/activity')) return 'admin';
+  if (p.startsWith('/item-master')) return 'item-master';
+  return 'other';
+};
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { signOut, user } = useAuth();
-  const { isViewer } = useRole();
+  const { isViewer, role } = useRole();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (role) setActivityUserContext({ role });
+  }, [role]);
+
+  useEffect(() => {
+    const mod = moduleFromPath(location.pathname);
+    void heartbeatSession(mod);
+    const id = window.setInterval(() => { void heartbeatSession(mod); }, 60_000);
+    const onUnload = () => { void endUserSession(); };
+    window.addEventListener('beforeunload', onUnload);
+    return () => { window.clearInterval(id); window.removeEventListener('beforeunload', onUnload); };
+  }, [location.pathname]);
 
   return (
     <SidebarProvider>

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Expense, ExpenseItem, ExpenseDocument, Supplier, ExpenseCategory, ExpenseLineItem, Company } from '@/types/expense';
 import { logActivity } from '@/lib/activityLog';
+import { logBusinessEvent } from '@/lib/activityCenter';
 
 // ── Suppliers ──
 export function useSuppliers() {
@@ -287,6 +288,13 @@ export function useCreateExpense() {
         next: `₹${payload.total_amount.toFixed(2)} • ${payload.payment_status}`,
       });
 
+      logBusinessEvent({
+        module: 'expense', eventType: 'expense.created', severity: 'success',
+        entityType: 'expense', entityId: expense.id,
+        summary: `Added ${payload.expense_type} expense ₹${payload.total_amount.toFixed(2)}`,
+        details: { items: payload.line_items.length, payment_status: payload.payment_status, supplier_id: payload.supplier_id },
+      });
+
       return expense;
     },
     onSuccess: () => {
@@ -334,6 +342,11 @@ export function useDeleteExpense() {
         prev: prev ? `₹${Number(prev.total_amount).toFixed(2)} • ${prev.payment_status}` : null,
         next: 'deleted',
         warn: true,
+      });
+      logBusinessEvent({
+        module: 'expense', eventType: 'expense.deleted', severity: 'warning',
+        entityType: 'expense', entityId: id,
+        summary: `Deleted ${prev?.expense_type || 'expense'}${prev?.total_amount ? ` ₹${Number(prev.total_amount).toFixed(2)}` : ''}`,
       });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['expenses'] }),

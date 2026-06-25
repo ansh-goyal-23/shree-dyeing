@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Challan, ChallanItem } from '@/types/challan';
+import { logBusinessEvent } from '@/lib/activityCenter';
 
 // -------------------------------------------------------------------
 // Store integration: dispatching a challan must reduce store stock
@@ -195,11 +196,18 @@ export function useCreateChallan() {
 
       return challan;
     },
-    onSuccess: () => {
+    onSuccess: (challan, vars) => {
       qc.invalidateQueries({ queryKey: ['challans'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock_by_item'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
+      const totalKg = vars.items.reduce((s, i) => s + (Number(i.net_weight) || 0), 0);
+      logBusinessEvent({
+        module: 'dispatch', eventType: 'challan.created', severity: 'success',
+        entityType: 'challan', entityId: challan.id, referenceNumber: vars.challan_number,
+        summary: `Created Challan ${vars.challan_number} — ${vars.items.length} lot(s), ${totalKg.toFixed(2)} kg`,
+        details: { items: vars.items.length, total_kg: totalKg, date: vars.date },
+      });
     },
   });
 }
@@ -313,11 +321,15 @@ export function useDeleteChallan() {
         await applyChallanStockDelta(prevChallan.challan_number, prevChallan.date, prevItems, []);
       }
     },
-    onSuccess: () => {
+    onSuccess: (_d, id) => {
       qc.invalidateQueries({ queryKey: ['challans'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock_by_item'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
+      logBusinessEvent({
+        module: 'dispatch', eventType: 'challan.deleted', severity: 'warning',
+        entityType: 'challan', entityId: id, summary: 'Challan deleted',
+      });
     },
   });
 }

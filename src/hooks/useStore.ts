@@ -22,6 +22,9 @@ import type {
 
 // Re-use the project's supabase client
 import { supabase } from '@/integrations/supabase/client';
+import { logBusinessEvent } from '@/lib/activityCenter';
+
+
 
 const sb = supabase as any;
 
@@ -301,10 +304,16 @@ export const useCreateStoreInward = () => {
 
       return header as StoreStockInward;
     },
-    onSuccess: () => {
+    onSuccess: (header, vars) => {
       qc.invalidateQueries({ queryKey: ['store_inward_list'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+      logBusinessEvent({
+        module: 'store', eventType: 'stock.received', severity: 'success',
+        entityType: 'inward', entityId: header.id, referenceNumber: header.inward_number,
+        summary: `Received Inward ${header.inward_number} — ${vars.lines.length} item(s)${vars.supplier ? ` from ${vars.supplier}` : ''}`,
+        details: { lines: vars.lines.length, supplier: vars.supplier, invoice: vars.invoice_number },
+      });
     },
   });
 };
@@ -430,10 +439,16 @@ export const useCreateStoreIssue = () => {
 
       return header as StoreInternalIssue;
     },
-    onSuccess: () => {
+    onSuccess: (header, vars) => {
       qc.invalidateQueries({ queryKey: ['store_issue_list'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+      logBusinessEvent({
+        module: 'store', eventType: 'internal_issue.created', severity: 'success',
+        entityType: 'issue', entityId: header.id, referenceNumber: header.issue_number,
+        summary: `Issued slip ${header.issue_number} — ${vars.lines.length} item(s)${vars.issued_to ? ` to ${vars.issued_to}` : ''}`,
+        details: { lines: vars.lines.length, department: vars.department, issued_to: vars.issued_to },
+      });
     },
   });
 };
@@ -668,13 +683,20 @@ export const useCreateFGReceipt = () => {
 
       return header as StoreFinishedGoodsReceipt;
     },
-    onSuccess: () => {
+    onSuccess: (header, vars) => {
       qc.invalidateQueries({ queryKey: ['fg_receipt_list'] });
       qc.invalidateQueries({ queryKey: ['fg_current_stock'] });
       qc.invalidateQueries({ queryKey: ['fg_eligible_lots'] });
       qc.invalidateQueries({ queryKey: ['store_items'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+      logBusinessEvent({
+        module: 'store', eventType: 'finished_lot.received', severity: 'success',
+        entityType: 'fg_receipt', entityId: header.id, referenceNumber: header.receipt_number,
+        entityName: `Lot ${vars.lot_no}`,
+        summary: `Received finished Lot ${vars.lot_no} — ${Number(vars.net_weight).toFixed(3)} kg`,
+        details: { lot_no: vars.lot_no, shade: vars.shade, client: vars.client },
+      });
     },
   });
 };
@@ -799,12 +821,18 @@ export const useCreateEDYReceipt = () => {
 
       return header as StoreExternalDyedYarnReceipt;
     },
-    onSuccess: () => {
+    onSuccess: (header, vars) => {
       qc.invalidateQueries({ queryKey: ['edy_receipt_list'] });
       qc.invalidateQueries({ queryKey: ['edy_current_stock'] });
       qc.invalidateQueries({ queryKey: ['store_items'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+      logBusinessEvent({
+        module: 'store', eventType: 'external_dyed_yarn.received', severity: 'success',
+        entityType: 'edy_receipt', entityId: header.id, referenceNumber: header.receipt_number,
+        summary: `Received external dyed yarn ${header.receipt_number} — ${Number(vars.net_weight).toFixed(3)} kg${vars.supplier ? ` (${vars.supplier})` : ''}`,
+        details: { supplier: vars.supplier, shade: vars.shade, yarn_type: vars.yarn_type },
+      });
     },
   });
 };
@@ -1022,11 +1050,18 @@ export const useIssueAsset = () => {
         })
         .eq('id', asset.id);
     },
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['store_assets'] });
       qc.invalidateQueries({ queryKey: ['store_asset_movements'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+      logBusinessEvent({
+        module: 'store', eventType: 'asset.issued', severity: 'info',
+        entityType: 'asset', entityId: vars.asset.id, referenceNumber: vars.asset.asset_id,
+        entityName: vars.asset.item_name,
+        summary: `Issued asset ${vars.asset.asset_id} to ${vars.holder}`,
+        details: { department: vars.department, condition: vars.condition },
+      });
     },
   });
 };
@@ -1095,11 +1130,17 @@ export const useReturnAsset = () => {
         })
         .eq('id', asset.id);
     },
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['store_assets'] });
       qc.invalidateQueries({ queryKey: ['store_asset_movements'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+      logBusinessEvent({
+        module: 'store', eventType: 'asset.returned', severity: 'info',
+        entityType: 'asset', entityId: vars.asset.id, referenceNumber: vars.asset.asset_id,
+        entityName: vars.asset.item_name,
+        summary: `Returned asset ${vars.asset.asset_id} (status → ${vars.status_after ?? 'available'})`,
+      });
     },
   });
 };
@@ -1363,13 +1404,19 @@ export const useApproveVerificationSession = () => {
 
       return { adjustments_created: adjCount };
     },
-    onSuccess: (_d, sessionId) => {
+    onSuccess: (res, sessionId) => {
       qc.invalidateQueries({ queryKey: ['store_verification_sessions'] });
       qc.invalidateQueries({ queryKey: ['store_verification_session', sessionId] });
       qc.invalidateQueries({ queryKey: ['store_verification_lines', sessionId] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock_by_item'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
+      logBusinessEvent({
+        module: 'store', eventType: 'stock_verification.completed', severity: 'success',
+        entityType: 'verification', entityId: sessionId,
+        summary: `Stock verification approved — ${res?.adjustments_created ?? 0} adjustment(s) posted`,
+        details: res,
+      });
     },
   });
 };
