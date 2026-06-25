@@ -37,6 +37,8 @@ import StoreInwardList from "@/pages/store/StoreInwardList";
 import StoreInwardCreate from "@/pages/store/StoreInwardCreate";
 import StoreIssueList from "@/pages/store/StoreIssueList";
 import StoreIssueForm from "@/pages/store/StoreIssueForm";
+import StoreFinishedGoodsList from "@/pages/store/StoreFinishedGoodsList";
+import StoreFinishedGoodsReceive from "@/pages/store/StoreFinishedGoodsReceive";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
