@@ -1421,4 +1421,25 @@ export const useStockLedger = () =>
     },
   });
 
+// ---------- Inventory Timeline (read-only) ----------
+// Per-item ledger slice. The view already computes running_balance per item
+// over its full history, so filtering by item_id preserves correct balances.
+export const useItemTimeline = (itemId: string | undefined) =>
+  useQuery({
+    queryKey: ['store_item_timeline', itemId],
+    enabled: !!itemId,
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('store_stock_ledger')
+        .select('*')
+        .eq('item_id', itemId)
+        .order('transaction_date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(5000);
+      if (error) throw error;
+      return (data ?? []) as StockLedgerRow[];
+    },
+  });
+
+
 
