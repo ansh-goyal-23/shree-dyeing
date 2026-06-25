@@ -71,8 +71,29 @@ export interface StoreStockTransaction {
   remarks: string | null;
   rate: number | null;
   amount: number | null;
+  purpose: string | null;
   created_at: string;
   created_by: string | null;
+}
+
+export interface StoreInternalIssue {
+  id: string;
+  issue_number: string;
+  issue_date: string;
+  department: string | null;
+  issued_to: string | null;
+  remarks: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+}
+
+export interface StoreInternalIssueLineInput {
+  item_id: string;
+  quantity: number;
+  unit: string;
+  rack_id?: string | null;
+  purpose?: string | null;
 }
 
 export interface StoreStockInward {
