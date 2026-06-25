@@ -69,8 +69,33 @@ export interface StoreStockTransaction {
   person: string | null;
   supplier: string | null;
   remarks: string | null;
+  rate: number | null;
+  amount: number | null;
   created_at: string;
   created_by: string | null;
+}
+
+export interface StoreStockInward {
+  id: string;
+  inward_number: string;
+  inward_date: string;
+  supplier: string | null;
+  invoice_number: string | null;
+  grn_number: string | null;
+  remarks: string | null;
+  total_amount: number;
+  created_at: string;
+  created_by: string | null;
+}
+
+export interface StoreStockInwardLineInput {
+  item_id: string;
+  quantity: number;
+  unit: string;
+  rate?: number | null;
+  amount?: number | null;
+  rack_id?: string | null;
+  remarks?: string | null;
 }
 
 export interface StoreCurrentStockRow {
