@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { PackageCheck, Plus, Search } from 'lucide-react';
+import { PackageCheck, Plus, Search, Activity } from 'lucide-react';
 
 const FinishedGoodsList: React.FC = () => {
   const { data: receipts = [], isLoading } = useFGReceiptList();
