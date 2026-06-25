@@ -1404,13 +1404,19 @@ export const useApproveVerificationSession = () => {
 
       return { adjustments_created: adjCount };
     },
-    onSuccess: (_d, sessionId) => {
+    onSuccess: (res, sessionId) => {
       qc.invalidateQueries({ queryKey: ['store_verification_sessions'] });
       qc.invalidateQueries({ queryKey: ['store_verification_session', sessionId] });
       qc.invalidateQueries({ queryKey: ['store_verification_lines', sessionId] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock_by_item'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
+      logBusinessEvent({
+        module: 'store', eventType: 'stock_verification.completed', severity: 'success',
+        entityType: 'verification', entityId: sessionId,
+        summary: `Stock verification approved — ${res?.adjustments_created ?? 0} adjustment(s) posted`,
+        details: res,
+      });
     },
   });
 };
