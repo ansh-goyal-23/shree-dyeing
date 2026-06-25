@@ -117,6 +117,7 @@ const App = () => (
                         <Route path="/store/current-stock" element={<StoreCurrentStock />} />
                         <Route path="/store/stock-verification" element={<StoreVerificationList />} />
                         <Route path="/store/stock-verification/:id" element={<StoreVerificationDetail />} />
+                        <Route path="/store/stock-ledger" element={<StoreStockLedger />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Layout>
