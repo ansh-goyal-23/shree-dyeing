@@ -880,25 +880,19 @@ export const useCreateEDYReceipt = () => {
       if (rcptErr) throw rcptErr;
       const receiptNumber: string = rcptNum;
 
-      const itemCode = `EDY-${receiptNumber}`;
-      const itemName = `${receiptNumber}${payload.shade ? ' — ' + payload.shade : ''}${payload.supplier ? ' (' + payload.supplier + ')' : ''}`;
-      const { data: newItem, error: itemErr } = await sb
-        .from('store_items')
-        .insert({
-          item_code: itemCode,
-          item_name: itemName,
-          category: 'external_dyed_yarn',
-          sub_category: null,
-          unit: 'kg',
-          is_asset: false,
-          is_active: true,
-          default_rack: payload.rack_id || null,
-          remarks: `Auto-created for external dyed yarn receipt ${receiptNumber}`,
-        })
-        .select('id')
-        .single();
-      if (itemErr) throw itemErr;
-      const itemId: string = newItem.id;
+      // Item name format: LotNumber_Shade_Dyer (uses challan as lot label).
+      const lotLabel = (payload.challan_number || receiptNumber).replace(/\s+/g, '');
+      const shadeLabel = (payload.shade || 'NA').replace(/\s+/g, '');
+      const dyerLabel = (payload.supplier || 'Dyer').replace(/\s+/g, '');
+      const itemName = `${lotLabel}_${shadeLabel}_${dyerLabel}`;
+      const itemId = await upsertCatalogueItem({
+        item_code: `EDY-${receiptNumber}`,
+        item_name: itemName,
+        category: 'external_dyed_yarn',
+        sub_category: 'External Production',
+        unit: 'kg',
+        remarks: `Auto-created for external dyed yarn receipt ${receiptNumber}`,
+      });
 
       const amount =
         payload.rate != null
