@@ -22,6 +22,7 @@ import {
   Wrench,
   Boxes,
   ClipboardCheck,
+  BookOpenCheck,
 } from 'lucide-react';
 
 import { useRole } from '@/context/RoleContext';
