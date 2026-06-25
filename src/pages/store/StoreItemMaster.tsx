@@ -45,6 +45,7 @@ const emptyForm = {
 };
 
 const StoreItemMaster: React.FC = () => {
+  const navigate = useNavigate();
   const { data: items = [], isLoading } = useStoreItems({ activeOnly: false });
   const { data: racks = [] } = useStoreRacks();
   const createItem = useCreateStoreItem();
