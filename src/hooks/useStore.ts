@@ -6,6 +6,8 @@ import type {
   StoreStockTransaction,
   StoreCurrentStockRow,
   StoreItemCategory,
+  StoreStockInward,
+  StoreStockInwardLineInput,
 } from '@/types/store';
 
 // Re-use the project's supabase client
