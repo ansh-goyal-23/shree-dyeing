@@ -43,6 +43,8 @@ import StoreExternalDyedYarnList from "@/pages/store/StoreExternalDyedYarnList";
 import StoreExternalDyedYarnReceive from "@/pages/store/StoreExternalDyedYarnReceive";
 import StoreAssetManagement from "@/pages/store/StoreAssetManagement";
 import StoreCurrentStock from "@/pages/store/StoreCurrentStock";
+import StoreVerificationList from "@/pages/store/StoreVerificationList";
+import StoreVerificationDetail from "@/pages/store/StoreVerificationDetail";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -112,7 +114,8 @@ const App = () => (
                         <Route path="/store/external-dyed-yarn/receive" element={<WriteRoute redirectTo="/store/external-dyed-yarn"><StoreExternalDyedYarnReceive /></WriteRoute>} />
                         <Route path="/store/assets" element={<StoreAssetManagement />} />
                         <Route path="/store/current-stock" element={<StoreCurrentStock />} />
-                        <Route path="/store/stock-verification" element={<StoreComingSoon title="Stock Verification" />} />
+                        <Route path="/store/stock-verification" element={<StoreVerificationList />} />
+                        <Route path="/store/stock-verification/:id" element={<StoreVerificationDetail />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Layout>
