@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Globe2, Plus, Search } from 'lucide-react';
+import { Globe2, Plus, Search, Activity } from 'lucide-react';
 
 const ExternalDyedYarnList: React.FC = () => {
   const { data: receipts = [], isLoading } = useEDYReceiptList();
