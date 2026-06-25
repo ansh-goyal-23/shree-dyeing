@@ -475,3 +475,155 @@ export const useUpdateStoreIssue = () => {
   });
 };
 
+
+// ---------- Finished Goods Receipts (lot-based) ----------
+
+export const useLotsForFG = () =>
+  useQuery({
+    queryKey: ['fg_eligible_lots'],
+    queryFn: async () => {
+      const [lotsRes, recvRes] = await Promise.all([
+        sb.from('lots').select('lot_no, color_name, yarn_company_name, denier, net_weight, status, shade_number').order('lot_no', { ascending: false }),
+        sb.from('store_finished_goods_receipts').select('lot_no'),
+      ]);
+      if (lotsRes.error) throw lotsRes.error;
+      if (recvRes.error) throw recvRes.error;
+      const taken = new Set((recvRes.data ?? []).map((r: any) => r.lot_no));
+      return ((lotsRes.data ?? []) as any[]).filter(l => !taken.has(l.lot_no));
+    },
+  });
+
+export const useFGReceiptList = () =>
+  useQuery({
+    queryKey: ['fg_receipt_list'],
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('store_finished_goods_receipts')
+        .select('*')
+        .order('receipt_date', { ascending: false })
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as StoreFinishedGoodsReceipt[];
+    },
+  });
+
+export const useFGCurrentStock = () =>
+  useQuery({
+    queryKey: ['fg_current_stock'],
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('store_fg_current_stock')
+        .select('*')
+        .order('receipt_date', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as StoreFGCurrentStockRow[];
+    },
+  });
+
+interface CreateFGReceiptPayload {
+  receipt_date: string;
+  lot_no: string;
+  shade?: string | null;
+  client?: string | null;
+  yarn_type?: string | null;
+  net_weight: number;
+  rack_id?: string | null;
+  remarks?: string | null;
+}
+
+export const useCreateFGReceipt = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateFGReceiptPayload) => {
+      if (!payload.lot_no) throw new Error('Select a lot');
+      if (!(payload.net_weight > 0)) throw new Error('Net weight must be positive');
+
+      const { data: dup } = await sb
+        .from('store_finished_goods_receipts')
+        .select('id')
+        .eq('lot_no', payload.lot_no)
+        .maybeSingle();
+      if (dup) throw new Error(`Lot ${payload.lot_no} has already been received`);
+
+      const fgItemCode = `FG-${payload.lot_no}`;
+      let itemId: string;
+      const { data: existingItem } = await sb
+        .from('store_items')
+        .select('id')
+        .eq('item_code', fgItemCode)
+        .maybeSingle();
+      if (existingItem?.id) {
+        itemId = existingItem.id;
+      } else {
+        const { data: newItem, error: itemErr } = await sb
+          .from('store_items')
+          .insert({
+            item_code: fgItemCode,
+            item_name: `${payload.lot_no}${payload.shade ? ' — ' + payload.shade : ''}`,
+            category: 'finished_good',
+            sub_category: null,
+            unit: 'kg',
+            is_asset: false,
+            is_active: true,
+            default_rack: payload.rack_id || null,
+            remarks: `Auto-created for finished lot ${payload.lot_no}`,
+          })
+          .select('id')
+          .single();
+        if (itemErr) throw itemErr;
+        itemId = newItem.id;
+      }
+
+      const { data: rcptNum, error: rcptErr } = await sb.rpc('next_store_fg_number');
+      if (rcptErr) throw rcptErr;
+      const receiptNumber: string = rcptNum;
+
+      const { data: header, error: headerErr } = await sb
+        .from('store_finished_goods_receipts')
+        .insert({
+          receipt_number: receiptNumber,
+          receipt_date: payload.receipt_date,
+          lot_no: payload.lot_no,
+          shade: payload.shade || null,
+          client: payload.client || null,
+          yarn_type: payload.yarn_type || null,
+          net_weight: payload.net_weight,
+          rack_id: payload.rack_id || null,
+          item_id: itemId,
+          remarks: payload.remarks || null,
+        })
+        .select()
+        .single();
+      if (headerErr) throw headerErr;
+
+      const { data: txnNum, error: txnNumErr } = await sb.rpc('next_store_txn_number');
+      if (txnNumErr) throw txnNumErr;
+      const { error: txnErr } = await sb.from('store_stock_transactions').insert({
+        transaction_number: txnNum,
+        transaction_date: payload.receipt_date,
+        transaction_type: 'finished_lot_receipt',
+        item_id: itemId,
+        quantity: Math.abs(Number(payload.net_weight)),
+        unit: 'kg',
+        rack_id: payload.rack_id || null,
+        reference_type: 'fg_receipt',
+        reference_number: receiptNumber,
+        remarks: payload.remarks || null,
+      });
+      if (txnErr) {
+        await sb.from('store_finished_goods_receipts').delete().eq('id', header.id);
+        throw txnErr;
+      }
+
+      return header as StoreFinishedGoodsReceipt;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fg_receipt_list'] });
+      qc.invalidateQueries({ queryKey: ['fg_current_stock'] });
+      qc.invalidateQueries({ queryKey: ['fg_eligible_lots'] });
+      qc.invalidateQueries({ queryKey: ['store_items'] });
+      qc.invalidateQueries({ queryKey: ['store_transactions'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+    },
+  });
+};
