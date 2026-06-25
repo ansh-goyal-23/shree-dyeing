@@ -439,10 +439,16 @@ export const useCreateStoreIssue = () => {
 
       return header as StoreInternalIssue;
     },
-    onSuccess: () => {
+    onSuccess: (header, vars) => {
       qc.invalidateQueries({ queryKey: ['store_issue_list'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+      logBusinessEvent({
+        module: 'store', eventType: 'internal_issue.created', severity: 'success',
+        entityType: 'issue', entityId: header.id, referenceNumber: header.issue_number,
+        summary: `Issued slip ${header.issue_number} — ${vars.lines.length} item(s)${vars.issued_to ? ` to ${vars.issued_to}` : ''}`,
+        details: { lines: vars.lines.length, department: vars.department, issued_to: vars.issued_to },
+      });
     },
   });
 };
