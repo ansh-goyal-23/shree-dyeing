@@ -136,7 +136,15 @@ const AssetManagement: React.FC = () => {
     try {
       await createAsset.mutateAsync({
         asset_id: form.asset_id || null,
-        item_id: form.item_id,
+        item_id: form.use_new_item ? undefined : form.item_id,
+        new_item: form.use_new_item
+          ? {
+              item_name: form.new_item_name.trim(),
+              category: 'tool_equipment',
+              sub_category: null,
+              unit: form.new_item_unit || 'pcs',
+            }
+          : undefined,
         current_holder: form.current_holder || null,
         department: form.department || null,
         rack_id: form.rack_id || null,
