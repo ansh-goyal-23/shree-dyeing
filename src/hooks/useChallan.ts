@@ -45,7 +45,7 @@ async function applyChallanStockDelta(
   const byCode = new Map((items ?? []).map((i: any) => [i.item_code, i]));
 
   for (const [lot, delta] of lotsWithDelta) {
-    const item = byCode.get(`FG-${lot}`) ?? byCode.get(`EDY-${lot}`);
+    const item: any = byCode.get(`FG-${lot}`) ?? byCode.get(`EDY-${lot}`);
     if (!item) continue; // not yet received into store — skip
     const { data: txnNum, error: nErr } = await sb.rpc('next_store_txn_number');
     if (nErr) continue;
