@@ -758,34 +758,15 @@ export const useCreateFGReceipt = () => {
         .maybeSingle();
       if (dup) throw new Error(`Lot ${payload.lot_no} has already been received`);
 
-      const fgItemCode = `FG-${payload.lot_no}`;
-      let itemId: string;
-      const { data: existingItem } = await sb
-        .from('store_items')
-        .select('id')
-        .eq('item_code', fgItemCode)
-        .maybeSingle();
-      if (existingItem?.id) {
-        itemId = existingItem.id;
-      } else {
-        const { data: newItem, error: itemErr } = await sb
-          .from('store_items')
-          .insert({
-            item_code: fgItemCode,
-            item_name: `${payload.lot_no}${payload.shade ? ' — ' + payload.shade : ''}`,
-            category: 'finished_good',
-            sub_category: null,
-            unit: 'kg',
-            is_asset: false,
-            is_active: true,
-            default_rack: payload.rack_id || null,
-            remarks: `Auto-created for finished lot ${payload.lot_no}`,
-          })
-          .select('id')
-          .single();
-        if (itemErr) throw itemErr;
-        itemId = newItem.id;
-      }
+      // Item name = lot number (per spec). Dedupe via item_code FG-<lot>.
+      const itemId = await upsertCatalogueItem({
+        item_code: `FG-${payload.lot_no}`,
+        item_name: `${payload.lot_no}`,
+        category: 'finished_good',
+        sub_category: 'Production Lot',
+        unit: 'kg',
+        remarks: `Auto-created for finished lot ${payload.lot_no}`,
+      });
 
       const { data: rcptNum, error: rcptErr } = await sb.rpc('next_store_fg_number');
       if (rcptErr) throw rcptErr;
