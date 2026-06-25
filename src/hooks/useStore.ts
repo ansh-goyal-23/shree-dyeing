@@ -22,6 +22,9 @@ import type {
 
 // Re-use the project's supabase client
 import { supabase } from '@/integrations/supabase/client';
+import { logBusinessEvent } from '@/lib/activityCenter';
+
+
 
 const sb = supabase as any;
 
@@ -301,10 +304,16 @@ export const useCreateStoreInward = () => {
 
       return header as StoreStockInward;
     },
-    onSuccess: () => {
+    onSuccess: (header, vars) => {
       qc.invalidateQueries({ queryKey: ['store_inward_list'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+      logBusinessEvent({
+        module: 'store', eventType: 'stock.received', severity: 'success',
+        entityType: 'inward', entityId: header.id, referenceNumber: header.inward_number,
+        summary: `Received Inward ${header.inward_number} — ${vars.lines.length} item(s)${vars.supplier ? ` from ${vars.supplier}` : ''}`,
+        details: { lines: vars.lines.length, supplier: vars.supplier, invoice: vars.invoice_number },
+      });
     },
   });
 };
