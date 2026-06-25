@@ -1007,7 +1007,12 @@ export const useAssetMovements = (assetId: string | undefined) =>
 
 interface CreateAssetPayload {
   asset_id?: string | null;
-  item_id: string;
+  /** Existing catalogue item; required unless new_item is provided. */
+  item_id?: string;
+  /** Auto-create the catalogue item (with is_asset=true). */
+  new_item?: Omit<UpsertCatalogueInput, 'is_asset' | 'category'> & {
+    category?: StoreItemCategory;
+  };
   current_holder?: string | null;
   department?: string | null;
   rack_id?: string | null;
