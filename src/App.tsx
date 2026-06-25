@@ -46,6 +46,7 @@ import StoreCurrentStock from "@/pages/store/StoreCurrentStock";
 import StoreVerificationList from "@/pages/store/StoreVerificationList";
 import StoreVerificationDetail from "@/pages/store/StoreVerificationDetail";
 import StoreStockLedger from "@/pages/store/StoreStockLedger";
+import StoreInventoryTimeline from "@/pages/store/StoreInventoryTimeline";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
