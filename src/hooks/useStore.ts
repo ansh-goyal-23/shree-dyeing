@@ -1104,4 +1104,273 @@ export const useReturnAsset = () => {
   });
 };
 
+// =====================================================================
+// Stock Verification (monthly physical count)
+// =====================================================================
+
+export type StoreVerificationStatus = 'draft' | 'approved' | 'cancelled';
+
+export interface StoreVerificationSession {
+  id: string;
+  session_number: string;
+  session_date: string;
+  title: string | null;
+  status: StoreVerificationStatus;
+  remarks: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  cancelled_at: string | null;
+  cancelled_by: string | null;
+  adjustment_count: number;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+}
+
+export interface StoreVerificationLineView {
+  id: string;
+  session_id: string;
+  item_id: string;
+  item_code: string;
+  item_name: string;
+  category: StoreItemCategory;
+  sub_category: string | null;
+  unit: string;
+  rack_id: string | null;
+  rack_code: string | null;
+  rack_name: string | null;
+  system_quantity: number;
+  physical_quantity: number | null;
+  difference: number | null;
+  remarks: string | null;
+  adjustment_txn_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const useVerificationSessions = () =>
+  useQuery({
+    queryKey: ['store_verification_sessions'],
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('store_verification_sessions')
+        .select('*')
+        .order('session_date', { ascending: false })
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as StoreVerificationSession[];
+    },
+  });
+
+export const useVerificationSession = (id: string | undefined) =>
+  useQuery({
+    queryKey: ['store_verification_session', id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('store_verification_sessions')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (error) throw error;
+      return data as StoreVerificationSession;
+    },
+  });
+
+export const useVerificationLines = (sessionId: string | undefined) =>
+  useQuery({
+    queryKey: ['store_verification_lines', sessionId],
+    enabled: !!sessionId,
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('store_verification_lines_view')
+        .select('*')
+        .eq('session_id', sessionId)
+        .order('item_name', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as StoreVerificationLineView[];
+    },
+  });
+
+interface CreateVerificationPayload {
+  session_date: string;
+  title?: string | null;
+  remarks?: string | null;
+  // optional filter: limit snapshot to these categories; null = all
+  categories?: StoreItemCategory[] | null;
+}
+
+export const useCreateVerificationSession = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateVerificationPayload) => {
+      const { data: num, error: numErr } = await sb.rpc('next_store_verification_number');
+      if (numErr) throw numErr;
+
+      const { data: session, error: sErr } = await sb
+        .from('store_verification_sessions')
+        .insert({
+          session_number: num,
+          session_date: payload.session_date,
+          title: payload.title || null,
+          remarks: payload.remarks || null,
+          status: 'draft',
+        })
+        .select()
+        .single();
+      if (sErr) throw sErr;
+
+      // Snapshot current stock per item
+      let q = sb.from('store_current_stock_by_item').select('*');
+      const { data: stockRows, error: stErr } = await q;
+      if (stErr) throw stErr;
+
+      const filtered = (stockRows ?? []).filter((r: any) => {
+        if (!payload.categories || payload.categories.length === 0) return true;
+        return payload.categories.includes(r.category);
+      });
+
+      if (filtered.length > 0) {
+        const lines = filtered.map((r: any) => ({
+          session_id: session.id,
+          item_id: r.item_id,
+          unit: r.unit,
+          rack_id: r.default_rack_id,
+          system_quantity: r.current_quantity ?? 0,
+          physical_quantity: null,
+        }));
+        const { error: lErr } = await sb.from('store_verification_lines').insert(lines);
+        if (lErr) throw lErr;
+      }
+
+      return session as StoreVerificationSession;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['store_verification_sessions'] });
+    },
+  });
+};
+
+export const useUpdateVerificationLine = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      id: string;
+      session_id: string;
+      physical_quantity?: number | null;
+      remarks?: string | null;
+    }) => {
+      const patch: any = {};
+      if (payload.physical_quantity !== undefined) patch.physical_quantity = payload.physical_quantity;
+      if (payload.remarks !== undefined) patch.remarks = payload.remarks;
+      const { error } = await sb
+        .from('store_verification_lines')
+        .update(patch)
+        .eq('id', payload.id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['store_verification_lines', vars.session_id] });
+    },
+  });
+};
+
+export const useCancelVerificationSession = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await sb
+        .from('store_verification_sessions')
+        .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, id) => {
+      qc.invalidateQueries({ queryKey: ['store_verification_sessions'] });
+      qc.invalidateQueries({ queryKey: ['store_verification_session', id] });
+    },
+  });
+};
+
+export const useApproveVerificationSession = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (sessionId: string) => {
+      // 1. Read session + lines
+      const { data: session, error: sErr } = await sb
+        .from('store_verification_sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .single();
+      if (sErr) throw sErr;
+      if (session.status !== 'draft') {
+        throw new Error(`Session is "${session.status}", cannot approve.`);
+      }
+
+      const { data: lines, error: lErr } = await sb
+        .from('store_verification_lines')
+        .select('*')
+        .eq('session_id', sessionId);
+      if (lErr) throw lErr;
+
+      const adjustments = (lines ?? []).filter((l: any) => {
+        if (l.physical_quantity === null || l.physical_quantity === undefined) return false;
+        const diff = Number(l.physical_quantity) - Number(l.system_quantity);
+        return Math.abs(diff) > 0.00001;
+      });
+
+      let adjCount = 0;
+      for (const line of adjustments) {
+        const diff = Number(line.physical_quantity) - Number(line.system_quantity);
+        const { data: txnNum, error: tnErr } = await sb.rpc('next_store_txn_number');
+        if (tnErr) throw tnErr;
+
+        const { data: txn, error: tErr } = await sb
+          .from('store_stock_transactions')
+          .insert({
+            transaction_number: txnNum,
+            transaction_date: session.session_date,
+            transaction_type: 'stock_adjustment',
+            item_id: line.item_id,
+            quantity: diff,
+            unit: line.unit,
+            rack_id: line.rack_id,
+            reference_type: 'verification',
+            reference_number: session.session_number,
+            remarks: `Stock verification adjustment (system ${line.system_quantity} → physical ${line.physical_quantity})`,
+          })
+          .select()
+          .single();
+        if (tErr) throw tErr;
+
+        await sb
+          .from('store_verification_lines')
+          .update({ adjustment_txn_id: txn.id })
+          .eq('id', line.id);
+
+        adjCount++;
+      }
+
+      const { error: upErr } = await sb
+        .from('store_verification_sessions')
+        .update({
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+          adjustment_count: adjCount,
+        })
+        .eq('id', sessionId);
+      if (upErr) throw upErr;
+
+      return { adjustments_created: adjCount };
+    },
+    onSuccess: (_d, sessionId) => {
+      qc.invalidateQueries({ queryKey: ['store_verification_sessions'] });
+      qc.invalidateQueries({ queryKey: ['store_verification_session', sessionId] });
+      qc.invalidateQueries({ queryKey: ['store_verification_lines', sessionId] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock_by_item'] });
+      qc.invalidateQueries({ queryKey: ['store_transactions'] });
+    },
+  });
+};
 
