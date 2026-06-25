@@ -91,7 +91,7 @@ export function AppSidebar() {
   const isShadeActive = location.pathname.startsWith('/shade-management');
   const { isViewer, isAdmin } = useRole();
 
-  const writeUrlPatterns = ['/create', '/opening-stock', '/bulk-opening-stock'];
+  const writeUrlPatterns = ['/create', '/opening-stock', '/bulk-opening-stock', '/edit'];
   const isWriteItem = (url: string) => writeUrlPatterns.some(p => url.includes(p));
   const filterForViewer = <T extends { url: string }>(items: T[]) =>
     isViewer ? items.filter(i => !isWriteItem(i.url)) : items;
