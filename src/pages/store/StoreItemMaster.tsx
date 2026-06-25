@@ -25,7 +25,8 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Plus, Pencil, Search, Package, PlusCircle } from 'lucide-react';
+import { Plus, Pencil, Search, Package, PlusCircle, Activity } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { StoreItem, StoreItemCategory } from '@/types/store';
 
