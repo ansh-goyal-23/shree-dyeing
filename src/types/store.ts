@@ -201,6 +201,50 @@ export interface StoreEDYCurrentStockRow {
   current_balance: number;
 }
 
+export type StoreAssetStatus = 'available' | 'issued' | 'repair' | 'scrap';
+export type StoreAssetMovementType = 'issue' | 'return' | 'status_change';
+
+export interface StoreAsset {
+  id: string;
+  asset_id: string;
+  item_id: string;
+  current_holder: string | null;
+  department: string | null;
+  rack_id: string | null;
+  purchase_date: string | null;
+  condition: string | null;
+  status: StoreAssetStatus;
+  remarks: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+}
+
+export interface StoreAssetView extends StoreAsset {
+  item_code: string;
+  item_name: string;
+  category: StoreItemCategory;
+  sub_category: string | null;
+  rack_code: string | null;
+  rack_name: string | null;
+}
+
+export interface StoreAssetMovement {
+  id: string;
+  asset_id: string;
+  movement_type: StoreAssetMovementType;
+  movement_date: string;
+  holder: string | null;
+  department: string | null;
+  rack_id: string | null;
+  condition: string | null;
+  status_after: StoreAssetStatus | null;
+  remarks: string | null;
+  transaction_id: string | null;
+  created_at: string;
+  created_by: string | null;
+}
+
 export interface StoreFGCurrentStockRow {
   receipt_id: string;
   receipt_number: string;

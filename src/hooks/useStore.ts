@@ -14,6 +14,10 @@ import type {
   StoreFGCurrentStockRow,
   StoreExternalDyedYarnReceipt,
   StoreEDYCurrentStockRow,
+  StoreAsset,
+  StoreAssetView,
+  StoreAssetMovement,
+  StoreAssetStatus,
 } from '@/types/store';
 
 // Re-use the project's supabase client
@@ -759,4 +763,300 @@ export const useCreateEDYReceipt = () => {
     },
   });
 };
+
+// ---------- Asset Management ----------
+
+export const useAssetItems = () =>
+  useQuery({
+    queryKey: ['store_items', 'asset_only'],
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('store_items')
+        .select('*')
+        .eq('is_asset', true)
+        .eq('is_active', true)
+        .order('item_name', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as StoreItem[];
+    },
+  });
+
+export const useAssets = () =>
+  useQuery({
+    queryKey: ['store_assets'],
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('store_assets_view')
+        .select('*')
+        .order('asset_id', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as StoreAssetView[];
+    },
+  });
+
+export const useAssetMovements = (assetId: string | undefined) =>
+  useQuery({
+    queryKey: ['store_asset_movements', assetId],
+    enabled: !!assetId,
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('store_asset_movements')
+        .select('*')
+        .eq('asset_id', assetId)
+        .order('movement_date', { ascending: false })
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as StoreAssetMovement[];
+    },
+  });
+
+interface CreateAssetPayload {
+  asset_id?: string | null;
+  item_id: string;
+  current_holder?: string | null;
+  department?: string | null;
+  rack_id?: string | null;
+  purchase_date?: string | null;
+  condition?: string | null;
+  status?: StoreAssetStatus;
+  remarks?: string | null;
+  /** If true and asset is initialised as Available, add +1 stock transaction. */
+  add_stock?: boolean;
+}
+
+export const useCreateAsset = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateAssetPayload) => {
+      let assetCode = payload.asset_id?.trim();
+      if (!assetCode) {
+        const { data, error } = await sb.rpc('next_store_asset_id');
+        if (error) throw error;
+        assetCode = data as string;
+      }
+      const status = payload.status ?? 'available';
+
+      const { data: asset, error: insErr } = await sb
+        .from('store_assets')
+        .insert({
+          asset_id: assetCode,
+          item_id: payload.item_id,
+          current_holder: payload.current_holder || null,
+          department: payload.department || null,
+          rack_id: payload.rack_id || null,
+          purchase_date: payload.purchase_date || null,
+          condition: payload.condition || null,
+          status,
+          remarks: payload.remarks || null,
+        })
+        .select()
+        .single();
+      if (insErr) throw insErr;
+
+      // Optionally seed inventory with +1 stock for this asset.
+      if (payload.add_stock) {
+        const { data: itemRow } = await sb
+          .from('store_items')
+          .select('unit')
+          .eq('id', payload.item_id)
+          .single();
+        const { data: txnNum } = await sb.rpc('next_store_txn_number');
+        await sb.from('store_stock_transactions').insert({
+          transaction_number: txnNum,
+          transaction_date: new Date().toISOString().slice(0, 10),
+          transaction_type: 'stock_in',
+          item_id: payload.item_id,
+          quantity: 1,
+          unit: itemRow?.unit || 'pcs',
+          rack_id: payload.rack_id || null,
+          reference_type: 'asset_register',
+          reference_number: assetCode,
+          remarks: `Initial stock for asset ${assetCode}`,
+        });
+      }
+
+      return asset as StoreAsset;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['store_assets'] });
+      qc.invalidateQueries({ queryKey: ['store_transactions'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+    },
+  });
+};
+
+interface UpdateAssetPayload {
+  id: string;
+  current_holder?: string | null;
+  department?: string | null;
+  rack_id?: string | null;
+  purchase_date?: string | null;
+  condition?: string | null;
+  status?: StoreAssetStatus;
+  remarks?: string | null;
+}
+
+export const useUpdateAsset = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...patch }: UpdateAssetPayload) => {
+      const { data, error } = await sb
+        .from('store_assets')
+        .update(patch)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as StoreAsset;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['store_assets'] }),
+  });
+};
+
+interface AssetIssuePayload {
+  asset: StoreAssetView;
+  movement_date: string;
+  holder: string;
+  department?: string | null;
+  rack_id?: string | null;
+  condition?: string | null;
+  remarks?: string | null;
+}
+
+export const useIssueAsset = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: AssetIssuePayload) => {
+      const { asset } = payload;
+      if (asset.status !== 'available') {
+        throw new Error(`Cannot issue: asset is currently "${asset.status}".`);
+      }
+
+      const { data: txnNum, error: txnNumErr } = await sb.rpc('next_store_txn_number');
+      if (txnNumErr) throw txnNumErr;
+
+      const { data: txn, error: txnErr } = await sb
+        .from('store_stock_transactions')
+        .insert({
+          transaction_number: txnNum,
+          transaction_date: payload.movement_date,
+          transaction_type: 'asset_issue',
+          item_id: asset.item_id,
+          quantity: -1,
+          unit: 'pcs',
+          rack_id: asset.rack_id,
+          reference_type: 'asset',
+          reference_number: asset.asset_id,
+          person: payload.holder,
+          remarks: payload.remarks || null,
+        })
+        .select()
+        .single();
+      if (txnErr) throw txnErr;
+
+      await sb.from('store_asset_movements').insert({
+        asset_id: asset.id,
+        movement_type: 'issue',
+        movement_date: payload.movement_date,
+        holder: payload.holder,
+        department: payload.department || null,
+        rack_id: payload.rack_id || null,
+        condition: payload.condition || null,
+        status_after: 'issued',
+        remarks: payload.remarks || null,
+        transaction_id: txn.id,
+      });
+
+      await sb
+        .from('store_assets')
+        .update({
+          status: 'issued',
+          current_holder: payload.holder,
+          department: payload.department || asset.department,
+          condition: payload.condition || asset.condition,
+        })
+        .eq('id', asset.id);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['store_assets'] });
+      qc.invalidateQueries({ queryKey: ['store_asset_movements'] });
+      qc.invalidateQueries({ queryKey: ['store_transactions'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+    },
+  });
+};
+
+interface AssetReturnPayload {
+  asset: StoreAssetView;
+  movement_date: string;
+  rack_id?: string | null;
+  condition?: string | null;
+  status_after?: StoreAssetStatus; // available | repair | scrap
+  remarks?: string | null;
+}
+
+export const useReturnAsset = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: AssetReturnPayload) => {
+      const { asset } = payload;
+      if (asset.status !== 'issued') {
+        throw new Error(`Cannot return: asset is "${asset.status}", not issued.`);
+      }
+      const newStatus: StoreAssetStatus = payload.status_after ?? 'available';
+
+      const { data: txnNum, error: txnNumErr } = await sb.rpc('next_store_txn_number');
+      if (txnNumErr) throw txnNumErr;
+
+      const { data: txn, error: txnErr } = await sb
+        .from('store_stock_transactions')
+        .insert({
+          transaction_number: txnNum,
+          transaction_date: payload.movement_date,
+          transaction_type: 'asset_return',
+          item_id: asset.item_id,
+          quantity: 1,
+          unit: 'pcs',
+          rack_id: payload.rack_id || asset.rack_id,
+          reference_type: 'asset',
+          reference_number: asset.asset_id,
+          person: asset.current_holder,
+          remarks: payload.remarks || null,
+        })
+        .select()
+        .single();
+      if (txnErr) throw txnErr;
+
+      await sb.from('store_asset_movements').insert({
+        asset_id: asset.id,
+        movement_type: 'return',
+        movement_date: payload.movement_date,
+        holder: asset.current_holder,
+        department: asset.department,
+        rack_id: payload.rack_id || asset.rack_id,
+        condition: payload.condition || null,
+        status_after: newStatus,
+        remarks: payload.remarks || null,
+        transaction_id: txn.id,
+      });
+
+      await sb
+        .from('store_assets')
+        .update({
+          status: newStatus,
+          current_holder: null,
+          rack_id: payload.rack_id || asset.rack_id,
+          condition: payload.condition || asset.condition,
+        })
+        .eq('id', asset.id);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['store_assets'] });
+      qc.invalidateQueries({ queryKey: ['store_asset_movements'] });
+      qc.invalidateQueries({ queryKey: ['store_transactions'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+    },
+  });
+};
+
 

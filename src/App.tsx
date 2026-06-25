@@ -41,6 +41,7 @@ import StoreFinishedGoodsList from "@/pages/store/StoreFinishedGoodsList";
 import StoreFinishedGoodsReceive from "@/pages/store/StoreFinishedGoodsReceive";
 import StoreExternalDyedYarnList from "@/pages/store/StoreExternalDyedYarnList";
 import StoreExternalDyedYarnReceive from "@/pages/store/StoreExternalDyedYarnReceive";
+import StoreAssetManagement from "@/pages/store/StoreAssetManagement";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -108,7 +109,7 @@ const App = () => (
                         <Route path="/store/finished-goods/receive" element={<WriteRoute redirectTo="/store/finished-goods"><StoreFinishedGoodsReceive /></WriteRoute>} />
                         <Route path="/store/external-dyed-yarn" element={<StoreExternalDyedYarnList />} />
                         <Route path="/store/external-dyed-yarn/receive" element={<WriteRoute redirectTo="/store/external-dyed-yarn"><StoreExternalDyedYarnReceive /></WriteRoute>} />
-                        <Route path="/store/assets" element={<StoreComingSoon title="Assets" />} />
+                        <Route path="/store/assets" element={<StoreAssetManagement />} />
                         <Route path="/store/current-stock" element={<StoreComingSoon title="Current Stock" description="Live derived stock view — UI coming next." />} />
                         <Route path="/store/stock-verification" element={<StoreComingSoon title="Stock Verification" />} />
                         <Route path="*" element={<NotFound />} />
