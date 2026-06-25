@@ -59,6 +59,9 @@ const AssetManagement: React.FC = () => {
   const [form, setForm] = useState({
     asset_id: '',
     item_id: '',
+    new_item_name: '',
+    new_item_unit: 'pcs',
+    use_new_item: true,
     current_holder: '',
     department: '',
     rack_id: '',
