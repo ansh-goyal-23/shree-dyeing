@@ -318,8 +318,16 @@ const AssetManagement: React.FC = () => {
                       <ArrowDownToLine className="h-3.5 w-3.5 mr-1" /> Return
                     </Button>
                   )}
-                  <Button size="sm" variant="ghost" onClick={() => setHistoryTarget(a)}>
+                  <Button size="sm" variant="ghost" onClick={() => setHistoryTarget(a)} title="Movements">
                     <History className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    title="View Timeline"
+                    onClick={() => a.item_id && navigate(`/store/timeline/${a.item_id}`)}
+                  >
+                    <Activity className="h-3.5 w-3.5" />
                   </Button>
                 </TableCell>
               </TableRow>
