@@ -23,6 +23,7 @@ import {
   Boxes,
   ClipboardCheck,
   BookOpenCheck,
+  Activity,
 } from 'lucide-react';
 
 import { useRole } from '@/context/RoleContext';
