@@ -13,7 +13,17 @@ import {
   IndianRupee,
   Droplet,
   Users,
+  Warehouse,
+  Package,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  PackageCheck,
+  Globe2,
+  Wrench,
+  Boxes,
+  ClipboardCheck,
 } from 'lucide-react';
+
 import { useRole } from '@/context/RoleContext';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
@@ -57,9 +67,22 @@ const expenseItems = [
 ];
 
 
+const storeItems = [
+  { title: 'Dashboard', url: '/store', icon: LayoutDashboard },
+  { title: 'Item Master', url: '/store/items', icon: Package },
+  { title: 'Stock Inward', url: '/store/stock-inward', icon: ArrowDownToLine },
+  { title: 'Internal Issues', url: '/store/internal-issues', icon: ArrowUpFromLine },
+  { title: 'Finished Goods', url: '/store/finished-goods', icon: PackageCheck },
+  { title: 'External Dyed Yarn', url: '/store/external-dyed-yarn', icon: Globe2 },
+  { title: 'Assets', url: '/store/assets', icon: Wrench },
+  { title: 'Current Stock', url: '/store/current-stock', icon: Boxes },
+  { title: 'Stock Verification', url: '/store/stock-verification', icon: ClipboardCheck },
+];
+
 const modules = [
   { title: 'Production', url: '/production', icon: Factory },
 ];
+
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -77,6 +100,8 @@ export function AppSidebar() {
   const sampling = filterForViewer(samplingItems);
   const dispatch = filterForViewer(dispatchItems);
   const expense = filterForViewer(expenseItems);
+  const store = filterForViewer(storeItems);
+
 
   return (
     <Sidebar collapsible="icon">
@@ -172,6 +197,32 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === '/expenses'}
+                      className="hover:bg-sidebar-accent/50"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                    >
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>
+            <Warehouse className="mr-2 h-4 w-4" />
+            {!collapsed && 'Store Management'}
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {store.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.url}
+                      end={item.url === '/store'}
                       className="hover:bg-sidebar-accent/50"
                       activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
                     >
