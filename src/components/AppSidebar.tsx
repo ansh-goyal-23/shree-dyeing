@@ -100,6 +100,8 @@ export function AppSidebar() {
   const sampling = filterForViewer(samplingItems);
   const dispatch = filterForViewer(dispatchItems);
   const expense = filterForViewer(expenseItems);
+  const store = filterForViewer(storeItems);
+
 
   return (
     <Sidebar collapsible="icon">
