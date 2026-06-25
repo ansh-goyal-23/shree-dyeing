@@ -683,13 +683,20 @@ export const useCreateFGReceipt = () => {
 
       return header as StoreFinishedGoodsReceipt;
     },
-    onSuccess: () => {
+    onSuccess: (header, vars) => {
       qc.invalidateQueries({ queryKey: ['fg_receipt_list'] });
       qc.invalidateQueries({ queryKey: ['fg_current_stock'] });
       qc.invalidateQueries({ queryKey: ['fg_eligible_lots'] });
       qc.invalidateQueries({ queryKey: ['store_items'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+      logBusinessEvent({
+        module: 'store', eventType: 'finished_lot.received', severity: 'success',
+        entityType: 'fg_receipt', entityId: header.id, referenceNumber: header.receipt_number,
+        entityName: `Lot ${vars.lot_no}`,
+        summary: `Received finished Lot ${vars.lot_no} — ${Number(vars.net_weight).toFixed(3)} kg`,
+        details: { lot_no: vars.lot_no, shade: vars.shade, client: vars.client },
+      });
     },
   });
 };
