@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/table';
 import { ClipboardCheck, Plus, Eye } from 'lucide-react';
 import { toast } from 'sonner';
-import { WriteGuard } from '@/components/ViewerGuard';
+
 
 const statusVariant = (s: string) =>
   s === 'approved' ? 'default' : s === 'cancelled' ? 'destructive' : 'secondary';
