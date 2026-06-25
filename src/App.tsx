@@ -119,6 +119,8 @@ const App = () => (
                         <Route path="/store/stock-verification" element={<StoreVerificationList />} />
                         <Route path="/store/stock-verification/:id" element={<StoreVerificationDetail />} />
                         <Route path="/store/stock-ledger" element={<StoreStockLedger />} />
+                        <Route path="/store/timeline" element={<StoreInventoryTimeline />} />
+                        <Route path="/store/timeline/:itemId" element={<StoreInventoryTimeline />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Layout>
