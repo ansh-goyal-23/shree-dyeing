@@ -30,6 +30,9 @@ import ExpenseList from "@/pages/ExpenseList";
 import ExpenseCreatePage from "@/pages/CreateExpense";
 import ItemMaster from "@/pages/ItemMaster";
 import UserManagement from "@/pages/UserManagement";
+import StoreDashboard from "@/pages/store/StoreDashboard";
+import StoreItemMaster from "@/pages/store/StoreItemMaster";
+import StoreComingSoon from "@/pages/store/StoreComingSoon";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -86,6 +89,15 @@ const App = () => (
                         <Route path="/dispatch/:id" element={<ChallanDetail />} />
                         <Route path="/item-master" element={<ItemMaster />} />
                         <Route path="/users" element={<UserManagement />} />
+                        <Route path="/store" element={<StoreDashboard />} />
+                        <Route path="/store/items" element={<StoreItemMaster />} />
+                        <Route path="/store/stock-inward" element={<StoreComingSoon title="Stock Inward" />} />
+                        <Route path="/store/internal-issues" element={<StoreComingSoon title="Internal Issues" />} />
+                        <Route path="/store/finished-goods" element={<StoreComingSoon title="Finished Goods" />} />
+                        <Route path="/store/external-dyed-yarn" element={<StoreComingSoon title="External Dyed Yarn" />} />
+                        <Route path="/store/assets" element={<StoreComingSoon title="Assets" />} />
+                        <Route path="/store/current-stock" element={<StoreComingSoon title="Current Stock" description="Live derived stock view — UI coming next." />} />
+                        <Route path="/store/stock-verification" element={<StoreComingSoon title="Stock Verification" />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Layout>
