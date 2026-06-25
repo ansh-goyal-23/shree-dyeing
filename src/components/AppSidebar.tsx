@@ -22,6 +22,7 @@ import {
   Wrench,
   Boxes,
   ClipboardCheck,
+  BookOpenCheck,
 } from 'lucide-react';
 
 import { useRole } from '@/context/RoleContext';
@@ -77,6 +78,7 @@ const storeItems = [
   { title: 'Assets', url: '/store/assets', icon: Wrench },
   { title: 'Current Stock', url: '/store/current-stock', icon: Boxes },
   { title: 'Stock Verification', url: '/store/stock-verification', icon: ClipboardCheck },
+  { title: 'Stock Ledger', url: '/store/stock-ledger', icon: BookOpenCheck },
 ];
 
 const modules = [
