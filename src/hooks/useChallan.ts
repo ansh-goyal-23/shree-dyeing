@@ -184,9 +184,23 @@ export function useCreateChallan() {
         );
         if (iErr) throw iErr;
       }
+
+      // Store integration: deduct FG / EDY stock for dispatched lots.
+      await applyChallanStockDelta(
+        payload.challan_number,
+        payload.date,
+        [],
+        payload.items.map(i => ({ lot_no: i.lot_no, net_weight: i.net_weight })),
+      );
+
       return challan;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['challans'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['challans'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock_by_item'] });
+      qc.invalidateQueries({ queryKey: ['store_transactions'] });
+    },
   });
 }
 
