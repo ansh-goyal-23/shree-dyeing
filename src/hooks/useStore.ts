@@ -1050,11 +1050,18 @@ export const useIssueAsset = () => {
         })
         .eq('id', asset.id);
     },
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['store_assets'] });
       qc.invalidateQueries({ queryKey: ['store_asset_movements'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+      logBusinessEvent({
+        module: 'store', eventType: 'asset.issued', severity: 'info',
+        entityType: 'asset', entityId: vars.asset.id, referenceNumber: vars.asset.asset_id,
+        entityName: vars.asset.item_name,
+        summary: `Issued asset ${vars.asset.asset_id} to ${vars.holder}`,
+        details: { department: vars.department, condition: vars.condition },
+      });
     },
   });
 };
@@ -1123,11 +1130,17 @@ export const useReturnAsset = () => {
         })
         .eq('id', asset.id);
     },
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['store_assets'] });
       qc.invalidateQueries({ queryKey: ['store_asset_movements'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+      logBusinessEvent({
+        module: 'store', eventType: 'asset.returned', severity: 'info',
+        entityType: 'asset', entityId: vars.asset.id, referenceNumber: vars.asset.asset_id,
+        entityName: vars.asset.item_name,
+        summary: `Returned asset ${vars.asset.asset_id} (status → ${vars.status_after ?? 'available'})`,
+      });
     },
   });
 };
