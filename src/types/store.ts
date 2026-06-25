@@ -49,6 +49,7 @@ export interface StoreItem {
   is_active: boolean;
   default_rack: string | null;
   remarks: string | null;
+  first_received_at: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -104,6 +105,8 @@ export interface StoreStockInward {
   invoice_number: string | null;
   grn_number: string | null;
   remarks: string | null;
+  bill_url: string | null;
+  bill_path: string | null;
   total_amount: number;
   created_at: string;
   created_by: string | null;

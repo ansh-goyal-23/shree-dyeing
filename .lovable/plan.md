@@ -1,165 +1,113 @@
-# ERP Activity Center — Implementation Plan
+## Goal
 
-Replaces the existing "Inventory Logs / Audit Logs" surface with a unified **Activity Center** that answers three questions:
-1. What happened in the factory? (Business Events)
-2. What are employees doing? (User Activity)
-3. Is the ERP healthy? (System Events)
+Improve the existing Store Management module so users never have to pre-create items. Items get created automatically from business transactions, and the Item Master becomes a passive Inventory Catalogue. Keep all existing tables, routes, hooks and transaction architecture intact.
 
-Admin-only. Read-only UI. Logging is fire-and-forget so it never slows ERP operations.
+## Scope (what changes / what does NOT)
 
----
+Changes only:
+- One new migration (additive) for storage/columns + view updates.
+- `StoreItemMaster` page repurposed to read-only **Inventory Catalogue**.
+- `StoreInwardCreate` gets an inline "Create new item" flow with duplicate detection + bill upload.
+- `StoreAssetManagement` gets "Create new Asset" action that auto-creates a catalogue entry.
+- Finished Goods & External Dyed Yarn auto-create catalogue entries on first receipt (mostly already done — only enforce + dedupe).
+- Current Stock displays latest rack derived from transactions.
+- Hooks in `useStore.ts` get a few helpers (`useFindSimilarItems`, `useCreateItemFromTransaction`, `useUploadInwardBill`).
 
-## 1. Database (new migration `sql_migrations/20260625_activity_center.sql`)
+Preserved untouched:
+- All existing tables (`store_items`, `store_stock_transactions`, `store_racks`, `store_inwards`, `store_internal_issues`, `store_finished_goods_receipts`, `store_edy_receipts`, `store_assets*`, `store_stock_verification*`, ledger view, asset view, etc.).
+- ERP integrations (challan dispatch, activity center logging).
+- Stock Ledger architecture (still the single source of truth).
+- Sidebar entries (only label "Item Master" → "Inventory Catalogue").
 
-Three append-only tables in `public`, each with GRANTs + RLS (admin read, authenticated insert via helpers, service_role all).
+## Database migration
 
-### `business_events`
-```
-id uuid pk, event_timestamp timestamptz default now(),
-module text, event_type text, severity text default 'info',
-user_id uuid, user_name text, user_role text,
-entity_type text, entity_id text, entity_name text,
-reference_number text,
-summary text not null,
-details jsonb,            -- arbitrary structured payload
-change_summary jsonb,     -- [{field, before, after}] meaningful diffs only
-created_at timestamptz default now()
-```
-Indexes: `event_timestamp desc`, `module`, `event_type`, `user_id`, `entity_type+entity_id`, `reference_number`.
+New file `sql_migrations/20260625_inventory_catalogue_upgrade.sql` (additive only):
 
-### `user_activity`
-```
-id uuid pk, user_id uuid, user_name text, role text,
-login_time timestamptz, logout_time timestamptz,
-last_activity timestamptz, session_duration_seconds int,
-device text, browser text, os text, ip_address text,
-modules_accessed jsonb default '[]', actions_count int default 0,
-created_at timestamptz default now()
-```
-Indexes: `user_id`, `login_time desc`. One row per session; heartbeat updates `last_activity`/`session_duration_seconds`/`modules_accessed`.
+1. `ALTER TABLE store_items` — add `first_received_at timestamptz` (nullable). `default_rack` stays but is no longer required/used by the UI (catalogue rack is derived).
+2. `ALTER TABLE store_inwards` — add `bill_url text` and `bill_path text` for uploaded invoice files. (Verify exact table name in the existing inward migration; keep `inward_date`, `supplier`, `invoice_number`, `remarks` as already present.)
+3. Drop & recreate `store_current_stock_by_item` view so each row includes the **latest rack** (rack of the most-recent transaction) and `last_transaction_date`, plus `first_received_date` (MIN of inflows) and `current_quantity` (SUM). Single row per item — replaces the per-rack grouping currently used in dashboards. Existing `store_current_stock` view is left intact for backward compatibility.
+4. Create Supabase storage bucket `inward-bills` (public read, authenticated write) via `INSERT INTO storage.buckets ... ON CONFLICT DO NOTHING` + matching policies (mirroring `expense-bills`).
+5. Trigger `tg_store_items_first_received`: on first inflow transaction (`quantity > 0`) for an item where `first_received_at IS NULL`, stamp `store_items.first_received_at = NEW.transaction_date`.
 
-### `system_events`
-```
-id uuid pk, ts timestamptz default now(),
-severity text check in (information|warning|error|critical),
-event_type text, module text,
-description text, technical_details jsonb,
-resolved boolean default false, resolved_by uuid, resolved_at timestamptz
-```
-Indexes: `ts desc`, `severity`, `resolved`.
+No data is deleted or moved. No tables are dropped.
 
-RLS: all three readable only by admins (`public.has_role(auth.uid(),'admin')`). Insert allowed for `authenticated` so client helpers can write. `system_events` UPDATE allowed for admins (to mark resolved).
+## Backend hooks (`src/hooks/useStore.ts`)
 
-The existing `inventory_change_logs` table is left in place (legacy); the sidebar link is moved to Activity Center and inventory logs become one source feeding `business_events` going forward.
+Add:
+- `useFindSimilarItems(name: string, category?)` — fuzzy match via `ilike %tokens%` on `store_items.item_name`; returns top 5.
+- `useUpsertCatalogueItem()` — given `{ item_name, category, sub_category, unit, is_asset }`, returns existing item id if exact-match on `(lower(item_name), category)` exists; otherwise inserts a new `store_items` row. Used by Inward + Asset + FG + EDY flows.
+- `useUploadInwardBill()` — uploads to `inward-bills/<inward_id>/<filename>`, returns public URL.
+- Update `useCreateStoreInward` to accept either `item_id` (existing) or `new_item: {...}` per line, call `useUpsertCatalogueItem` server-side (in the mutation function) before posting the stock transaction.
+- Update `useStoreCurrentStockByItem` to read from the new view (now also exposes `latest_rack_*`, `first_received_date`, `last_transaction_date`).
 
----
+Existing FG and EDY hooks already auto-create items — add a `useUpsertCatalogueItem` call instead of their bespoke insert, so dedupe is consistent. Naming rules:
+- FG → `item_name = lot_number`, category `finished_good`, sub_category `Production Lot`.
+- EDY → `item_name = ${lot}_${shade}_${dyer}`, category `external_dyed_yarn`, sub_category `External Production`.
 
-## 2. Logging helpers (`src/lib/activityCenter.ts`)
+## UI changes
 
-Three small async functions, all fire-and-forget (`void supabase.from(...).insert(...)`, swallow errors):
+### 1. `StoreItemMaster.tsx` → Inventory Catalogue (read-only)
+- Rename heading & sidebar label to "Inventory Catalogue".
+- Remove "Create Item" / "Edit" buttons (admin still gets an "Edit" overflow action for unit/category corrections only — no delete).
+- Columns: Item Name · Category · Sub Category · Unit · Asset (Yes/No) · Created Date · First Received · Last Transaction · Current Stock.
+- Search box + filters: Category, Sub Category, Asset, Has Stock.
+- Sortable headers (client-side).
+- Row click → existing Inventory Timeline.
 
-- `logBusinessEvent({ module, eventType, severity?, entityType?, entityId?, entityName?, referenceNumber?, summary, details?, changeSummary? })`
-  Pulls `user_id`, name, role from `AuthContext`/`RoleContext` cache.
-- `logUserActivity` — session bookkeeping (start, heartbeat, end). Helper exposes `startSession`, `heartbeat(module)`, `endSession`.
-- `logSystemEvent({ severity, eventType, module, description, technicalDetails? })`
-  Also installed as a global `window.onerror` / `unhandledrejection` handler in `main.tsx` to capture frontend errors as `error` severity.
+### 2. `StoreInwardCreate.tsx` — inline item creation
+For each line, the "Item" cell becomes a **Combobox with two modes**:
+- Type to search existing `store_items` (live filter).
+- If no exact match, footer shows **"+ Create '<typed name>' as new item"**.
+- Choosing "Create" opens a small inline dialog: Category, Sub Category, Unit (required), Asset toggle (auto-shown only when Category = Tools & Equipment). On confirm, dialog calls `useUpsertCatalogueItem` and selects the returned item id into the row.
+- Before insert, `useFindSimilarItems` runs; if matches exist, the dialog shows a "Did you mean?" panel listing them with **Use Existing Item** buttons. User must explicitly click **Create New Item** to bypass.
 
-Helpers must:
-- Never throw.
-- Never block the caller (`void` the promise).
-- Skip when no auth session.
+Header gets two new fields:
+- **Upload Bill** (`<input type=file accept="application/pdf,image/*">`) — uploaded via `useUploadInwardBill` after the inward header is saved; URL stored on `store_inwards.bill_url`.
+- (Date, Supplier, Invoice Number, Remarks already present.)
 
-### Diff utility
-`buildChangeSummary(before, after, fields)` → `[{field, before, after}]`, ignoring unchanged values. Used by recipe/expense/role flows so logs store *business* diffs only, never raw rows.
+Per-row fields retained: Quantity, Unit (auto from item), Rate (opt), Amount (opt), Rack, Remarks. Rack is **per transaction only** — never written back to `store_items`.
 
----
+### 3. `StoreAssetManagement.tsx`
+- Replace existing "Register Asset" dialog (currently pulls only existing tool_equipment items) with a "New Asset" dialog that captures: Item Name, Sub Category, Unit, Remarks. On submit:
+  1. `useUpsertCatalogueItem` with `category='tool_equipment'`, `is_asset=true`.
+  2. Existing asset registration flow proceeds with the returned `item_id`.
+- Existing "select from catalogue" path stays as a secondary tab for power users.
 
-## 3. Instrumentation (minimal, surgical)
+### 4. Finished Goods & External Dyed Yarn
+- Receive forms unchanged visually. Internally swap the bespoke `store_items` insert for `useUpsertCatalogueItem` (idempotent on `(item_name, category)`), so re-receiving the same lot reuses the row instead of erroring on the unique `item_code`.
+- Generate `item_code` deterministically: `FG-<lot_no>` and `EDY-<receipt_number>` (existing logic preserved as the dedupe key).
 
-Add `logBusinessEvent` calls inside existing mutation hooks/handlers only at meaningful boundaries — no CRUD spam:
+### 5. Current Stock (`StoreCurrentStock.tsx`)
+- Switch source to the new view. Columns become: Item · Category · Sub Category · Latest Rack · Current Qty · Unit · Last Transaction. (Existing transaction-history drawer kept.)
 
-| Module | Where | Event |
-|---|---|---|
-| Auth | `AuthContext` sign-in / sign-out | `user.logged_in`, `user.logged_out` + start/end session |
-| User Mgmt | `UserManagement.tsx` create/role change/disable | `user.created`, `user.role_changed` (with change_summary) |
-| Sampling | `useSampling` create/cancel, order create/complete | `sampling.intake_created` etc |
-| Shade | `AppContext` lot create/approve/reject/delete, recipe save (with diff), process step add, recipe clone | `lot.*`, `recipe.*`, `process_step.added` |
-| Store | `useStore` inward create, issue create, FG receive, EDY receive, verification approve, asset issue/return | `store.*` |
-| Dispatch | `useChallan` create/dispatch/cancel/delete | `challan.*` |
-| Expenses | `useExpenses` create/delete | `expense.*` |
+### 6. Sidebar (`AppSidebar.tsx`)
+- Rename "Item Master" → "Inventory Catalogue". Same route `/store/item-master` (no route changes to avoid breakage).
 
-Each call is one extra line in code already running the mutation — no refactor.
+## Duplicate-detection algorithm
 
----
+`useFindSimilarItems(name, category?)`:
+- Normalise: lowercase, strip punctuation, split on whitespace.
+- Query: `store_items` with `item_name ilike %<each token>%` AND optional `category = ?`.
+- Score = number of tokens matched + bonus for exact-prefix match. Return top 5 with score ≥ 1, ordered desc.
+- Used in Inward "Create new item" dialog and Asset "New Asset" dialog.
 
-## 4. UI
+## Backward compatibility
 
-### Routing & sidebar
-- New route `/activity` (admin-only via `AdminRoute`).
-- `src/components/AppSidebar.tsx`: add **Administration → Activity Center** (Activity icon). Remove/replace old "Inventory Logs" link (keep page but link from Activity Center as a sub-view if needed).
+- No existing route, table, column or migration is removed.
+- Existing items in `store_items` keep working as-is; `first_received_at` backfills lazily via trigger on next inflow (and an inline `UPDATE store_items SET first_received_at = (SELECT MIN(transaction_date) FROM store_stock_transactions t WHERE t.item_id = store_items.id AND t.quantity > 0)` one-time backfill in the migration).
+- Old `store_current_stock` view kept untouched; new view added side-by-side.
+- ERP integrations (challan dispatch, activity center, ledger) untouched.
 
-### `src/pages/ActivityCenter.tsx`
-Top-level page with shadcn `Tabs`: **Business Events | User Activity | System Events**. Sticky filter bar per tab. URL query `?tab=...` preserved.
+## Files touched
 
-### Tab 1 — `components/activity/BusinessEventsTab.tsx`
-- Filters: date range, module (multi), event type (multi), user, role, free-text (matches `entity_name`, `reference_number`, `summary`).
-- Table: Date · Time · User · Module (icon+label) · Event (badge) · Reference · Summary. Newest first, 100/page, cursor pagination (`event_timestamp < lastSeen`).
-- Row click → right `Sheet` drawer: full summary, who/when, JSON `details`, formatted `change_summary` (before → after lines), "Open Record" button that routes by `entity_type` (lot → `/lots/:id`, challan → `/challans/:id`, expense → expense dialog, issue → `/store/issues/:id`, etc.).
-- "Timeline" toggle inside drawer when `entity_type+entity_id` set: fetch all events for that entity, render chronological vertical timeline.
+- `sql_migrations/20260625_inventory_catalogue_upgrade.sql` (new)
+- `src/hooks/useStore.ts` (additive helpers + small updates)
+- `src/pages/store/StoreItemMaster.tsx` (rework to catalogue)
+- `src/pages/store/StoreInwardCreate.tsx` (inline create + bill upload)
+- `src/pages/store/StoreAssetManagement.tsx` (new-asset dialog)
+- `src/pages/store/StoreFinishedGoodsReceive.tsx` (swap to upsert)
+- `src/pages/store/StoreExternalDyedYarnReceive.tsx` (swap to upsert)
+- `src/pages/store/StoreCurrentStock.tsx` (new view columns)
+- `src/components/AppSidebar.tsx` (label only)
 
-### Tab 2 — `components/activity/UserActivityTab.tsx`
-- Cards: Users Online (sessions with `last_activity > now()-5min`), Today's Logins, Avg Session, Most Active User, Most Used Module, Failed Logins (from `system_events` where `event_type='auth.failed'`).
-- Recent Activity table (login/logout/timeout).
-- User profile drawer: last login/logout, session history, daily-usage sparkline, modules used (from `modules_accessed` aggregation), business events count.
-- Charts (Recharts already in stack): Daily Active Users (bar), Hourly Logins (line), Module Usage (pie), Session Duration (histogram).
-- Filters: date, role, user.
-
-### Tab 3 — `components/activity/SystemEventsTab.tsx`
-- Dashboard cards: Recent Errors (24h), Pending (unresolved), Resolved, Storage Usage (from Supabase storage size where available — otherwise hide), Database Status (simple `select 1` ping).
-- Severity badges: information=blue, warning=orange, error=red, critical=dark red — tokens added in `index.css`.
-- Table with severity filter, "Mark resolved" admin action (updates row).
-- Drawer shows `technical_details` JSON.
-
-### Shared
-- `components/activity/SeverityBadge.tsx`, `ModuleIcon.tsx`, `EventTypeBadge.tsx`.
-- All data hooks in `src/hooks/useActivityCenter.ts` using React Query with `keepPreviousData` and 30s stale time. No realtime subscriptions (polling on tab focus only) to keep it cheap.
-
-### Session tracking
-- On login: `logUserActivity.startSession()` inserts a row, stores `session_id` in memory.
-- Heartbeat: a single `setInterval` in `Layout.tsx` every 60s updates `last_activity`, `session_duration_seconds`, and appends current route's module to `modules_accessed` (dedup).
-- On logout / `beforeunload`: set `logout_time`.
-
----
-
-## 5. Performance & safety
-- All inserts are `void`-promised; failures only `console.warn`, never surfaced to user.
-- Indexes on every filter column.
-- 100/page cursor pagination, lazy drawer detail fetches.
-- No logging of: page views, searches, sorting, filtering, typing, hovers, PDF prints.
-- Admin-only RLS so non-admins cannot even read.
-
----
-
-## 6. Files to create / edit
-
-**Create**
-- `sql_migrations/20260625_activity_center.sql`
-- `src/lib/activityCenter.ts`
-- `src/hooks/useActivityCenter.ts`
-- `src/pages/ActivityCenter.tsx`
-- `src/components/activity/BusinessEventsTab.tsx`
-- `src/components/activity/UserActivityTab.tsx`
-- `src/components/activity/SystemEventsTab.tsx`
-- `src/components/activity/EventDrawer.tsx`
-- `src/components/activity/SeverityBadge.tsx`
-- `src/components/activity/ModuleIcon.tsx`
-
-**Edit (one-line instrumentation only)**
-- `src/App.tsx` (route), `src/components/AppSidebar.tsx` (link), `src/components/Layout.tsx` (heartbeat)
-- `src/context/AuthContext.tsx` (login/logout events + session)
-- `src/main.tsx` (global error → `logSystemEvent`)
-- `src/hooks/useChallan.ts`, `src/hooks/useExpenses.ts`, `src/hooks/useSampling.ts`, `src/hooks/useStore.ts`
-- `src/context/AppContext.tsx` (lot/recipe events)
-- `src/pages/UserManagement.tsx` (user/role events)
-
-No existing behavior changes; only additive logging calls.
+No deletions. No route changes.

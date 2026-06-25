@@ -130,9 +130,14 @@ export interface StoreCurrentStockByItemRow {
   sub_category: string | null;
   unit: string;
   is_asset: boolean;
+  item_created_at: string | null;
+  first_received_date: string | null;
   default_rack_id: string | null;
   default_rack_code: string | null;
   default_rack_name: string | null;
+  latest_rack_id: string | null;
+  latest_rack_code: string | null;
+  latest_rack_name: string | null;
   current_quantity: number;
   last_transaction_date: string | null;
   last_transaction_at: string | null;
@@ -148,6 +153,129 @@ export const useStoreCurrentStockByItem = () =>
         .order('item_name', { ascending: true });
       if (error) throw error;
       return (data ?? []) as StoreCurrentStockByItemRow[];
+    },
+  });
+
+// ---------- Catalogue helpers (auto-create items from transactions) ----
+
+export interface UpsertCatalogueInput {
+  item_name: string;
+  category: StoreItemCategory;
+  sub_category?: string | null;
+  unit: string;
+  is_asset?: boolean;
+  remarks?: string | null;
+  /** Force a specific item_code (used by FG / EDY for deterministic dedupe). */
+  item_code?: string | null;
+}
+
+/**
+ * Find-or-create an inventory catalogue item.
+ * Dedupe rules:
+ *  - If item_code is provided, dedupe on item_code (exact).
+ *  - Otherwise dedupe on (lower(item_name), category).
+ * Never throws on duplicate; always returns the existing row's id.
+ */
+export const upsertCatalogueItem = async (input: UpsertCatalogueInput): Promise<string> => {
+  const name = input.item_name.trim();
+  if (!name) throw new Error('Item name is required');
+  if (!input.unit) throw new Error('Unit is required');
+
+  if (input.item_code) {
+    const { data: byCode } = await sb
+      .from('store_items')
+      .select('id')
+      .eq('item_code', input.item_code)
+      .maybeSingle();
+    if (byCode?.id) return byCode.id as string;
+  }
+
+  const { data: byName } = await sb
+    .from('store_items')
+    .select('id')
+    .ilike('item_name', name)
+    .eq('category', input.category)
+    .limit(1);
+  if (byName && byName.length) return byName[0].id as string;
+
+  const code = input.item_code
+    || `${input.category.toUpperCase().slice(0, 3)}-${Date.now().toString(36).toUpperCase()}`;
+
+  const { data: created, error } = await sb
+    .from('store_items')
+    .insert({
+      item_code: code,
+      item_name: name,
+      category: input.category,
+      sub_category: input.sub_category || null,
+      unit: input.unit,
+      is_asset: input.is_asset ?? false,
+      is_active: true,
+      remarks: input.remarks || null,
+    })
+    .select('id')
+    .single();
+  if (error) throw error;
+  return created.id as string;
+};
+
+export const useUpsertCatalogueItem = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpsertCatalogueInput) => upsertCatalogueItem(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['store_items'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock_by_item'] });
+    },
+  });
+};
+
+/**
+ * Find similar existing items by name (fuzzy token match).
+ * Used to warn user before creating a near-duplicate item.
+ */
+export const useFindSimilarItems = (name: string, category?: StoreItemCategory) =>
+  useQuery({
+    queryKey: ['store_items_similar', name.trim().toLowerCase(), category ?? ''],
+    enabled: name.trim().length >= 2,
+    queryFn: async () => {
+      const tokens = name.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(t => t.length >= 2);
+      if (!tokens.length) return [] as StoreItem[];
+      let q = sb.from('store_items').select('*').eq('is_active', true);
+      if (category) q = q.eq('category', category);
+      q = q.ilike('item_name', `%${tokens[0]}%`);
+      const { data, error } = await q.limit(50);
+      if (error) throw error;
+      const lcName = name.trim().toLowerCase();
+      return ((data ?? []) as StoreItem[])
+        .map((it: StoreItem) => {
+          const lc = it.item_name.toLowerCase();
+          let score = 0;
+          for (const t of tokens) if (lc.includes(t)) score++;
+          if (lc === lcName) score += 5;
+          else if (lc.startsWith(lcName)) score += 2;
+          return { it, score };
+        })
+        .filter(x => x.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5)
+        .map(x => x.it);
+    },
+  });
+
+/** Upload an invoice file to the `inward-bills` bucket. */
+export const useUploadInwardBill = () =>
+  useMutation({
+    mutationFn: async (file: File) => {
+      const ext = file.name.split('.').pop() || 'bin';
+      const path = `${new Date().getFullYear()}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await sb.storage.from('inward-bills').upload(path, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+      if (error) throw error;
+      const { data } = sb.storage.from('inward-bills').getPublicUrl(path);
+      return { path, url: data.publicUrl as string };
     },
   });
 
@@ -233,7 +361,12 @@ interface CreateInwardPayload {
   invoice_number?: string | null;
   grn_number?: string | null;
   remarks?: string | null;
-  lines: StoreStockInwardLineInput[];
+  bill_url?: string | null;
+  bill_path?: string | null;
+  lines: (StoreStockInwardLineInput & {
+    /** If item_id is empty, create catalogue item from these fields. */
+    new_item?: UpsertCatalogueInput;
+  })[];
 }
 
 export const useCreateStoreInward = () => {
@@ -242,12 +375,24 @@ export const useCreateStoreInward = () => {
     mutationFn: async (payload: CreateInwardPayload) => {
       if (!payload.lines.length) throw new Error('Add at least one line item');
 
+      // 0. Resolve any new_item entries into store_items rows first.
+      const resolvedLines = await Promise.all(payload.lines.map(async (l) => {
+        let itemId = l.item_id;
+        let unit = l.unit;
+        if (!itemId && l.new_item) {
+          itemId = await upsertCatalogueItem(l.new_item);
+          unit = unit || l.new_item.unit;
+        }
+        if (!itemId) throw new Error('Each line must reference an item');
+        return { ...l, item_id: itemId, unit };
+      }));
+
       // 1. Generate inward number
       const { data: numData, error: numErr } = await sb.rpc('next_store_inward_number');
       if (numErr) throw numErr;
       const inwardNumber: string = numData;
 
-      const totalAmount = payload.lines.reduce(
+      const totalAmount = resolvedLines.reduce(
         (s, l) => s + Number(l.amount ?? (Number(l.rate || 0) * Number(l.quantity || 0))),
         0,
       );
@@ -262,6 +407,8 @@ export const useCreateStoreInward = () => {
           invoice_number: payload.invoice_number || null,
           grn_number: payload.grn_number || null,
           remarks: payload.remarks || null,
+          bill_url: payload.bill_url || null,
+          bill_path: payload.bill_path || null,
           total_amount: totalAmount,
         })
         .select()
@@ -270,7 +417,7 @@ export const useCreateStoreInward = () => {
 
       // 3. Build transaction rows (positive quantities; stock_in type)
       const txnRows = await Promise.all(
-        payload.lines.map(async (l) => {
+        resolvedLines.map(async (l) => {
           const { data: txnNum, error: txnErr } = await sb.rpc('next_store_txn_number');
           if (txnErr) throw txnErr;
           const amt = l.amount ?? Number(l.rate || 0) * Number(l.quantity || 0);
@@ -611,34 +758,15 @@ export const useCreateFGReceipt = () => {
         .maybeSingle();
       if (dup) throw new Error(`Lot ${payload.lot_no} has already been received`);
 
-      const fgItemCode = `FG-${payload.lot_no}`;
-      let itemId: string;
-      const { data: existingItem } = await sb
-        .from('store_items')
-        .select('id')
-        .eq('item_code', fgItemCode)
-        .maybeSingle();
-      if (existingItem?.id) {
-        itemId = existingItem.id;
-      } else {
-        const { data: newItem, error: itemErr } = await sb
-          .from('store_items')
-          .insert({
-            item_code: fgItemCode,
-            item_name: `${payload.lot_no}${payload.shade ? ' — ' + payload.shade : ''}`,
-            category: 'finished_good',
-            sub_category: null,
-            unit: 'kg',
-            is_asset: false,
-            is_active: true,
-            default_rack: payload.rack_id || null,
-            remarks: `Auto-created for finished lot ${payload.lot_no}`,
-          })
-          .select('id')
-          .single();
-        if (itemErr) throw itemErr;
-        itemId = newItem.id;
-      }
+      // Item name = lot number (per spec). Dedupe via item_code FG-<lot>.
+      const itemId = await upsertCatalogueItem({
+        item_code: `FG-${payload.lot_no}`,
+        item_name: `${payload.lot_no}`,
+        category: 'finished_good',
+        sub_category: 'Production Lot',
+        unit: 'kg',
+        remarks: `Auto-created for finished lot ${payload.lot_no}`,
+      });
 
       const { data: rcptNum, error: rcptErr } = await sb.rpc('next_store_fg_number');
       if (rcptErr) throw rcptErr;
@@ -752,25 +880,19 @@ export const useCreateEDYReceipt = () => {
       if (rcptErr) throw rcptErr;
       const receiptNumber: string = rcptNum;
 
-      const itemCode = `EDY-${receiptNumber}`;
-      const itemName = `${receiptNumber}${payload.shade ? ' — ' + payload.shade : ''}${payload.supplier ? ' (' + payload.supplier + ')' : ''}`;
-      const { data: newItem, error: itemErr } = await sb
-        .from('store_items')
-        .insert({
-          item_code: itemCode,
-          item_name: itemName,
-          category: 'external_dyed_yarn',
-          sub_category: null,
-          unit: 'kg',
-          is_asset: false,
-          is_active: true,
-          default_rack: payload.rack_id || null,
-          remarks: `Auto-created for external dyed yarn receipt ${receiptNumber}`,
-        })
-        .select('id')
-        .single();
-      if (itemErr) throw itemErr;
-      const itemId: string = newItem.id;
+      // Item name format: LotNumber_Shade_Dyer (uses challan as lot label).
+      const lotLabel = (payload.challan_number || receiptNumber).replace(/\s+/g, '');
+      const shadeLabel = (payload.shade || 'NA').replace(/\s+/g, '');
+      const dyerLabel = (payload.supplier || 'Dyer').replace(/\s+/g, '');
+      const itemName = `${lotLabel}_${shadeLabel}_${dyerLabel}`;
+      const itemId = await upsertCatalogueItem({
+        item_code: `EDY-${receiptNumber}`,
+        item_name: itemName,
+        category: 'external_dyed_yarn',
+        sub_category: 'External Production',
+        unit: 'kg',
+        remarks: `Auto-created for external dyed yarn receipt ${receiptNumber}`,
+      });
 
       const amount =
         payload.rate != null
@@ -885,7 +1007,12 @@ export const useAssetMovements = (assetId: string | undefined) =>
 
 interface CreateAssetPayload {
   asset_id?: string | null;
-  item_id: string;
+  /** Existing catalogue item; required unless new_item is provided. */
+  item_id?: string;
+  /** Auto-create the catalogue item (with is_asset=true). */
+  new_item?: Omit<UpsertCatalogueInput, 'is_asset' | 'category'> & {
+    category?: StoreItemCategory;
+  };
   current_holder?: string | null;
   department?: string | null;
   rack_id?: string | null;
@@ -909,11 +1036,25 @@ export const useCreateAsset = () => {
       }
       const status = payload.status ?? 'available';
 
+      // Resolve item_id — auto-create catalogue entry when only new_item is supplied.
+      let itemId = payload.item_id || '';
+      if (!itemId) {
+        if (!payload.new_item) throw new Error('Either item_id or new_item is required');
+        itemId = await upsertCatalogueItem({
+          item_name: payload.new_item.item_name,
+          category: payload.new_item.category || 'tool_equipment',
+          sub_category: payload.new_item.sub_category || null,
+          unit: payload.new_item.unit || 'pcs',
+          is_asset: true,
+          remarks: payload.new_item.remarks || `Auto-created for asset ${assetCode}`,
+        });
+      }
+
       const { data: asset, error: insErr } = await sb
         .from('store_assets')
         .insert({
           asset_id: assetCode,
-          item_id: payload.item_id,
+          item_id: itemId,
           current_holder: payload.current_holder || null,
           department: payload.department || null,
           rack_id: payload.rack_id || null,
@@ -931,14 +1072,14 @@ export const useCreateAsset = () => {
         const { data: itemRow } = await sb
           .from('store_items')
           .select('unit')
-          .eq('id', payload.item_id)
+          .eq('id', itemId)
           .single();
         const { data: txnNum } = await sb.rpc('next_store_txn_number');
         await sb.from('store_stock_transactions').insert({
           transaction_number: txnNum,
           transaction_date: new Date().toISOString().slice(0, 10),
           transaction_type: 'stock_in',
-          item_id: payload.item_id,
+          item_id: itemId,
           quantity: 1,
           unit: itemRow?.unit || 'pcs',
           rack_id: payload.rack_id || null,

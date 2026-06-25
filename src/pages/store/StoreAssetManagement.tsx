@@ -59,6 +59,9 @@ const AssetManagement: React.FC = () => {
   const [form, setForm] = useState({
     asset_id: '',
     item_id: '',
+    new_item_name: '',
+    new_item_unit: 'pcs',
+    use_new_item: true,
     current_holder: '',
     department: '',
     rack_id: '',
@@ -114,7 +117,9 @@ const AssetManagement: React.FC = () => {
 
   const openCreate = () => {
     setForm({
-      asset_id: '', item_id: '', current_holder: '', department: '',
+      asset_id: '', item_id: '',
+      new_item_name: '', new_item_unit: 'pcs', use_new_item: true,
+      current_holder: '', department: '',
       rack_id: '', purchase_date: '', condition: 'Good',
       status: 'available', remarks: '', add_stock: true,
     });
@@ -122,11 +127,24 @@ const AssetManagement: React.FC = () => {
   };
 
   const submitCreate = async () => {
-    if (!form.item_id) { toast.error('Pick the Item (must be marked as Asset)'); return; }
+    if (form.use_new_item) {
+      if (!form.new_item_name.trim()) { toast.error('Item name is required'); return; }
+    } else if (!form.item_id) {
+      toast.error('Pick an existing asset item or switch to New Item');
+      return;
+    }
     try {
       await createAsset.mutateAsync({
         asset_id: form.asset_id || null,
-        item_id: form.item_id,
+        item_id: form.use_new_item ? undefined : form.item_id,
+        new_item: form.use_new_item
+          ? {
+              item_name: form.new_item_name.trim(),
+              category: 'tool_equipment',
+              sub_category: null,
+              unit: form.new_item_unit || 'pcs',
+            }
+          : undefined,
         current_holder: form.current_holder || null,
         department: form.department || null,
         rack_id: form.rack_id || null,
@@ -349,16 +367,53 @@ const AssetManagement: React.FC = () => {
                 placeholder="Auto-generated if blank (AST-#####)"
               />
             </div>
-            <div>
-              <Label>Item *</Label>
-              <Select value={form.item_id} onValueChange={(v) => setForm(f => ({ ...f, item_id: v }))}>
-                <SelectTrigger><SelectValue placeholder={assetItems.length ? 'Select asset item' : 'No asset items — mark items as Asset first'} /></SelectTrigger>
-                <SelectContent>
-                  {assetItems.map(i => (
-                    <SelectItem key={i.id} value={i.id}>{i.item_code} — {i.item_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="md:col-span-2 border rounded-md p-3 space-y-3">
+              <div className="flex items-center gap-4 text-sm">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" checked={form.use_new_item}
+                    onChange={() => setForm(f => ({ ...f, use_new_item: true, item_id: '' }))} />
+                  Create new asset item
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" checked={!form.use_new_item}
+                    onChange={() => setForm(f => ({ ...f, use_new_item: false }))} />
+                  Use existing asset item
+                </label>
+              </div>
+              {form.use_new_item ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <div className="md:col-span-2">
+                    <Label>New Item Name *</Label>
+                    <Input
+                      value={form.new_item_name}
+                      onChange={(e) => setForm(f => ({ ...f, new_item_name: e.target.value }))}
+                      placeholder="e.g. Drill Machine"
+                    />
+                  </div>
+                  <div>
+                    <Label>Unit</Label>
+                    <Input
+                      value={form.new_item_unit}
+                      onChange={(e) => setForm(f => ({ ...f, new_item_unit: e.target.value }))}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground md:col-span-3">
+                    Category will be set to <strong>Tools &amp; Equipment</strong> and registered as an Asset automatically.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <Label>Existing Asset Item *</Label>
+                  <Select value={form.item_id} onValueChange={(v) => setForm(f => ({ ...f, item_id: v }))}>
+                    <SelectTrigger><SelectValue placeholder={assetItems.length ? 'Select asset item' : 'No asset items yet'} /></SelectTrigger>
+                    <SelectContent>
+                      {assetItems.map(i => (
+                        <SelectItem key={i.id} value={i.id}>{i.item_code} — {i.item_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             <div>
               <Label>Current Holder</Label>
