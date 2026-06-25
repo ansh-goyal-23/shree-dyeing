@@ -42,6 +42,7 @@ import StoreFinishedGoodsReceive from "@/pages/store/StoreFinishedGoodsReceive";
 import StoreExternalDyedYarnList from "@/pages/store/StoreExternalDyedYarnList";
 import StoreExternalDyedYarnReceive from "@/pages/store/StoreExternalDyedYarnReceive";
 import StoreAssetManagement from "@/pages/store/StoreAssetManagement";
+import StoreCurrentStock from "@/pages/store/StoreCurrentStock";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 

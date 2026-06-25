@@ -119,6 +119,51 @@ export const useStoreCurrentStock = () =>
     },
   });
 
+export interface StoreCurrentStockByItemRow {
+  item_id: string;
+  item_code: string;
+  item_name: string;
+  category: import('@/types/store').StoreItemCategory;
+  sub_category: string | null;
+  unit: string;
+  is_asset: boolean;
+  default_rack_id: string | null;
+  default_rack_code: string | null;
+  default_rack_name: string | null;
+  current_quantity: number;
+  last_transaction_date: string | null;
+  last_transaction_at: string | null;
+}
+
+export const useStoreCurrentStockByItem = () =>
+  useQuery({
+    queryKey: ['store_current_stock_by_item'],
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('store_current_stock_by_item')
+        .select('*')
+        .order('item_name', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as StoreCurrentStockByItemRow[];
+    },
+  });
+
+export const useItemTransactions = (itemId: string | undefined) =>
+  useQuery({
+    queryKey: ['store_item_transactions', itemId],
+    enabled: !!itemId,
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('store_stock_transactions')
+        .select('*')
+        .eq('item_id', itemId)
+        .order('transaction_date', { ascending: false })
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as StoreStockTransaction[];
+    },
+  });
+
 // ---------- Categories (UI labels) ----------
 
 export const STORE_CATEGORY_LABEL: Record<StoreItemCategory, string> = {
