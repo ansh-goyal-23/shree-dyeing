@@ -4,6 +4,7 @@ import { calculateNetWeight } from '@/lib/calculations';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { logActivity } from '@/lib/activityLog';
+import { logBusinessEvent } from '@/lib/activityCenter';
 
 interface AppState {
   lots: Lot[];
@@ -136,6 +137,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       shade_number, source_lot_no: lotData.source_lot_no || null, status,
     });
     if (lotErr) return false;
+    logBusinessEvent({
+      module: 'shade', eventType: 'lot.created', severity: 'success',
+      entityType: 'lot', entityId: lotData.lot_no, entityName: `Lot ${lotData.lot_no}`,
+      referenceNumber: lotData.lot_no,
+      summary: `Created Lot ${lotData.lot_no}${shade_number !== lotData.lot_no ? ` (shade ${shade_number})` : ''} — ${net_weight.toFixed(3)} kg`,
+      details: { color: lotData.color_name, denier: lotData.denier, status },
+    });
     await fetchAll();
     return true;
   }, [fetchAll]);
@@ -163,6 +171,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // RLS blocked the delete silently.
       return false;
     }
+    logBusinessEvent({
+      module: 'shade', eventType: 'lot.deleted', severity: 'warning',
+      entityType: 'lot', entityId: lotNo, referenceNumber: lotNo,
+      summary: `Deleted Lot ${lotNo}`,
+    });
     await fetchAll();
     return true;
   }, [fetchAll]);
@@ -203,6 +216,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       action: 'Status Change', referenceType: 'lot', referenceId: lotNo,
       section: 'Status', itemLabel: `Lot ${lotNo} approval`, prev: 'Unapproved', next: 'Approved',
     });
+    logBusinessEvent({
+      module: 'shade', eventType: 'lot.approved', severity: 'success',
+      entityType: 'lot', entityId: lotNo, referenceNumber: lotNo,
+      summary: `Approved Lot ${lotNo}`,
+    });
     await fetchAll();
   }, [fetchAll]);
 
@@ -211,6 +229,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await logActivity({
       action: 'Status Change', referenceType: 'lot', referenceId: lotNo,
       section: 'Status', itemLabel: `Lot ${lotNo} approval`, prev: 'Approved', next: 'Unapproved',
+    });
+    logBusinessEvent({
+      module: 'shade', eventType: 'lot.rejected', severity: 'warning',
+      entityType: 'lot', entityId: lotNo, referenceNumber: lotNo,
+      summary: `Unapproved Lot ${lotNo}`,
     });
     await fetchAll();
   }, [fetchAll]);
