@@ -1,20 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import {
-  useStoreItems,
-  useCreateStoreItem,
-  useUpdateStoreItem,
+  useStoreCurrentStockByItem,
   useStoreRacks,
   useCreateStoreRack,
   STORE_CATEGORIES,
   STORE_CATEGORY_LABEL,
   RAW_MATERIAL_SUBCATEGORIES,
-  STORE_UNITS,
+  type StoreCurrentStockByItemRow,
 } from '@/hooks/useStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -25,119 +22,76 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Plus, Pencil, Search, Package, PlusCircle, Activity } from 'lucide-react';
+import { Search, Package, PlusCircle, Activity, ArrowUpDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import type { StoreItem, StoreItemCategory } from '@/types/store';
 
-const NO_RACK = '__no_rack__';
+type SortKey = 'item_name' | 'category' | 'first_received_date' | 'last_transaction_date' | 'current_quantity';
 
-const emptyForm = {
-  item_code: '',
-  item_name: '',
-  category: 'raw_material' as StoreItemCategory,
-  sub_category: '' as string,
-  unit: 'kg',
-  is_asset: false,
-  is_active: true,
-  default_rack: '' as string,
-  remarks: '',
-};
+const ALL = 'all';
 
-const StoreItemMaster: React.FC = () => {
+const InventoryCatalogue: React.FC = () => {
   const navigate = useNavigate();
-  const { data: items = [], isLoading } = useStoreItems({ activeOnly: false });
+  const { data: rows = [], isLoading } = useStoreCurrentStockByItem();
   const { data: racks = [] } = useStoreRacks();
-  const createItem = useCreateStoreItem();
-  const updateItem = useUpdateStoreItem();
   const createRack = useCreateStoreRack();
 
   const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [subFilter, setSubFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('active');
-
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<StoreItem | null>(null);
-  const [form, setForm] = useState({ ...emptyForm });
+  const [categoryFilter, setCategoryFilter] = useState<string>(ALL);
+  const [subFilter, setSubFilter] = useState<string>(ALL);
+  const [assetFilter, setAssetFilter] = useState<string>(ALL);
+  const [sortKey, setSortKey] = useState<SortKey>('item_name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
   const [rackDialogOpen, setRackDialogOpen] = useState(false);
   const [rackForm, setRackForm] = useState({ rack_code: '', rack_name: '', area: '', description: '' });
 
+  const subOptions = useMemo(() => {
+    if (categoryFilter === 'raw_material') return RAW_MATERIAL_SUBCATEGORIES;
+    const uniq = Array.from(new Set(rows
+      .filter(r => categoryFilter === ALL || r.category === categoryFilter)
+      .map(r => r.sub_category)
+      .filter(Boolean) as string[]));
+    return uniq.map(v => ({ value: v, label: v }));
+  }, [rows, categoryFilter]);
+
   const filtered = useMemo(() => {
-    return items.filter(i => {
-      if (statusFilter === 'active' && !i.is_active) return false;
-      if (statusFilter === 'inactive' && i.is_active) return false;
-      if (categoryFilter !== 'all' && i.category !== categoryFilter) return false;
-      if (subFilter !== 'all' && (i.sub_category || '') !== subFilter) return false;
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        if (!i.item_name.toLowerCase().includes(q) && !i.item_code.toLowerCase().includes(q)) return false;
-      }
-      return true;
+    const needle = search.trim().toLowerCase();
+    const list = rows.filter(r => {
+      if (categoryFilter !== ALL && r.category !== categoryFilter) return false;
+      if (subFilter !== ALL && (r.sub_category || '') !== subFilter) return false;
+      if (assetFilter === 'asset' && !r.is_asset) return false;
+      if (assetFilter === 'non_asset' && r.is_asset) return false;
+      if (!needle) return true;
+      return (
+        r.item_name.toLowerCase().includes(needle) ||
+        r.item_code.toLowerCase().includes(needle) ||
+        (r.sub_category || '').toLowerCase().includes(needle)
+      );
     });
-  }, [items, search, categoryFilter, subFilter, statusFilter]);
-
-  const openCreate = () => {
-    setEditing(null);
-    setForm({ ...emptyForm });
-    setDialogOpen(true);
-  };
-
-  const openEdit = (item: StoreItem) => {
-    setEditing(item);
-    setForm({
-      item_code: item.item_code,
-      item_name: item.item_name,
-      category: item.category,
-      sub_category: item.sub_category || '',
-      unit: item.unit,
-      is_asset: item.is_asset,
-      is_active: item.is_active,
-      default_rack: item.default_rack || '',
-      remarks: item.remarks || '',
+    list.sort((a, b) => {
+      const dir = sortDir === 'asc' ? 1 : -1;
+      const av = (a as any)[sortKey] ?? '';
+      const bv = (b as any)[sortKey] ?? '';
+      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
+      return String(av).localeCompare(String(bv)) * dir;
     });
-    setDialogOpen(true);
+    return list;
+  }, [rows, search, categoryFilter, subFilter, assetFilter, sortKey, sortDir]);
+
+  const toggleSort = (k: SortKey) => {
+    if (sortKey === k) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(k); setSortDir('asc'); }
   };
 
-  const submit = async () => {
-    if (!form.item_code.trim() || !form.item_name.trim() || !form.unit.trim()) {
-      toast.error('Item Code, Name and Unit are required');
-      return;
-    }
-    const payload = {
-      item_code: form.item_code.trim(),
-      item_name: form.item_name.trim(),
-      category: form.category,
-      sub_category: form.sub_category || null,
-      unit: form.unit,
-      is_asset: form.is_asset,
-      is_active: form.is_active,
-      default_rack: form.default_rack || null,
-      remarks: form.remarks || null,
-    };
-    try {
-      if (editing) {
-        await updateItem.mutateAsync({ id: editing.id, ...payload });
-        toast.success('Item updated');
-      } else {
-        await createItem.mutateAsync(payload as any);
-        toast.success('Item created');
-      }
-      setDialogOpen(false);
-    } catch (e: any) {
-      toast.error(e.message || 'Failed to save');
-    }
-  };
-
-  const toggleActive = async (item: StoreItem) => {
-    try {
-      await updateItem.mutateAsync({ id: item.id, is_active: !item.is_active });
-      toast.success(item.is_active ? 'Item deactivated' : 'Item activated');
-    } catch (e: any) {
-      toast.error(e.message || 'Failed');
-    }
-  };
+  const SortableHead: React.FC<{ k: SortKey; children: React.ReactNode; className?: string }> = ({ k, children, className }) => (
+    <TableHead className={className}>
+      <button onClick={() => toggleSort(k)} className="inline-flex items-center gap-1 hover:text-foreground">
+        {children}
+        <ArrowUpDown className="h-3 w-3 opacity-50" />
+      </button>
+    </TableHead>
+  );
 
   const submitRack = async () => {
     if (!rackForm.rack_code.trim() || !rackForm.rack_name.trim()) {
@@ -160,25 +114,20 @@ const StoreItemMaster: React.FC = () => {
     }
   };
 
-  const showSubcategory = form.category === 'raw_material';
-
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Package className="h-6 w-6" /> Item Master
+            <Package className="h-6 w-6" /> Inventory Catalogue
           </h1>
-          <p className="text-muted-foreground text-sm">Store / Inventory item catalogue.</p>
+          <p className="text-muted-foreground text-sm">
+            Auto-generated from Stock Inward, Finished Goods, External Dyed Yarn and Asset Management. Items are created as you transact — no manual setup needed.
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setRackDialogOpen(true)}>
-            <PlusCircle className="h-4 w-4 mr-1" /> New Rack
-          </Button>
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4 mr-1" /> New Item
-          </Button>
-        </div>
+        <Button variant="outline" onClick={() => setRackDialogOpen(true)}>
+          <PlusCircle className="h-4 w-4 mr-1" /> New Rack
+        </Button>
       </div>
 
       {/* Filters */}
@@ -188,34 +137,30 @@ const StoreItemMaster: React.FC = () => {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name or code…"
+            placeholder="Search item name or code…"
             className="pl-8"
           />
         </div>
-        <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setSubFilter('all'); }}>
+        <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setSubFilter(ALL); }}>
           <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value={ALL}>All Categories</SelectItem>
             {STORE_CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select
-          value={subFilter}
-          onValueChange={setSubFilter}
-          disabled={categoryFilter !== 'raw_material'}
-        >
+        <Select value={subFilter} onValueChange={setSubFilter} disabled={!subOptions.length}>
           <SelectTrigger><SelectValue placeholder="Sub Category" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Sub Categories</SelectItem>
-            {RAW_MATERIAL_SUBCATEGORIES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+            <SelectItem value={ALL}>All Sub Categories</SelectItem>
+            {subOptions.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={assetFilter} onValueChange={setAssetFilter}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="active">Active Only</SelectItem>
-            <SelectItem value="inactive">Inactive Only</SelectItem>
-            <SelectItem value="all">All</SelectItem>
+            <SelectItem value={ALL}>All Items</SelectItem>
+            <SelectItem value="asset">Assets Only</SelectItem>
+            <SelectItem value="non_asset">Non-Assets</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -225,48 +170,52 @@ const StoreItemMaster: React.FC = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="min-w-[110px]">Code</TableHead>
-              <TableHead className="min-w-[180px]">Name</TableHead>
-              <TableHead>Category</TableHead>
+              <SortableHead k="item_name" className="min-w-[200px]">Item Name</SortableHead>
+              <SortableHead k="category">Category</SortableHead>
               <TableHead>Sub Category</TableHead>
               <TableHead>Unit</TableHead>
               <TableHead>Asset</TableHead>
-              <TableHead>Default Rack</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <SortableHead k="first_received_date">First Received</SortableHead>
+              <SortableHead k="last_transaction_date">Last Transaction</SortableHead>
+              <SortableHead k="current_quantity" className="text-right">Current Stock</SortableHead>
+              <TableHead className="text-right">Timeline</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">Loading…</TableCell></TableRow>
             ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">No items found.</TableCell></TableRow>
-            ) : filtered.map(item => {
-              const rack = racks.find(r => r.id === item.default_rack);
-              const subLabel = RAW_MATERIAL_SUBCATEGORIES.find(s => s.value === item.sub_category)?.label || item.sub_category || '—';
+              <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">No items yet. Create the first item via Stock Inward.</TableCell></TableRow>
+            ) : filtered.map((r: StoreCurrentStockByItemRow) => {
+              const subLabel = RAW_MATERIAL_SUBCATEGORIES.find(s => s.value === r.sub_category)?.label || r.sub_category || '—';
+              const qty = Number(r.current_quantity);
               return (
-                <TableRow key={item.id}>
-                  <TableCell className="font-mono text-xs">{item.item_code}</TableCell>
-                  <TableCell className="font-medium">{item.item_name}</TableCell>
-                  <TableCell>{STORE_CATEGORY_LABEL[item.category]}</TableCell>
-                  <TableCell>{item.category === 'raw_material' ? subLabel : '—'}</TableCell>
-                  <TableCell>{item.unit}</TableCell>
-                  <TableCell>{item.is_asset ? <Badge variant="secondary">Asset</Badge> : '—'}</TableCell>
-                  <TableCell>{rack ? `${rack.rack_code}` : '—'}</TableCell>
+                <TableRow
+                  key={r.item_id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => navigate(`/store/timeline/${r.item_id}`)}
+                >
                   <TableCell>
-                    {item.is_active
-                      ? <Badge>Active</Badge>
-                      : <Badge variant="outline">Inactive</Badge>}
+                    <div className="font-medium">{r.item_name}</div>
+                    <div className="text-xs text-muted-foreground font-mono">{r.item_code}</div>
+                  </TableCell>
+                  <TableCell>{STORE_CATEGORY_LABEL[r.category]}</TableCell>
+                  <TableCell>{subLabel}</TableCell>
+                  <TableCell>{r.unit}</TableCell>
+                  <TableCell>{r.is_asset ? <Badge variant="secondary">Yes</Badge> : <span className="text-muted-foreground">No</span>}</TableCell>
+                  <TableCell className="text-xs">{r.first_received_date || '—'}</TableCell>
+                  <TableCell className="text-xs">{r.last_transaction_date || '—'}</TableCell>
+                  <TableCell className={'text-right font-semibold ' + (qty < 0 ? 'text-destructive' : qty === 0 ? 'text-muted-foreground' : '')}>
+                    {qty.toFixed(3)} <span className="text-xs text-muted-foreground">{r.unit}</span>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" title="View Timeline" onClick={() => navigate(`/store/timeline/${item.id}`)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="View Timeline"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/store/timeline/${r.item_id}`); }}
+                    >
                       <Activity className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(item)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => toggleActive(item)}>
-                      {item.is_active ? 'Deactivate' : 'Activate'}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -275,100 +224,6 @@ const StoreItemMaster: React.FC = () => {
           </TableBody>
         </Table>
       </div>
-
-      {/* Create / Edit dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{editing ? 'Edit Item' : 'New Item'}</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <Label>Item Code *</Label>
-              <Input value={form.item_code} onChange={(e) => setForm(f => ({ ...f, item_code: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Item Name *</Label>
-              <Input value={form.item_name} onChange={(e) => setForm(f => ({ ...f, item_name: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Category *</Label>
-              <Select
-                value={form.category}
-                onValueChange={(v) => setForm(f => ({ ...f, category: v as StoreItemCategory, sub_category: '' }))}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {STORE_CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Sub Category {showSubcategory && '*'}</Label>
-              {showSubcategory ? (
-                <Select value={form.sub_category} onValueChange={(v) => setForm(f => ({ ...f, sub_category: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select sub category" /></SelectTrigger>
-                  <SelectContent>
-                    {RAW_MATERIAL_SUBCATEGORIES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input
-                  value={form.sub_category}
-                  onChange={(e) => setForm(f => ({ ...f, sub_category: e.target.value }))}
-                  placeholder="Optional"
-                />
-              )}
-            </div>
-            <div>
-              <Label>Unit *</Label>
-              <Select value={form.unit} onValueChange={(v) => setForm(f => ({ ...f, unit: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {STORE_UNITS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Default Rack</Label>
-              <Select
-                value={form.default_rack || NO_RACK}
-                onValueChange={(v) => setForm(f => ({ ...f, default_rack: v === NO_RACK ? '' : v }))}
-              >
-                <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_RACK}>None</SelectItem>
-                  {racks.filter(r => r.is_active).map(r => (
-                    <SelectItem key={r.id} value={r.id}>{r.rack_code} — {r.rack_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center justify-between border rounded-md px-3 py-2">
-              <Label className="m-0">Is Asset</Label>
-              <Switch checked={form.is_asset} onCheckedChange={(v) => setForm(f => ({ ...f, is_asset: v }))} />
-            </div>
-            <div className="flex items-center justify-between border rounded-md px-3 py-2">
-              <Label className="m-0">Active</Label>
-              <Switch checked={form.is_active} onCheckedChange={(v) => setForm(f => ({ ...f, is_active: v }))} />
-            </div>
-            <div className="md:col-span-2">
-              <Label>Remarks</Label>
-              <Textarea
-                value={form.remarks}
-                onChange={(e) => setForm(f => ({ ...f, remarks: e.target.value }))}
-                rows={2}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={submit} disabled={createItem.isPending || updateItem.isPending}>
-              {editing ? 'Update' : 'Create'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Quick add Rack */}
       <Dialog open={rackDialogOpen} onOpenChange={setRackDialogOpen}>
@@ -404,4 +259,4 @@ const StoreItemMaster: React.FC = () => {
   );
 };
 
-export default StoreItemMaster;
+export default InventoryCatalogue;
