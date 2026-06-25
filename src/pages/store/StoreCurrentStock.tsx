@@ -21,7 +21,8 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Boxes, Search, Download } from 'lucide-react';
+import { Boxes, Search, Download, Activity } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 const ALL = 'all';
