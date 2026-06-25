@@ -255,3 +255,221 @@ export const useCreateStoreInward = () => {
     },
   });
 };
+
+// ---------- Internal Issues ----------
+
+export const useStoreIssueList = () =>
+  useQuery({
+    queryKey: ['store_issue_list'],
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('store_internal_issues')
+        .select('*')
+        .order('issue_date', { ascending: false })
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as StoreInternalIssue[];
+    },
+  });
+
+export const useStoreIssue = (id: string | undefined) =>
+  useQuery({
+    queryKey: ['store_issue', id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('store_internal_issues')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (error) throw error;
+      return data as StoreInternalIssue;
+    },
+  });
+
+export const useStoreIssueLines = (issueNumber: string | undefined) =>
+  useQuery({
+    queryKey: ['store_issue_lines', issueNumber],
+    enabled: !!issueNumber,
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('store_stock_transactions')
+        .select('*')
+        .eq('reference_type', 'internal_issue')
+        .eq('reference_number', issueNumber)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as StoreStockTransaction[];
+    },
+  });
+
+interface CreateIssuePayload {
+  issue_date: string;
+  department?: string | null;
+  issued_to?: string | null;
+  remarks?: string | null;
+  lines: StoreInternalIssueLineInput[];
+}
+
+const buildIssueTxn = async (
+  issueNumber: string,
+  issueDate: string,
+  l: StoreInternalIssueLineInput,
+  issuedTo?: string | null,
+  isReversal = false,
+) => {
+  const { data: txnNum, error: txnErr } = await sb.rpc('next_store_txn_number');
+  if (txnErr) throw txnErr;
+  const qty = Math.abs(Number(l.quantity));
+  return {
+    transaction_number: txnNum,
+    transaction_date: issueDate,
+    transaction_type: 'internal_issue',
+    item_id: l.item_id,
+    quantity: isReversal ? qty : -qty, // outflow negative; reversal positive
+    unit: l.unit,
+    rack_id: l.rack_id || null,
+    reference_type: 'internal_issue',
+    reference_number: issueNumber,
+    person: issuedTo || null,
+    purpose: l.purpose || null,
+    remarks: isReversal ? `Reversal of ${issueNumber}` : null,
+  };
+};
+
+export const useCreateStoreIssue = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateIssuePayload) => {
+      if (!payload.lines.length) throw new Error('Add at least one item');
+
+      const { data: numData, error: numErr } = await sb.rpc('next_store_issue_number');
+      if (numErr) throw numErr;
+      const issueNumber: string = numData;
+
+      const { data: header, error: headerErr } = await sb
+        .from('store_internal_issues')
+        .insert({
+          issue_number: issueNumber,
+          issue_date: payload.issue_date,
+          department: payload.department || null,
+          issued_to: payload.issued_to || null,
+          remarks: payload.remarks || null,
+        })
+        .select()
+        .single();
+      if (headerErr) throw headerErr;
+
+      const txnRows = await Promise.all(
+        payload.lines.map((l) =>
+          buildIssueTxn(issueNumber, payload.issue_date, l, payload.issued_to),
+        ),
+      );
+
+      const { error: txInsErr } = await sb
+        .from('store_stock_transactions')
+        .insert(txnRows);
+
+      if (txInsErr) {
+        await sb.from('store_internal_issues').delete().eq('id', header.id);
+        throw txInsErr;
+      }
+
+      return header as StoreInternalIssue;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['store_issue_list'] });
+      qc.invalidateQueries({ queryKey: ['store_transactions'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+    },
+  });
+};
+
+interface UpdateIssuePayload extends CreateIssuePayload {
+  id: string;
+  issue_number: string;
+}
+
+export const useUpdateStoreIssue = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: UpdateIssuePayload) => {
+      if (!payload.lines.length) throw new Error('Add at least one item');
+
+      // 1. Fetch existing outflow lines for this issue (non-reversal)
+      const { data: existing, error: exErr } = await sb
+        .from('store_stock_transactions')
+        .select('*')
+        .eq('reference_type', 'internal_issue')
+        .eq('reference_number', payload.issue_number);
+      if (exErr) throw exErr;
+
+      // Compute net per (item, rack) so a previously edited issue still
+      // nets correctly. Only insert reversals for the current net outflow.
+      const netMap = new Map<string, { item_id: string; rack_id: string | null; unit: string; qty: number }>();
+      for (const t of (existing ?? []) as StoreStockTransaction[]) {
+        const key = `${t.item_id}::${t.rack_id ?? ''}`;
+        const cur = netMap.get(key) || { item_id: t.item_id, rack_id: t.rack_id, unit: t.unit, qty: 0 };
+        cur.qty += Number(t.quantity);
+        netMap.set(key, cur);
+      }
+
+      const reversalLines: StoreInternalIssueLineInput[] = [];
+      for (const v of netMap.values()) {
+        if (v.qty < 0) {
+          // Outstanding outflow exists -> insert positive reversal
+          reversalLines.push({
+            item_id: v.item_id,
+            rack_id: v.rack_id,
+            unit: v.unit,
+            quantity: Math.abs(v.qty),
+          });
+        }
+      }
+
+      const reversalRows = await Promise.all(
+        reversalLines.map((l) =>
+          buildIssueTxn(payload.issue_number, payload.issue_date, l, payload.issued_to, true),
+        ),
+      );
+
+      const newRows = await Promise.all(
+        payload.lines.map((l) =>
+          buildIssueTxn(payload.issue_number, payload.issue_date, l, payload.issued_to),
+        ),
+      );
+
+      // 2. Update header
+      const { error: hdrErr } = await sb
+        .from('store_internal_issues')
+        .update({
+          issue_date: payload.issue_date,
+          department: payload.department || null,
+          issued_to: payload.issued_to || null,
+          remarks: payload.remarks || null,
+        })
+        .eq('id', payload.id);
+      if (hdrErr) throw hdrErr;
+
+      // 3. Insert reversals + new lines
+      if (reversalRows.length) {
+        const { error } = await sb.from('store_stock_transactions').insert(reversalRows);
+        if (error) throw error;
+      }
+      const { error: insErr } = await sb
+        .from('store_stock_transactions')
+        .insert(newRows);
+      if (insErr) throw insErr;
+
+      return { id: payload.id, issue_number: payload.issue_number };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['store_issue_list'] });
+      qc.invalidateQueries({ queryKey: ['store_issue'] });
+      qc.invalidateQueries({ queryKey: ['store_issue_lines'] });
+      qc.invalidateQueries({ queryKey: ['store_transactions'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+    },
+  });
+};
+
