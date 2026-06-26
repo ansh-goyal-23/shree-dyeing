@@ -20,11 +20,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let lastSignedInUserId: string | null = null;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      if (event === 'SIGNED_IN' && session?.user) {
+      if (event === 'SIGNED_IN' && session?.user && lastSignedInUserId !== session.user.id) {
+        lastSignedInUserId = session.user.id;
         setActivityUserContext({ id: session.user.id, name: session.user.email || null });
         void startUserSession(session.user.id, session.user.email || null, null);
         logBusinessEvent({
@@ -33,6 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           summary: `${session.user.email || 'User'} logged in`,
         });
       }
+      if (event === 'SIGNED_OUT') lastSignedInUserId = null;
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
