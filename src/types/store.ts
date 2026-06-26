@@ -157,6 +157,8 @@ export interface StoreFinishedGoodsReceipt {
   client: string | null;
   yarn_type: string | null;
   net_weight: number;
+  gross_weight: number | null;
+  cone_count: number | null;
   rack_id: string | null;
   item_id: string | null;
   remarks: string | null;
@@ -173,11 +175,17 @@ export interface StoreExternalDyedYarnReceipt {
   challan_number: string | null;
   yarn_type: string | null;
   shade: string | null;
+  shade_number: string | null;
+  lot_no: string | null;
+  cone_count: number | null;
+  gross_weight: number | null;
   net_weight: number;
   rate: number | null;
   amount: number | null;
   rack_id: string | null;
   item_id: string | null;
+  challan_pdf_url: string | null;
+  challan_pdf_path: string | null;
   remarks: string | null;
   created_at: string;
   updated_at: string;

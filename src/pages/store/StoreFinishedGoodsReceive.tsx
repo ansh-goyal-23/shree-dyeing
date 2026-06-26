@@ -32,10 +32,9 @@ const FinishedGoodsReceive: React.FC = () => {
   const [selectedLotNo, setSelectedLotNo] = useState<string>('');
   const [form, setForm] = useState({
     receipt_date: today,
-    shade: '',
-    client: '',
-    yarn_type: '',
-    net_weight: '',
+    shade_number: '',
+    cone_count: '',
+    gross_weight: '',
     rack_id: '',
     remarks: '',
   });
@@ -52,26 +51,24 @@ const FinishedGoodsReceive: React.FC = () => {
     if (l) {
       setForm(f => ({
         ...f,
-        shade: l.color_name || l.shade_number || '',
-        client: l.yarn_company_name || '',
-        yarn_type: l.denier || '',
-        net_weight: l.net_weight != null ? String(l.net_weight) : '',
+        shade_number: l.shade_number || l.color_name || '',
+        gross_weight: l.net_weight != null ? String(l.net_weight) : f.gross_weight,
       }));
     }
   };
 
   const handleSave = async () => {
     if (!selectedLotNo) { toast.error('Select a lot'); return; }
-    const nw = parseFloat(form.net_weight);
-    if (!(nw > 0)) { toast.error('Enter a valid net weight'); return; }
+    const gw = parseFloat(form.gross_weight);
+    if (!(gw > 0)) { toast.error('Enter a valid gross weight'); return; }
+    const cones = form.cone_count ? parseInt(form.cone_count, 10) : null;
     try {
       const r = await createFG.mutateAsync({
         receipt_date: form.receipt_date,
         lot_no: selectedLotNo,
-        shade: form.shade,
-        client: form.client,
-        yarn_type: form.yarn_type,
-        net_weight: nw,
+        shade: form.shade_number || null,
+        gross_weight: gw,
+        cone_count: cones,
         rack_id: form.rack_id || null,
         remarks: form.remarks,
       });
@@ -145,7 +142,7 @@ const FinishedGoodsReceive: React.FC = () => {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Receipt Details</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Entry Details</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <Label>Date *</Label>
@@ -156,27 +153,30 @@ const FinishedGoodsReceive: React.FC = () => {
             />
           </div>
           <div>
-            <Label>Lot Number</Label>
+            <Label>Lot No</Label>
             <Input value={selectedLotNo} disabled />
           </div>
           <div>
-            <Label>Shade</Label>
-            <Input value={form.shade} onChange={(e) => setForm(f => ({ ...f, shade: e.target.value }))} />
+            <Label>Shade No</Label>
+            <Input
+              value={form.shade_number}
+              onChange={(e) => setForm(f => ({ ...f, shade_number: e.target.value }))}
+            />
           </div>
           <div>
-            <Label>Client</Label>
-            <Input value={form.client} onChange={(e) => setForm(f => ({ ...f, client: e.target.value }))} />
+            <Label>No. of Cones</Label>
+            <Input
+              type="number" min="0" step="1"
+              value={form.cone_count}
+              onChange={(e) => setForm(f => ({ ...f, cone_count: e.target.value }))}
+            />
           </div>
           <div>
-            <Label>Yarn Type</Label>
-            <Input value={form.yarn_type} onChange={(e) => setForm(f => ({ ...f, yarn_type: e.target.value }))} />
-          </div>
-          <div>
-            <Label>Net Weight (kg) *</Label>
+            <Label>Gross Weight (kg) *</Label>
             <Input
               type="number" step="any"
-              value={form.net_weight}
-              onChange={(e) => setForm(f => ({ ...f, net_weight: e.target.value }))}
+              value={form.gross_weight}
+              onChange={(e) => setForm(f => ({ ...f, gross_weight: e.target.value }))}
             />
           </div>
           <div>

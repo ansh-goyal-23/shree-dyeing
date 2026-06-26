@@ -739,7 +739,9 @@ interface CreateFGReceiptPayload {
   shade?: string | null;
   client?: string | null;
   yarn_type?: string | null;
-  net_weight: number;
+  /** Quantity moved into stock (kg). */
+  gross_weight: number;
+  cone_count?: number | null;
   rack_id?: string | null;
   remarks?: string | null;
 }
@@ -749,7 +751,7 @@ export const useCreateFGReceipt = () => {
   return useMutation({
     mutationFn: async (payload: CreateFGReceiptPayload) => {
       if (!payload.lot_no) throw new Error('Select a lot');
-      if (!(payload.net_weight > 0)) throw new Error('Net weight must be positive');
+      if (!(payload.gross_weight > 0)) throw new Error('Gross weight must be positive');
 
       const { data: dup } = await sb
         .from('store_finished_goods_receipts')
@@ -781,7 +783,9 @@ export const useCreateFGReceipt = () => {
           shade: payload.shade || null,
           client: payload.client || null,
           yarn_type: payload.yarn_type || null,
-          net_weight: payload.net_weight,
+          net_weight: payload.gross_weight,
+          gross_weight: payload.gross_weight,
+          cone_count: payload.cone_count ?? null,
           rack_id: payload.rack_id || null,
           item_id: itemId,
           remarks: payload.remarks || null,
@@ -797,7 +801,7 @@ export const useCreateFGReceipt = () => {
         transaction_date: payload.receipt_date,
         transaction_type: 'finished_lot_receipt',
         item_id: itemId,
-        quantity: Math.abs(Number(payload.net_weight)),
+        quantity: Math.abs(Number(payload.gross_weight)),
         unit: 'kg',
         rack_id: payload.rack_id || null,
         reference_type: 'fg_receipt',
@@ -822,8 +826,8 @@ export const useCreateFGReceipt = () => {
         module: 'store', eventType: 'finished_lot.received', severity: 'success',
         entityType: 'fg_receipt', entityId: header.id, referenceNumber: header.receipt_number,
         entityName: `Lot ${vars.lot_no}`,
-        summary: `Received finished Lot ${vars.lot_no} — ${Number(vars.net_weight).toFixed(3)} kg`,
-        details: { lot_no: vars.lot_no, shade: vars.shade, client: vars.client },
+        summary: `Received finished Lot ${vars.lot_no} — ${Number(vars.gross_weight).toFixed(3)} kg`,
+        details: { lot_no: vars.lot_no, shade: vars.shade, cones: vars.cone_count },
       });
     },
   });
@@ -862,27 +866,33 @@ interface CreateEDYReceiptPayload {
   receipt_date: string;
   supplier?: string | null;
   challan_number?: string | null;
-  yarn_type?: string | null;
+  lot_no?: string | null;
+  shade_number?: string | null;
   shade?: string | null;
-  net_weight: number;
+  yarn_type?: string | null;
+  cone_count?: number | null;
+  /** Quantity into stock (kg). */
+  gross_weight: number;
   rate?: number | null;
   rack_id?: string | null;
   remarks?: string | null;
+  challan_pdf_url?: string | null;
+  challan_pdf_path?: string | null;
 }
 
 export const useCreateEDYReceipt = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: CreateEDYReceiptPayload) => {
-      if (!(payload.net_weight > 0)) throw new Error('Net weight must be positive');
+      if (!(payload.gross_weight > 0)) throw new Error('Gross weight must be positive');
 
       const { data: rcptNum, error: rcptErr } = await sb.rpc('next_store_edy_number');
       if (rcptErr) throw rcptErr;
       const receiptNumber: string = rcptNum;
 
-      // Item name format: LotNumber_Shade_Dyer (uses challan as lot label).
-      const lotLabel = (payload.challan_number || receiptNumber).replace(/\s+/g, '');
-      const shadeLabel = (payload.shade || 'NA').replace(/\s+/g, '');
+      // Item name format: LotNumber_Shade_Dyer
+      const lotLabel = (payload.lot_no || payload.challan_number || receiptNumber).replace(/\s+/g, '');
+      const shadeLabel = (payload.shade_number || payload.shade || 'NA').replace(/\s+/g, '');
       const dyerLabel = (payload.supplier || 'Dyer').replace(/\s+/g, '');
       const itemName = `${lotLabel}_${shadeLabel}_${dyerLabel}`;
       const itemId = await upsertCatalogueItem({
@@ -896,7 +906,7 @@ export const useCreateEDYReceipt = () => {
 
       const amount =
         payload.rate != null
-          ? Number(payload.rate) * Number(payload.net_weight)
+          ? Number(payload.rate) * Number(payload.gross_weight)
           : null;
 
       const { data: header, error: headerErr } = await sb
@@ -906,13 +916,19 @@ export const useCreateEDYReceipt = () => {
           receipt_date: payload.receipt_date,
           supplier: payload.supplier || null,
           challan_number: payload.challan_number || null,
+          lot_no: payload.lot_no || null,
+          shade_number: payload.shade_number || null,
           yarn_type: payload.yarn_type || null,
           shade: payload.shade || null,
-          net_weight: payload.net_weight,
+          cone_count: payload.cone_count ?? null,
+          net_weight: payload.gross_weight,
+          gross_weight: payload.gross_weight,
           rate: payload.rate ?? null,
           amount,
           rack_id: payload.rack_id || null,
           item_id: itemId,
+          challan_pdf_url: payload.challan_pdf_url || null,
+          challan_pdf_path: payload.challan_pdf_path || null,
           remarks: payload.remarks || null,
         })
         .select()
@@ -926,7 +942,7 @@ export const useCreateEDYReceipt = () => {
         transaction_date: payload.receipt_date,
         transaction_type: 'external_dyed_yarn_receipt',
         item_id: itemId,
-        quantity: Math.abs(Number(payload.net_weight)),
+        quantity: Math.abs(Number(payload.gross_weight)),
         unit: 'kg',
         rack_id: payload.rack_id || null,
         reference_type: 'edy_receipt',
@@ -952,8 +968,8 @@ export const useCreateEDYReceipt = () => {
       logBusinessEvent({
         module: 'store', eventType: 'external_dyed_yarn.received', severity: 'success',
         entityType: 'edy_receipt', entityId: header.id, referenceNumber: header.receipt_number,
-        summary: `Received external dyed yarn ${header.receipt_number} — ${Number(vars.net_weight).toFixed(3)} kg${vars.supplier ? ` (${vars.supplier})` : ''}`,
-        details: { supplier: vars.supplier, shade: vars.shade, yarn_type: vars.yarn_type },
+        summary: `Received external dyed yarn ${header.receipt_number} — ${Number(vars.gross_weight).toFixed(3)} kg${vars.supplier ? ` (${vars.supplier})` : ''}`,
+        details: { supplier: vars.supplier, lot_no: vars.lot_no, shade_number: vars.shade_number, cones: vars.cone_count },
       });
     },
   });

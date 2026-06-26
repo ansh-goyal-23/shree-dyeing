@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useStoreRacks, useCreateEDYReceipt } from '@/hooks/useStore';
+import { useStoreRacks, useCreateEDYReceipt, useUploadInwardBill } from '@/hooks/useStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Globe2, Save } from 'lucide-react';
+import { Globe2, Save, Upload, FileText, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 const NO_RACK = '__no_rack__';
@@ -18,42 +18,48 @@ const ExternalDyedYarnReceive: React.FC = () => {
   const navigate = useNavigate();
   const { data: racks = [] } = useStoreRacks();
   const createEDY = useCreateEDYReceipt();
+  const uploadBill = useUploadInwardBill();
 
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
     receipt_date: today,
     supplier: '',
-    challan_number: '',
-    yarn_type: '',
-    shade: '',
-    net_weight: '',
-    rate: '',
+    lot_no: '',
+    shade_number: '',
+    cone_count: '',
+    gross_weight: '',
     rack_id: '',
     remarks: '',
   });
-
-  const amount = useMemo(() => {
-    const w = parseFloat(form.net_weight);
-    const r = parseFloat(form.rate);
-    if (!isFinite(w) || !isFinite(r)) return null;
-    return w * r;
-  }, [form.net_weight, form.rate]);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
 
   const handleSave = async () => {
-    const nw = parseFloat(form.net_weight);
-    if (!(nw > 0)) { toast.error('Enter a valid net weight'); return; }
-    if (!form.supplier.trim()) { toast.error('Supplier / Dyer is required'); return; }
+    const gw = parseFloat(form.gross_weight);
+    if (!(gw > 0)) { toast.error('Enter a valid gross weight'); return; }
+    if (!form.supplier.trim()) { toast.error('Dyer is required'); return; }
+    if (!form.lot_no.trim()) { toast.error('Lot No is required'); return; }
+    const cones = form.cone_count ? parseInt(form.cone_count, 10) : null;
+
     try {
+      let challan_pdf_url: string | null = null;
+      let challan_pdf_path: string | null = null;
+      if (pdfFile) {
+        const up = await uploadBill.mutateAsync(pdfFile);
+        challan_pdf_url = up.url;
+        challan_pdf_path = up.path;
+      }
       const r = await createEDY.mutateAsync({
         receipt_date: form.receipt_date,
         supplier: form.supplier.trim(),
-        challan_number: form.challan_number.trim() || null,
-        yarn_type: form.yarn_type.trim() || null,
-        shade: form.shade.trim() || null,
-        net_weight: nw,
-        rate: form.rate ? parseFloat(form.rate) : null,
+        lot_no: form.lot_no.trim(),
+        shade_number: form.shade_number.trim() || null,
+        shade: form.shade_number.trim() || null,
+        cone_count: cones,
+        gross_weight: gw,
         rack_id: form.rack_id || null,
         remarks: form.remarks || null,
+        challan_pdf_url,
+        challan_pdf_path,
       });
       toast.success(`Receipt ${r.receipt_number} saved — EDY stock updated`);
       navigate('/store/external-dyed-yarn');
@@ -72,10 +78,10 @@ const ExternalDyedYarnReceive: React.FC = () => {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Receipt Details</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Entry Details</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <Label>Date *</Label>
+            <Label>Challan Date *</Label>
             <Input
               type="date"
               value={form.receipt_date}
@@ -83,7 +89,7 @@ const ExternalDyedYarnReceive: React.FC = () => {
             />
           </div>
           <div>
-            <Label>Supplier / Dyer *</Label>
+            <Label>Dyer *</Label>
             <Input
               value={form.supplier}
               onChange={(e) => setForm(f => ({ ...f, supplier: e.target.value }))}
@@ -91,50 +97,33 @@ const ExternalDyedYarnReceive: React.FC = () => {
             />
           </div>
           <div>
-            <Label>Challan Number</Label>
+            <Label>Lot No *</Label>
             <Input
-              value={form.challan_number}
-              onChange={(e) => setForm(f => ({ ...f, challan_number: e.target.value }))}
+              value={form.lot_no}
+              onChange={(e) => setForm(f => ({ ...f, lot_no: e.target.value }))}
             />
           </div>
           <div>
-            <Label>Yarn Type</Label>
+            <Label>Shade No</Label>
             <Input
-              value={form.yarn_type}
-              onChange={(e) => setForm(f => ({ ...f, yarn_type: e.target.value }))}
-              placeholder="e.g. 30/1 Cotton"
+              value={form.shade_number}
+              onChange={(e) => setForm(f => ({ ...f, shade_number: e.target.value }))}
             />
           </div>
           <div>
-            <Label>Shade</Label>
+            <Label>No. of Cones</Label>
             <Input
-              value={form.shade}
-              onChange={(e) => setForm(f => ({ ...f, shade: e.target.value }))}
+              type="number" min="0" step="1"
+              value={form.cone_count}
+              onChange={(e) => setForm(f => ({ ...f, cone_count: e.target.value }))}
             />
           </div>
           <div>
-            <Label>Net Weight (kg) *</Label>
+            <Label>Gross Weight (kg) *</Label>
             <Input
               type="number" step="any"
-              value={form.net_weight}
-              onChange={(e) => setForm(f => ({ ...f, net_weight: e.target.value }))}
-            />
-          </div>
-          <div>
-            <Label>Rate (optional)</Label>
-            <Input
-              type="number" step="any"
-              value={form.rate}
-              onChange={(e) => setForm(f => ({ ...f, rate: e.target.value }))}
-              placeholder="Per kg"
-            />
-          </div>
-          <div>
-            <Label>Amount</Label>
-            <Input
-              value={amount != null ? amount.toFixed(2) : ''}
-              disabled
-              placeholder="Auto = weight × rate"
+              value={form.gross_weight}
+              onChange={(e) => setForm(f => ({ ...f, gross_weight: e.target.value }))}
             />
           </div>
           <div>
@@ -152,6 +141,38 @@ const ExternalDyedYarnReceive: React.FC = () => {
               </SelectContent>
             </Select>
           </div>
+          <div>
+            <Label>Challan PDF</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="edy-challan-pdf"
+                type="file"
+                accept="application/pdf,image/*"
+                onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById('edy-challan-pdf')?.click()}
+              >
+                <Upload className="h-4 w-4 mr-1" />
+                {pdfFile ? 'Replace' : 'Upload'}
+              </Button>
+              {pdfFile && (
+                <div className="flex items-center gap-1 text-sm text-muted-foreground truncate">
+                  <FileText className="h-4 w-4" />
+                  <span className="truncate max-w-[180px]">{pdfFile.name}</span>
+                  <Button
+                    size="icon" variant="ghost" className="h-6 w-6"
+                    onClick={() => setPdfFile(null)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
           <div className="md:col-span-2">
             <Label>Remarks</Label>
             <Textarea
@@ -165,9 +186,9 @@ const ExternalDyedYarnReceive: React.FC = () => {
 
       <div className="flex justify-end gap-2">
         <Button variant="outline" onClick={() => navigate('/store/external-dyed-yarn')}>Cancel</Button>
-        <Button onClick={handleSave} disabled={createEDY.isPending}>
+        <Button onClick={handleSave} disabled={createEDY.isPending || uploadBill.isPending}>
           <Save className="h-4 w-4 mr-1" />
-          {createEDY.isPending ? 'Saving…' : 'Save Receipt'}
+          {createEDY.isPending || uploadBill.isPending ? 'Saving…' : 'Save Receipt'}
         </Button>
       </div>
     </div>
