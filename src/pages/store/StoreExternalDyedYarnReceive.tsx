@@ -43,6 +43,7 @@ const ExternalDyedYarnReceive: React.FC = () => {
         shade: form.shade_number.trim() || null,
         cone_count: cones,
         gross_weight: gw,
+        rack_id: form.rack_id || null,
       });
       toast.success(`Receipt ${r.receipt_number} saved — EDY stock updated`);
       navigate('/store/external-dyed-yarn');
