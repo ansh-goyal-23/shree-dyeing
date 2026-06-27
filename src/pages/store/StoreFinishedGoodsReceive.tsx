@@ -66,6 +66,7 @@ const FinishedGoodsReceive: React.FC = () => {
         shade: form.shade_number || null,
         gross_weight: gw,
         cone_count: cones,
+        rack_id: form.rack_id || null,
       });
       toast.success(`Receipt ${r.receipt_number} saved — finished goods stock updated`);
       navigate('/store/finished-goods');
