@@ -148,17 +148,27 @@ export const STORE_TXN_SIGN: Record<StoreTransactionType, 1 | -1> = {
   stock_adjustment: 1, // caller decides sign for adjustments
 };
 
-export interface StoreFinishedGoodsReceipt {
+export type StoreYarnReceiptSource = 'finished_goods' | 'external_dyed_yarn';
+
+/** Unified receipt row for both Finished Goods and External Dyed Yarn. */
+export interface StoreYarnReceipt {
   id: string;
   receipt_number: string;
   receipt_date: string;
-  lot_no: string;
+  source: StoreYarnReceiptSource;
+  lot_no: string | null;
   shade: string | null;
-  client: string | null;
+  shade_number: string | null;
   yarn_type: string | null;
-  net_weight: number;
-  gross_weight: number | null;
+  client: string | null;          // finished_goods only
+  supplier: string | null;        // external_dyed_yarn only
+  challan_number: string | null;
+  challan_pdf_url: string | null;
+  challan_pdf_path: string | null;
+  rate: number | null;
+  amount: number | null;
   cone_count: number | null;
+  received_weight: number;
   rack_id: string | null;
   item_id: string | null;
   remarks: string | null;
@@ -167,29 +177,17 @@ export interface StoreFinishedGoodsReceipt {
   created_by: string | null;
 }
 
-export interface StoreExternalDyedYarnReceipt {
-  id: string;
-  receipt_number: string;
-  receipt_date: string;
-  supplier: string | null;
-  challan_number: string | null;
-  yarn_type: string | null;
-  shade: string | null;
-  shade_number: string | null;
-  lot_no: string | null;
-  cone_count: number | null;
-  gross_weight: number | null;
+/** Backwards-compatible FG row alias (net_weight/gross_weight map to received_weight). */
+export interface StoreFinishedGoodsReceipt extends StoreYarnReceipt {
+  lot_no: string;
   net_weight: number;
-  rate: number | null;
-  amount: number | null;
-  rack_id: string | null;
-  item_id: string | null;
-  challan_pdf_url: string | null;
-  challan_pdf_path: string | null;
-  remarks: string | null;
-  created_at: string;
-  updated_at: string;
-  created_by: string | null;
+  gross_weight: number | null;
+}
+
+/** Backwards-compatible EDY row alias. */
+export interface StoreExternalDyedYarnReceipt extends StoreYarnReceipt {
+  net_weight: number;
+  gross_weight: number | null;
 }
 
 export interface StoreEDYCurrentStockRow {
