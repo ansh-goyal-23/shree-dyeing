@@ -689,6 +689,16 @@ export const useUpdateStoreIssue = () => {
 };
 
 
+// ---------- Yarn Receipts: shared row mapper ----------
+// Unified table `store_yarn_receipts` stores both Finished Goods and EDY rows.
+// The UI still reads `net_weight` / `gross_weight`, so we expose them as aliases
+// of the single `received_weight` column.
+const mapYarnReceipt = (r: any) => ({
+  ...r,
+  net_weight: r.received_weight,
+  gross_weight: r.received_weight,
+});
+
 // ---------- Finished Goods Receipts (lot-based) ----------
 
 export const useLotsForFG = () =>
@@ -697,7 +707,7 @@ export const useLotsForFG = () =>
     queryFn: async () => {
       const [lotsRes, recvRes] = await Promise.all([
         sb.from('lots').select('lot_no, color_name, yarn_company_name, denier, net_weight, status, shade_number').order('lot_no', { ascending: false }),
-        sb.from('store_finished_goods_receipts').select('lot_no'),
+        sb.from('store_yarn_receipts').select('lot_no').eq('source', 'finished_goods'),
       ]);
       if (lotsRes.error) throw lotsRes.error;
       if (recvRes.error) throw recvRes.error;
@@ -711,12 +721,13 @@ export const useFGReceiptList = () =>
     queryKey: ['fg_receipt_list'],
     queryFn: async () => {
       const { data, error } = await sb
-        .from('store_finished_goods_receipts')
+        .from('store_yarn_receipts')
         .select('*')
+        .eq('source', 'finished_goods')
         .order('receipt_date', { ascending: false })
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data ?? []) as StoreFinishedGoodsReceipt[];
+      return (data ?? []).map(mapYarnReceipt) as StoreFinishedGoodsReceipt[];
     },
   });
 
@@ -725,8 +736,9 @@ export const useFGCurrentStock = () =>
     queryKey: ['fg_current_stock'],
     queryFn: async () => {
       const { data, error } = await sb
-        .from('store_fg_current_stock')
+        .from('store_yarn_receipt_stock')
         .select('*')
+        .eq('source', 'finished_goods')
         .order('receipt_date', { ascending: false });
       if (error) throw error;
       return (data ?? []) as StoreFGCurrentStockRow[];
@@ -754,13 +766,13 @@ export const useCreateFGReceipt = () => {
       if (!(payload.gross_weight > 0)) throw new Error('Gross weight must be positive');
 
       const { data: dup } = await sb
-        .from('store_finished_goods_receipts')
+        .from('store_yarn_receipts')
         .select('id')
+        .eq('source', 'finished_goods')
         .eq('lot_no', payload.lot_no)
         .maybeSingle();
       if (dup) throw new Error(`Lot ${payload.lot_no} has already been received`);
 
-      // Item name = lot number (per spec). Dedupe via item_code FG-<lot>.
       const itemId = await upsertCatalogueItem({
         item_code: `FG-${payload.lot_no}`,
         item_name: `${payload.lot_no}`,
@@ -775,16 +787,16 @@ export const useCreateFGReceipt = () => {
       const receiptNumber: string = rcptNum;
 
       const { data: header, error: headerErr } = await sb
-        .from('store_finished_goods_receipts')
+        .from('store_yarn_receipts')
         .insert({
           receipt_number: receiptNumber,
           receipt_date: payload.receipt_date,
+          source: 'finished_goods',
           lot_no: payload.lot_no,
           shade: payload.shade || null,
           client: payload.client || null,
           yarn_type: payload.yarn_type || null,
-          net_weight: payload.gross_weight,
-          gross_weight: payload.gross_weight,
+          received_weight: payload.gross_weight,
           cone_count: payload.cone_count ?? null,
           rack_id: payload.rack_id || null,
           item_id: itemId,
@@ -809,11 +821,11 @@ export const useCreateFGReceipt = () => {
         remarks: payload.remarks || null,
       });
       if (txnErr) {
-        await sb.from('store_finished_goods_receipts').delete().eq('id', header.id);
+        await sb.from('store_yarn_receipts').delete().eq('id', header.id);
         throw txnErr;
       }
 
-      return header as StoreFinishedGoodsReceipt;
+      return mapYarnReceipt(header) as StoreFinishedGoodsReceipt;
     },
     onSuccess: (header, vars) => {
       qc.invalidateQueries({ queryKey: ['fg_receipt_list'] });
@@ -840,12 +852,13 @@ export const useEDYReceiptList = () =>
     queryKey: ['edy_receipt_list'],
     queryFn: async () => {
       const { data, error } = await sb
-        .from('store_external_dyed_yarn_receipts')
+        .from('store_yarn_receipts')
         .select('*')
+        .eq('source', 'external_dyed_yarn')
         .order('receipt_date', { ascending: false })
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data ?? []) as StoreExternalDyedYarnReceipt[];
+      return (data ?? []).map(mapYarnReceipt) as StoreExternalDyedYarnReceipt[];
     },
   });
 
@@ -854,8 +867,9 @@ export const useEDYCurrentStock = () =>
     queryKey: ['edy_current_stock'],
     queryFn: async () => {
       const { data, error } = await sb
-        .from('store_edy_current_stock')
+        .from('store_yarn_receipt_stock')
         .select('*')
+        .eq('source', 'external_dyed_yarn')
         .order('receipt_date', { ascending: false });
       if (error) throw error;
       return (data ?? []) as StoreEDYCurrentStockRow[];
@@ -890,7 +904,6 @@ export const useCreateEDYReceipt = () => {
       if (rcptErr) throw rcptErr;
       const receiptNumber: string = rcptNum;
 
-      // Item name format: LotNumber_Shade_Dyer
       const lotLabel = (payload.lot_no || payload.challan_number || receiptNumber).replace(/\s+/g, '');
       const shadeLabel = (payload.shade_number || payload.shade || 'NA').replace(/\s+/g, '');
       const dyerLabel = (payload.supplier || 'Dyer').replace(/\s+/g, '');
@@ -910,10 +923,11 @@ export const useCreateEDYReceipt = () => {
           : null;
 
       const { data: header, error: headerErr } = await sb
-        .from('store_external_dyed_yarn_receipts')
+        .from('store_yarn_receipts')
         .insert({
           receipt_number: receiptNumber,
           receipt_date: payload.receipt_date,
+          source: 'external_dyed_yarn',
           supplier: payload.supplier || null,
           challan_number: payload.challan_number || null,
           lot_no: payload.lot_no || null,
@@ -921,8 +935,7 @@ export const useCreateEDYReceipt = () => {
           yarn_type: payload.yarn_type || null,
           shade: payload.shade || null,
           cone_count: payload.cone_count ?? null,
-          net_weight: payload.gross_weight,
-          gross_weight: payload.gross_weight,
+          received_weight: payload.gross_weight,
           rate: payload.rate ?? null,
           amount,
           rack_id: payload.rack_id || null,
@@ -953,11 +966,11 @@ export const useCreateEDYReceipt = () => {
         remarks: payload.remarks || null,
       });
       if (txnErr) {
-        await sb.from('store_external_dyed_yarn_receipts').delete().eq('id', header.id);
+        await sb.from('store_yarn_receipts').delete().eq('id', header.id);
         throw txnErr;
       }
 
-      return header as StoreExternalDyedYarnReceipt;
+      return mapYarnReceipt(header) as StoreExternalDyedYarnReceipt;
     },
     onSuccess: (header, vars) => {
       qc.invalidateQueries({ queryKey: ['edy_receipt_list'] });
@@ -974,8 +987,6 @@ export const useCreateEDYReceipt = () => {
     },
   });
 };
-
-// ---------- Asset Management ----------
 
 export const useAssetItems = () =>
   useQuery({
