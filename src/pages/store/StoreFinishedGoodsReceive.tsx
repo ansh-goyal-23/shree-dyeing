@@ -1,16 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  useLotsForFG, useStoreRacks, useCreateFGReceipt,
-} from '@/hooks/useStore';
+import { useLotsForFG, useCreateFGReceipt } from '@/hooks/useStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
 import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from '@/components/ui/command';
@@ -19,12 +13,9 @@ import { PackageCheck, Save, Check, ChevronsUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-const NO_RACK = '__no_rack__';
-
 const FinishedGoodsReceive: React.FC = () => {
   const navigate = useNavigate();
   const { data: lots = [], isLoading: lotsLoading } = useLotsForFG();
-  const { data: racks = [] } = useStoreRacks();
   const createFG = useCreateFGReceipt();
 
   const today = new Date().toISOString().slice(0, 10);
@@ -32,11 +23,10 @@ const FinishedGoodsReceive: React.FC = () => {
   const [selectedLotNo, setSelectedLotNo] = useState<string>('');
   const [form, setForm] = useState({
     receipt_date: today,
+    lot_no: '',
     shade_number: '',
     cone_count: '',
     gross_weight: '',
-    rack_id: '',
-    remarks: '',
   });
 
   const selectedLot = useMemo(
@@ -51,7 +41,9 @@ const FinishedGoodsReceive: React.FC = () => {
     if (l) {
       setForm(f => ({
         ...f,
+        lot_no: l.lot_no || '',
         shade_number: l.shade_number || l.color_name || '',
+        cone_count: l.cone_count != null ? String(l.cone_count) : f.cone_count,
         gross_weight: l.net_weight != null ? String(l.net_weight) : f.gross_weight,
       }));
     }
@@ -59,18 +51,18 @@ const FinishedGoodsReceive: React.FC = () => {
 
   const handleSave = async () => {
     if (!selectedLotNo) { toast.error('Select a lot'); return; }
+    const lotNo = form.lot_no.trim();
+    if (!lotNo) { toast.error('Lot No is required'); return; }
     const gw = parseFloat(form.gross_weight);
     if (!(gw > 0)) { toast.error('Enter a valid gross weight'); return; }
     const cones = form.cone_count ? parseInt(form.cone_count, 10) : null;
     try {
       const r = await createFG.mutateAsync({
         receipt_date: form.receipt_date,
-        lot_no: selectedLotNo,
+        lot_no: lotNo,
         shade: form.shade_number || null,
         gross_weight: gw,
         cone_count: cones,
-        rack_id: form.rack_id || null,
-        remarks: form.remarks,
       });
       toast.success(`Receipt ${r.receipt_number} saved — finished goods stock updated`);
       navigate('/store/finished-goods');
@@ -137,6 +129,9 @@ const FinishedGoodsReceive: React.FC = () => {
                 </Command>
               </PopoverContent>
             </Popover>
+            <p className="text-xs text-muted-foreground mt-1">
+              Pre-fills the entry fields below. All values remain editable.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -153,22 +148,17 @@ const FinishedGoodsReceive: React.FC = () => {
             />
           </div>
           <div>
-            <Label>Lot No</Label>
-            <Input value={selectedLotNo} disabled />
-          </div>
-          <div>
-            <Label>Shade No</Label>
+            <Label>Lot # *</Label>
             <Input
-              value={form.shade_number}
-              onChange={(e) => setForm(f => ({ ...f, shade_number: e.target.value }))}
+              value={form.lot_no}
+              onChange={(e) => setForm(f => ({ ...f, lot_no: e.target.value }))}
             />
           </div>
           <div>
-            <Label>No. of Cones</Label>
+            <Label>Shade #</Label>
             <Input
-              type="number" min="0" step="1"
-              value={form.cone_count}
-              onChange={(e) => setForm(f => ({ ...f, cone_count: e.target.value }))}
+              value={form.shade_number}
+              onChange={(e) => setForm(f => ({ ...f, shade_number: e.target.value }))}
             />
           </div>
           <div>
@@ -180,26 +170,11 @@ const FinishedGoodsReceive: React.FC = () => {
             />
           </div>
           <div>
-            <Label>Rack</Label>
-            <Select
-              value={form.rack_id || NO_RACK}
-              onValueChange={(v) => setForm(f => ({ ...f, rack_id: v === NO_RACK ? '' : v }))}
-            >
-              <SelectTrigger><SelectValue placeholder="Select rack" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NO_RACK}>None</SelectItem>
-                {racks.filter(r => r.is_active).map(r => (
-                  <SelectItem key={r.id} value={r.id}>{r.rack_code} — {r.rack_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="md:col-span-2">
-            <Label>Remarks</Label>
-            <Textarea
-              rows={2}
-              value={form.remarks}
-              onChange={(e) => setForm(f => ({ ...f, remarks: e.target.value }))}
+            <Label>No. of Cones</Label>
+            <Input
+              type="number" min="0" step="1"
+              value={form.cone_count}
+              onChange={(e) => setForm(f => ({ ...f, cone_count: e.target.value }))}
             />
           </div>
         </CardContent>
