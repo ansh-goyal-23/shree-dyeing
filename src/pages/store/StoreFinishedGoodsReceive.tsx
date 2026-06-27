@@ -181,6 +181,23 @@ const FinishedGoodsReceive: React.FC = () => {
               onChange={(e) => setForm(f => ({ ...f, cone_count: e.target.value }))}
             />
           </div>
+          <div>
+            <Label>Rack No.</Label>
+            <Select
+              value={form.rack_id || 'none'}
+              onValueChange={(v) => setForm(f => ({ ...f, rack_id: v === 'none' ? '' : v }))}
+            >
+              <SelectTrigger><SelectValue placeholder="Select rack" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— None —</SelectItem>
+                {racks.map(r => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.rack_code}{r.rack_name ? ` — ${r.rack_name}` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
 
