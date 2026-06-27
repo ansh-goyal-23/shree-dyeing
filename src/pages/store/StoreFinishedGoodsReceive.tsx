@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useLotsForFG, useCreateFGReceipt } from '@/hooks/useStore';
+import { useLotsForFG, useCreateFGReceipt, useStoreRacks } from '@/hooks/useStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
