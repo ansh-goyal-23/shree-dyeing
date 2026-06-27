@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useLotsForFG, useCreateFGReceipt } from '@/hooks/useStore';
+import { useLotsForFG, useCreateFGReceipt, useStoreRacks } from '@/hooks/useStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,7 @@ import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PackageCheck, Save, Check, ChevronsUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -17,6 +18,7 @@ const FinishedGoodsReceive: React.FC = () => {
   const navigate = useNavigate();
   const { data: lots = [], isLoading: lotsLoading } = useLotsForFG();
   const createFG = useCreateFGReceipt();
+  const { data: racks = [] } = useStoreRacks();
 
   const today = new Date().toISOString().slice(0, 10);
   const [open, setOpen] = useState(false);
@@ -27,6 +29,7 @@ const FinishedGoodsReceive: React.FC = () => {
     shade_number: '',
     cone_count: '',
     gross_weight: '',
+    rack_id: '',
   });
 
   const selectedLot = useMemo(
@@ -63,6 +66,7 @@ const FinishedGoodsReceive: React.FC = () => {
         shade: form.shade_number || null,
         gross_weight: gw,
         cone_count: cones,
+        rack_id: form.rack_id || null,
       });
       toast.success(`Receipt ${r.receipt_number} saved — finished goods stock updated`);
       navigate('/store/finished-goods');
@@ -176,6 +180,23 @@ const FinishedGoodsReceive: React.FC = () => {
               value={form.cone_count}
               onChange={(e) => setForm(f => ({ ...f, cone_count: e.target.value }))}
             />
+          </div>
+          <div>
+            <Label>Rack No.</Label>
+            <Select
+              value={form.rack_id || 'none'}
+              onValueChange={(v) => setForm(f => ({ ...f, rack_id: v === 'none' ? '' : v }))}
+            >
+              <SelectTrigger><SelectValue placeholder="Select rack" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— None —</SelectItem>
+                {racks.map(r => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.rack_code}{r.rack_name ? ` — ${r.rack_name}` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>

@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCreateEDYReceipt } from '@/hooks/useStore';
+import { useCreateEDYReceipt, useStoreRacks } from '@/hooks/useStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Globe2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ExternalDyedYarnReceive: React.FC = () => {
   const navigate = useNavigate();
   const createEDY = useCreateEDYReceipt();
+  const { data: racks = [] } = useStoreRacks();
 
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
@@ -21,6 +23,7 @@ const ExternalDyedYarnReceive: React.FC = () => {
     shade_number: '',
     gross_weight: '',
     cone_count: '',
+    rack_id: '',
   });
 
   const handleSave = async () => {
@@ -40,6 +43,7 @@ const ExternalDyedYarnReceive: React.FC = () => {
         shade: form.shade_number.trim() || null,
         cone_count: cones,
         gross_weight: gw,
+        rack_id: form.rack_id || null,
       });
       toast.success(`Receipt ${r.receipt_number} saved — EDY stock updated`);
       navigate('/store/external-dyed-yarn');
@@ -112,6 +116,23 @@ const ExternalDyedYarnReceive: React.FC = () => {
               value={form.cone_count}
               onChange={(e) => setForm(f => ({ ...f, cone_count: e.target.value }))}
             />
+          </div>
+          <div>
+            <Label>Rack No.</Label>
+            <Select
+              value={form.rack_id || 'none'}
+              onValueChange={(v) => setForm(f => ({ ...f, rack_id: v === 'none' ? '' : v }))}
+            >
+              <SelectTrigger><SelectValue placeholder="Select rack" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— None —</SelectItem>
+                {racks.map(r => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.rack_code}{r.rack_name ? ` — ${r.rack_name}` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
