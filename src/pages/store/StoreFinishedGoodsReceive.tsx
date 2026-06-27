@@ -18,6 +18,7 @@ const FinishedGoodsReceive: React.FC = () => {
   const navigate = useNavigate();
   const { data: lots = [], isLoading: lotsLoading } = useLotsForFG();
   const createFG = useCreateFGReceipt();
+  const { data: racks = [] } = useStoreRacks();
 
   const today = new Date().toISOString().slice(0, 10);
   const [open, setOpen] = useState(false);
@@ -28,6 +29,7 @@ const FinishedGoodsReceive: React.FC = () => {
     shade_number: '',
     cone_count: '',
     gross_weight: '',
+    rack_id: '',
   });
 
   const selectedLot = useMemo(
