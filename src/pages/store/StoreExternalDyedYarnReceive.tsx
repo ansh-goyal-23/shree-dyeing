@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCreateEDYReceipt } from '@/hooks/useStore';
+import { useCreateEDYReceipt, useStoreRacks } from '@/hooks/useStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Globe2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ExternalDyedYarnReceive: React.FC = () => {
   const navigate = useNavigate();
   const createEDY = useCreateEDYReceipt();
+  const { data: racks = [] } = useStoreRacks();
 
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
@@ -21,6 +23,7 @@ const ExternalDyedYarnReceive: React.FC = () => {
     shade_number: '',
     gross_weight: '',
     cone_count: '',
+    rack_id: '',
   });
 
   const handleSave = async () => {
