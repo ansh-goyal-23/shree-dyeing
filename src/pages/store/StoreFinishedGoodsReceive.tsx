@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import AddRackDialog from '@/components/store/AddRackDialog';
 import { PackageCheck, Save, Check, ChevronsUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -183,20 +184,23 @@ const FinishedGoodsReceive: React.FC = () => {
           </div>
           <div>
             <Label>Rack No.</Label>
-            <Select
-              value={form.rack_id || 'none'}
-              onValueChange={(v) => setForm(f => ({ ...f, rack_id: v === 'none' ? '' : v }))}
-            >
-              <SelectTrigger><SelectValue placeholder="Select rack" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">— None —</SelectItem>
-                {racks.map(r => (
-                  <SelectItem key={r.id} value={r.id}>
-                    {r.rack_code}{r.rack_name ? ` — ${r.rack_name}` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Select
+                value={form.rack_id || 'none'}
+                onValueChange={(v) => setForm(f => ({ ...f, rack_id: v === 'none' ? '' : v }))}
+              >
+                <SelectTrigger><SelectValue placeholder="Select rack" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— None —</SelectItem>
+                  {racks.map(r => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.rack_code}{r.rack_name ? ` — ${r.rack_name}` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <AddRackDialog onCreated={(id) => setForm(f => ({ ...f, rack_id: id }))} />
+            </div>
           </div>
         </CardContent>
       </Card>
