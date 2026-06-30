@@ -92,13 +92,19 @@ const CreateLot: React.FC = () => {
     if (!form.number_of_chesses) { toast.error('Number of Chesses is required.'); return; }
     if (!form.gross_weight) { toast.error('Gross Weight is required.'); return; }
 
+    const shadeInput = form.shade_number.trim();
+    if (shadeInput && !shadeOptions.some(o => o.lot_no === shadeInput)) {
+      toast.error('Shade Number must be selected from the dropdown, or left empty to use Lot No.');
+      return;
+    }
+
     const success = await addLot({
       lot_no: form.lot_no.trim(),
       date: form.date,
       yarn_company_name: form.yarn_company_name.trim(),
-      color_name: form.color_name.trim(),
+      color_name: form.color_name.trim().toUpperCase(),
       denier: form.denier.trim(),
-      shade_number: form.shade_number.trim() || form.lot_no.trim(),
+      shade_number: shadeInput || form.lot_no.trim(),
       number_of_chesses: form.number_of_chesses,
       gross_weight: form.gross_weight,
       source_lot_no: null,
