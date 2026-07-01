@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react';
 import DecimalInput from '@/components/DecimalInput';
 import type { Lot } from '@/types';
 import type { PackagingType } from '@/types/challan';
+import type { StoreEDYCurrentStockRow } from '@/types/store';
 import { lookupRate, type ClientRate } from '@/hooks/useClientRates';
 
 export type LotType = 'Production' | 'Sampling';
@@ -25,13 +26,23 @@ interface ChallanItemRowProps {
   index: number;
   item: ItemData;
   lots: Lot[];
+  edyStock?: StoreEDYCurrentStockRow[];
   clientId: string;
   clientRates: ClientRate[];
   onChange: (index: number, updated: ItemData) => void;
   onRemove: (index: number) => void;
 }
 
-const LotSearchDropdown: React.FC<{ value: string; lots: Lot[]; onChange: (v: string) => void }> = ({ value, lots, onChange }) => {
+type LotOption =
+  | { kind: 'production'; lot_no: string; label: string; sub: string }
+  | { kind: 'edy'; lot_no: string; label: string; sub: string; edy: StoreEDYCurrentStockRow };
+
+const LotSearchDropdown: React.FC<{
+  value: string;
+  lots: Lot[];
+  edyStock: StoreEDYCurrentStockRow[];
+  onSelect: (opt: LotOption) => void;
+}> = ({ value, lots, edyStock, onSelect }) => {
   const [search, setSearch] = useState(value);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -44,33 +55,69 @@ const LotSearchDropdown: React.FC<{ value: string; lots: Lot[]; onChange: (v: st
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
-  const sorted = useMemo(() =>
-    [...lots].sort((a, b) => {
-      const na = parseFloat(a.lot_no) || 0, nb = parseFloat(b.lot_no) || 0;
-      return nb - na;
-    }), [lots]);
+  const prodOptions: LotOption[] = useMemo(() =>
+    [...lots]
+      .sort((a, b) => (parseFloat(b.lot_no) || 0) - (parseFloat(a.lot_no) || 0))
+      .map(l => ({
+        kind: 'production' as const,
+        lot_no: l.lot_no,
+        label: l.lot_no,
+        sub: `${l.color_name || ''}${l.shade_number ? ` · ${l.shade_number}` : ''}`,
+      })),
+    [lots]);
+
+  const edyOptions: LotOption[] = useMemo(() =>
+    edyStock
+      .filter(e => Number(e.current_balance || 0) > 0)
+      .map(e => ({
+        kind: 'edy' as const,
+        lot_no: e.receipt_number,
+        label: e.receipt_number,
+        sub: `${e.supplier || 'Dyer'}${e.shade ? ` · ${e.shade}` : ''} · ${Number(e.current_balance).toFixed(3)} kg`,
+        edy: e,
+      })),
+    [edyStock]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return sorted;
-    const q = search.toLowerCase().trim();
-    return sorted.filter(l => l.lot_no.toLowerCase().includes(q));
-  }, [sorted, search]);
+    const q = search.trim().toLowerCase();
+    const match = (o: LotOption) => !q || o.label.toLowerCase().includes(q) || o.sub.toLowerCase().includes(q);
+    return { prod: prodOptions.filter(match), edy: edyOptions.filter(match) };
+  }, [prodOptions, edyOptions, search]);
 
   return (
     <div ref={ref} className="relative">
       <input type="text" value={search}
         onChange={e => { setSearch(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
-        className="input-industrial w-full text-sm" placeholder="Search lot..." />
-      {open && filtered.length > 0 && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-40 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md">
-          {filtered.map(l => (
-            <button key={l.lot_no} type="button" onMouseDown={e => e.preventDefault()}
-              onClick={() => { onChange(l.lot_no); setSearch(l.lot_no); setOpen(false); }}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground btn-transition">
-              {l.lot_no}
-            </button>
-          ))}
+        className="input-industrial w-full text-sm" placeholder="Search lot or EDY..." />
+      {open && (filtered.prod.length > 0 || filtered.edy.length > 0) && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-64 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+          {filtered.prod.length > 0 && (
+            <>
+              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground bg-secondary/40">Production Lots</div>
+              {filtered.prod.map(o => (
+                <button key={`p-${o.lot_no}`} type="button" onMouseDown={e => e.preventDefault()}
+                  onClick={() => { onSelect(o); setSearch(o.label); setOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground btn-transition">
+                  <span className="font-medium">{o.label}</span>
+                  {o.sub && <span className="text-muted-foreground ml-2 text-xs">{o.sub}</span>}
+                </button>
+              ))}
+            </>
+          )}
+          {filtered.edy.length > 0 && (
+            <>
+              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground bg-secondary/40 border-t">External Dyed Yarn (Store)</div>
+              {filtered.edy.map(o => (
+                <button key={`e-${o.lot_no}`} type="button" onMouseDown={e => e.preventDefault()}
+                  onClick={() => { onSelect(o); setSearch(o.label); setOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground btn-transition">
+                  <span className="font-medium">EDY · {o.label}</span>
+                  <span className="text-muted-foreground ml-2 text-xs">{o.sub}</span>
+                </button>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -85,7 +132,7 @@ const DEDUCTION: Record<PackagingType, number> = {
 const calcNet = (gross: number, units: number, type: PackagingType) =>
   parseFloat((gross - DEDUCTION[type] * units).toFixed(3));
 
-const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, clientId, clientRates, onChange, onRemove }) => {
+const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, edyStock = [], clientId, clientRates, onChange, onRemove }) => {
   const resolveRate = (denier: string, lotType: LotType, currentRate: number) => {
     if (clientId && denier) {
       const found = lookupRate(clientRates, clientId, denier, lotType);
@@ -94,22 +141,36 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, clie
     return currentRate;
   };
 
-  const handleLotChange = (lotNo: string) => {
-    const lot = lots.find(l => l.lot_no === lotNo);
-    const denier = lot?.denier || '';
-    const autoRate = resolveRate(denier, item.lot_type, item.rate);
-
-    const updated: ItemData = {
-      ...item,
-      lot_no: lotNo,
-      shade_number: lot?.shade_number || '',
-      color_name: lot?.color_name || '',
-      denier,
-      rate: autoRate,
-      amount: parseFloat((item.net_weight * autoRate).toFixed(2)),
-    };
-    onChange(index, updated);
+  const handleSelect = (opt: LotOption) => {
+    if (opt.kind === 'production') {
+      const lot = lots.find(l => l.lot_no === opt.lot_no);
+      const denier = lot?.denier || '';
+      const autoRate = resolveRate(denier, item.lot_type, item.rate);
+      onChange(index, {
+        ...item,
+        lot_no: opt.lot_no,
+        shade_number: lot?.shade_number || '',
+        color_name: lot?.color_name || '',
+        denier,
+        rate: autoRate,
+        amount: parseFloat((item.net_weight * autoRate).toFixed(2)),
+      });
+    } else {
+      const e = opt.edy;
+      const denier = e.yarn_type || '';
+      const autoRate = resolveRate(denier, item.lot_type, item.rate);
+      onChange(index, {
+        ...item,
+        lot_no: opt.lot_no, // = receipt_number; matches item_code EDY-<receipt_number>
+        shade_number: e.shade || '',
+        color_name: `EDY: ${e.supplier || 'Dyer'}`,
+        denier,
+        rate: autoRate,
+        amount: parseFloat((item.net_weight * autoRate).toFixed(2)),
+      });
+    }
   };
+
 
   const handleLotTypeChange = (lotType: LotType) => {
     const autoRate = resolveRate(item.denier, lotType, item.rate);
