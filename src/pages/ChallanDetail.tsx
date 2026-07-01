@@ -32,6 +32,7 @@ const ChallanDetail: React.FC = () => {
   const { lots } = useApp();
   const clientId = challan?.client_id || '';
   const { data: clientRates = [] } = useClientRates(clientId || undefined);
+  const { data: edyStock = [] } = useEDYCurrentStock();
   
 
   const [editing, setEditing] = useState(false);
