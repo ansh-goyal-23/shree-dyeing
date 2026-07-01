@@ -8,6 +8,7 @@ import type { ItemData } from '@/components/ChallanItemRow';
 import { toast } from 'sonner';
 import { useChallanFooterOptions } from '@/hooks/useChallanFooterOptions';
 import { useClientRates } from '@/hooks/useClientRates';
+import { useEDYCurrentStock } from '@/hooks/useStore';
 import FooterAutocomplete from '@/components/FooterAutocomplete';
 import { PlusCircle, Loader2 } from 'lucide-react';
 import { getDraft, setDraft, clearDraft } from '@/lib/draftCache';
@@ -55,6 +56,7 @@ const CreateChallan: React.FC = () => {
   });
   useEffect(() => { setDraft(DRAFT_KEY, { form, items }); }, [form, items]);
   const { data: clientRates = [] } = useClientRates(form.client_id || undefined);
+  const { data: edyStock = [] } = useEDYCurrentStock();
 
   const updateItem = (index: number, updated: ItemData) => {
     setItems(prev => prev.map((it, i) => i === index ? updated : it));
@@ -158,7 +160,7 @@ const CreateChallan: React.FC = () => {
             </thead>
             <tbody>
               {items.map((item, i) => (
-                <ChallanItemRow key={i} index={i} item={item} lots={lots} clientId={form.client_id} clientRates={clientRates} onChange={updateItem} onRemove={removeItem} />
+                <ChallanItemRow key={i} index={i} item={item} lots={lots} edyStock={edyStock} clientId={form.client_id} clientRates={clientRates} onChange={updateItem} onRemove={removeItem} />
               ))}
             </tbody>
             <tfoot>
