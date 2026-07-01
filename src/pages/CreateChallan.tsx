@@ -160,7 +160,7 @@ const CreateChallan: React.FC = () => {
             </thead>
             <tbody>
               {items.map((item, i) => (
-                <ChallanItemRow key={i} index={i} item={item} lots={lots} clientId={form.client_id} clientRates={clientRates} onChange={updateItem} onRemove={removeItem} />
+                <ChallanItemRow key={i} index={i} item={item} lots={lots} edyStock={edyStock} clientId={form.client_id} clientRates={clientRates} onChange={updateItem} onRemove={removeItem} />
               ))}
             </tbody>
             <tfoot>
