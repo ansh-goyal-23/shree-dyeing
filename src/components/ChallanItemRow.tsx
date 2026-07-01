@@ -213,7 +213,7 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, edyS
   return (
     <tr className="border-b border-border hover:bg-secondary/30">
       <td className="p-2">
-        <LotSearchDropdown value={item.lot_no} lots={lots} onChange={handleLotChange} />
+        <LotSearchDropdown value={item.lot_no} lots={lots} edyStock={edyStock} onSelect={handleSelect} />
       </td>
       <td className="p-2 text-sm text-muted-foreground">{item.shade_number}</td>
       <td className="p-2 text-sm text-muted-foreground">{item.color_name}</td>
