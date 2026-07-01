@@ -167,8 +167,9 @@ const ReferenceRecipePanel: React.FC<ReferenceRecipePanelProps> = ({ defaultLotN
       {/* Lot details + dyes + process steps */}
       {lot && (
         <div className="space-y-3 pt-1">
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm">
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 text-sm">
             <div><span className="text-muted-foreground">Lot No:</span> <span className="font-medium">{lot.lot_no}</span></div>
+            <div><span className="text-muted-foreground">Yarn Co:</span> <span className="font-medium">{lot.yarn_company_name || '—'}</span></div>
             <div><span className="text-muted-foreground">Color:</span> <span className="font-medium">{lot.color_name}</span></div>
             <div><span className="text-muted-foreground">Shade:</span> <span className="font-medium">{lot.shade_number}</span></div>
             <div><span className="text-muted-foreground">Net Wt:</span> <span className="font-medium font-data">{netWeight.toFixed(3)} kg</span></div>
