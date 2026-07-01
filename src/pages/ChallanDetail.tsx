@@ -228,7 +228,7 @@ const ChallanDetail: React.FC = () => {
           <tbody>
             {editing ? (
               items.map((item, i) => (
-                <ChallanItemRow key={i} index={i} item={item} lots={lots} clientId={clientId} clientRates={clientRates} onChange={updateItem} onRemove={removeItem} />
+                <ChallanItemRow key={i} index={i} item={item} lots={lots} edyStock={edyStock} clientId={clientId} clientRates={clientRates} onChange={updateItem} onRemove={removeItem} />
               ))
             ) : (
               (challanItems.length === 0 ? (
