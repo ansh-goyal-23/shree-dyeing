@@ -104,7 +104,7 @@ const ExternalDyedYarnReceive: React.FC = () => {
             />
           </div>
           <div>
-            <Label>Shade</Label>
+            <Label>Shade *</Label>
             <Input
               value={form.shade_number}
               onChange={(e) => setForm(f => ({ ...f, shade_number: e.target.value }))}
