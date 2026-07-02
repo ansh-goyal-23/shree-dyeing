@@ -36,7 +36,7 @@ const ExternalDyedYarnReceive: React.FC = () => {
 
   const handleSave = async () => {
     if (!form.supplier.trim()) { toast.error('Dyer is required'); return; }
-    if (!form.lot_no.trim()) { toast.error('Lot is required'); return; }
+    if (!form.shade_number.trim()) { toast.error('Shade Number is required'); return; }
     const gw = parseFloat(form.gross_weight);
     if (!(gw > 0)) { toast.error('Enter a valid gross weight'); return; }
     const cones = form.cone_count ? parseInt(form.cone_count, 10) : null;
