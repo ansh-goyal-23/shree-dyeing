@@ -89,9 +89,10 @@ const ExternalDyedYarnReceive: React.FC = () => {
           </div>
           <div>
             <Label>Dyer *</Label>
-            <Input
+            <FooterAutocomplete
               value={form.supplier}
-              onChange={(e) => setForm(f => ({ ...f, supplier: e.target.value }))}
+              onChange={(v) => setForm(f => ({ ...f, supplier: v }))}
+              options={dyerOptions}
               placeholder="External dyeing factory name"
             />
           </div>
