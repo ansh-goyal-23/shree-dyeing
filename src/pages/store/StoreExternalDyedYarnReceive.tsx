@@ -97,7 +97,7 @@ const ExternalDyedYarnReceive: React.FC = () => {
             />
           </div>
           <div>
-            <Label>Lot *</Label>
+            <Label>Lot</Label>
             <Input
               value={form.lot_no}
               onChange={(e) => setForm(f => ({ ...f, lot_no: e.target.value }))}
