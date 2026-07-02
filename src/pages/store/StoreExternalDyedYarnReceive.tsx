@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCreateEDYReceipt, useStoreRacks } from '@/hooks/useStore';
+import { useCreateEDYReceipt, useStoreRacks, useEDYReceiptList } from '@/hooks/useStore';
+import FooterAutocomplete from '@/components/FooterAutocomplete';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
