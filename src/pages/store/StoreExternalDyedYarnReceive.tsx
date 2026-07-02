@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCreateEDYReceipt, useStoreRacks } from '@/hooks/useStore';
+import { useCreateEDYReceipt, useStoreRacks, useEDYReceiptList } from '@/hooks/useStore';
+import FooterAutocomplete from '@/components/FooterAutocomplete';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +15,12 @@ const ExternalDyedYarnReceive: React.FC = () => {
   const navigate = useNavigate();
   const createEDY = useCreateEDYReceipt();
   const { data: racks = [] } = useStoreRacks();
+  const { data: pastReceipts = [] } = useEDYReceiptList();
+  const dyerOptions = React.useMemo(() => {
+    const set = new Set<string>();
+    pastReceipts.forEach(r => { if (r.supplier && r.supplier.trim()) set.add(r.supplier.trim()); });
+    return Array.from(set).sort();
+  }, [pastReceipts]);
 
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
@@ -82,9 +89,10 @@ const ExternalDyedYarnReceive: React.FC = () => {
           </div>
           <div>
             <Label>Dyer *</Label>
-            <Input
+            <FooterAutocomplete
               value={form.supplier}
-              onChange={(e) => setForm(f => ({ ...f, supplier: e.target.value }))}
+              onChange={(v) => setForm(f => ({ ...f, supplier: v }))}
+              options={dyerOptions}
               placeholder="External dyeing factory name"
             />
           </div>
