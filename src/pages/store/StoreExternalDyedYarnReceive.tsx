@@ -15,6 +15,12 @@ const ExternalDyedYarnReceive: React.FC = () => {
   const navigate = useNavigate();
   const createEDY = useCreateEDYReceipt();
   const { data: racks = [] } = useStoreRacks();
+  const { data: pastReceipts = [] } = useEDYReceiptList();
+  const dyerOptions = React.useMemo(() => {
+    const set = new Set<string>();
+    pastReceipts.forEach(r => { if (r.supplier && r.supplier.trim()) set.add(r.supplier.trim()); });
+    return Array.from(set).sort();
+  }, [pastReceipts]);
 
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
