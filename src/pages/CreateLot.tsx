@@ -33,6 +33,7 @@ const CreateLot: React.FC = () => {
         color_name: saved.color_name ?? prefillColor,
         denier: saved.denier ?? '',
         shade_number: saved.shade_number ?? '',
+        ref_no: saved.ref_no ?? '',
         number_of_chesses: saved.number_of_chesses ?? 0,
         gross_weight: saved.gross_weight ?? 0,
       };
@@ -44,6 +45,7 @@ const CreateLot: React.FC = () => {
       color_name: prefillColor,
       denier: '',
       shade_number: '',
+      ref_no: '',
       number_of_chesses: 0,
       gross_weight: 0,
     };
@@ -109,6 +111,7 @@ const CreateLot: React.FC = () => {
       gross_weight: form.gross_weight,
       source_lot_no: null,
       remarks: '',
+      ref_no: form.ref_no.trim() || null,
     });
 
     if (success) {
