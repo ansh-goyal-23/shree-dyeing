@@ -135,6 +135,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       color_name: lotData.color_name, denier: lotData.denier, number_of_chesses: lotData.number_of_chesses,
       gross_weight: lotData.gross_weight, net_weight, is_approved: false,
       shade_number, source_lot_no: lotData.source_lot_no || null, status,
+      ref_no: lotData.ref_no?.trim() || null,
     });
     if (lotErr) return false;
     logBusinessEvent({
@@ -373,6 +374,7 @@ const mapLot = (row: any): Lot => ({
   status: row.status || (row.is_approved ? 'Approved' : 'In Approval'),
   shade_number: row.shade_number || row.lot_no, source_lot_no: row.source_lot_no || null,
   remarks: row.remarks || '',
+  ref_no: row.ref_no || null,
   created_by: row.created_by || null,
 });
 
