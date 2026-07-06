@@ -33,6 +33,7 @@ const CreateLot: React.FC = () => {
         color_name: saved.color_name ?? prefillColor,
         denier: saved.denier ?? '',
         shade_number: saved.shade_number ?? '',
+        ref_no: saved.ref_no ?? '',
         number_of_chesses: saved.number_of_chesses ?? 0,
         gross_weight: saved.gross_weight ?? 0,
       };
@@ -44,6 +45,7 @@ const CreateLot: React.FC = () => {
       color_name: prefillColor,
       denier: '',
       shade_number: '',
+      ref_no: '',
       number_of_chesses: 0,
       gross_weight: 0,
     };
@@ -109,6 +111,7 @@ const CreateLot: React.FC = () => {
       gross_weight: form.gross_weight,
       source_lot_no: null,
       remarks: '',
+      ref_no: form.ref_no.trim() || null,
     });
 
     if (success) {
@@ -192,7 +195,7 @@ const CreateLot: React.FC = () => {
           </div>
         </div>
 
-        {/* Row 2: Date */}
+        {/* Row 2: Date + Ref No */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Date *</label>
@@ -202,6 +205,16 @@ const CreateLot: React.FC = () => {
               onChange={e => update('date', e.target.value)}
               className="input-industrial w-full font-data"
               required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Ref. No.</label>
+            <input
+              type="text"
+              value={form.ref_no}
+              onChange={e => update('ref_no', e.target.value)}
+              className="input-industrial w-full font-data"
+              placeholder="Optional reference"
             />
           </div>
         </div>

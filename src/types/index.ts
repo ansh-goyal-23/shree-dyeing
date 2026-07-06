@@ -23,6 +23,7 @@ export interface Lot {
   shade_number: string;
   source_lot_no: string | null;
   remarks: string;
+  ref_no?: string | null;
   created_by?: string | null;
 }
 
