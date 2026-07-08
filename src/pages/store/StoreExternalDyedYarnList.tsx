@@ -20,7 +20,26 @@ import { Globe2, Plus, Search, Activity, Pencil, Trash2 } from 'lucide-react';
 const ExternalDyedYarnList: React.FC = () => {
   const { data: receipts = [], isLoading } = useEDYReceiptList();
   const { data: stock = [], isLoading: stockLoading } = useEDYCurrentStock();
+  const deleteReceipt = useDeleteYarnReceipt();
   const [q, setQ] = useState('');
+  const [editing, setEditing] = useState<StoreExternalDyedYarnReceipt | null>(null);
+  const [confirmDel, setConfirmDel] = useState<StoreExternalDyedYarnReceipt | null>(null);
+
+  const handleDelete = async () => {
+    if (!confirmDel) return;
+    try {
+      await deleteReceipt.mutateAsync({
+        id: confirmDel.id,
+        receipt_number: confirmDel.receipt_number,
+        item_id: confirmDel.item_id,
+        source: 'external_dyed_yarn',
+      });
+      toast.success(`Receipt ${confirmDel.receipt_number} deleted`);
+      setConfirmDel(null);
+    } catch (e: any) {
+      toast.error(e.message || 'Delete failed');
+    }
+  };
 
   const filteredStock = useMemo(() => {
     const needle = q.trim().toLowerCase();
