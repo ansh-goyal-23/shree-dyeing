@@ -158,13 +158,14 @@ export function useCreateChallan() {
         .from('challans')
         .insert({
           challan_number: payload.challan_number,
+          challan_kind: 'production',
           date: payload.date,
           client_id: payload.client_id,
           notes: payload.notes,
           prepared_by_name: payload.prepared_by_name,
           receiver_name: payload.receiver_name,
           receiver_contact_number: payload.receiver_contact_number,
-        })
+        } as any)
         .select()
         .single();
       if (cErr) throw cErr;
