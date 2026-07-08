@@ -166,13 +166,14 @@ const ExternalDyedYarnList: React.FC = () => {
                     <TableHead className="text-right">Net Weight</TableHead>
                     <TableHead className="text-right">Rate</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>
                   ) : filteredReceipts.length === 0 ? (
-                    <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">No receipts yet.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center py-6 text-muted-foreground">No receipts yet.</TableCell></TableRow>
                   ) : filteredReceipts.map(r => (
                     <TableRow key={r.id}>
                       <TableCell className="font-mono text-xs">{r.receipt_number}</TableCell>
@@ -184,6 +185,14 @@ const ExternalDyedYarnList: React.FC = () => {
                       <TableCell className="text-right">{Number(r.net_weight).toFixed(3)} kg</TableCell>
                       <TableCell className="text-right">{r.rate != null ? Number(r.rate).toFixed(2) : '—'}</TableCell>
                       <TableCell className="text-right">{r.amount != null ? Number(r.amount).toFixed(2) : '—'}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" title="Edit" onClick={() => setEditing(r)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" title="Delete" onClick={() => setConfirmDel(r)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -192,6 +201,30 @@ const ExternalDyedYarnList: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <EditYarnReceiptDialog
+        receipt={editing}
+        source="external_dyed_yarn"
+        open={!!editing}
+        onOpenChange={(o) => { if (!o) setEditing(null); }}
+      />
+
+      <AlertDialog open={!!confirmDel} onOpenChange={(o) => { if (!o) setConfirmDel(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete receipt {confirmDel?.receipt_number}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the receipt and its stock entry. Blocked if any stock has already been issued out.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleteReceipt.isPending}>
+              {deleteReceipt.isPending ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
