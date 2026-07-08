@@ -860,14 +860,23 @@ export const useEDYReceiptList = () =>
   useQuery({
     queryKey: ['edy_receipt_list'],
     queryFn: async () => {
-      const { data, error } = await sb
-        .from('store_yarn_receipts')
-        .select('*')
-        .eq('source', 'external_dyed_yarn')
-        .order('receipt_date', { ascending: false })
-        .order('created_at', { ascending: false });
+      const [{ data, error }, { data: racks, error: rErr }] = await Promise.all([
+        sb.from('store_yarn_receipts').select('*')
+          .eq('source', 'external_dyed_yarn')
+          .order('receipt_date', { ascending: false })
+          .order('created_at', { ascending: false }),
+        sb.from('store_racks').select('id, rack_code, rack_name'),
+      ]);
       if (error) throw error;
-      return (data ?? []).map(mapYarnReceipt) as StoreExternalDyedYarnReceipt[];
+      if (rErr) throw rErr;
+      const rackMap = new Map<string, any>((racks ?? []).map((r: any) => [r.id, r]));
+      return (data ?? []).map((row: any) => {
+        const rec = mapYarnReceipt(row) as StoreExternalDyedYarnReceipt;
+        const rk = row.rack_id ? rackMap.get(row.rack_id) : null;
+        (rec as any).rack_code = rk?.rack_code ?? null;
+        (rec as any).rack_name = rk?.rack_name ?? null;
+        return rec;
+      });
     },
   });
 
