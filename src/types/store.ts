@@ -198,6 +198,9 @@ export interface StoreEDYCurrentStockRow {
   challan_number: string | null;
   yarn_type: string | null;
   shade: string | null;
+  shade_number: string | null;
+  lot_no: string | null;
+  cone_count: number | null;
   received_weight: number;
   rate: number | null;
   amount: number | null;
@@ -209,6 +212,7 @@ export interface StoreEDYCurrentStockRow {
   unit: string | null;
   current_balance: number;
 }
+
 
 export type StoreAssetStatus = 'available' | 'issued' | 'repair' | 'scrap';
 export type StoreAssetMovementType = 'issue' | 'return' | 'status_change';
@@ -260,8 +264,10 @@ export interface StoreFGCurrentStockRow {
   receipt_date: string;
   lot_no: string;
   shade: string | null;
+  shade_number: string | null;
   client: string | null;
   yarn_type: string | null;
+  cone_count: number | null;
   received_weight: number;
   rack_id: string | null;
   rack_code: string | null;
@@ -272,3 +278,4 @@ export interface StoreFGCurrentStockRow {
   current_balance: number;
   lot_status: string | null;
 }
+
