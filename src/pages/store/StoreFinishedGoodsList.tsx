@@ -162,26 +162,28 @@ const FinishedGoodsList: React.FC = () => {
                   <TableRow>
                     <TableHead>Receipt #</TableHead>
                     <TableHead>Date</TableHead>
-                    <TableHead>Lot</TableHead>
-                    <TableHead>Shade</TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead className="text-right">Net Weight</TableHead>
+                    <TableHead>Lot #</TableHead>
+                    <TableHead>Shade #</TableHead>
+                    <TableHead className="text-right">Gross Wt</TableHead>
+                    <TableHead className="text-right"># of Cones</TableHead>
+                    <TableHead>Rack No.</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>
                   ) : filteredReceipts.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">No receipts yet.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">No receipts yet.</TableCell></TableRow>
                   ) : filteredReceipts.map(r => (
                     <TableRow key={r.id}>
                       <TableCell className="font-mono text-xs">{r.receipt_number}</TableCell>
                       <TableCell>{r.receipt_date}</TableCell>
                       <TableCell className="font-mono text-xs">{r.lot_no}</TableCell>
-                      <TableCell>{r.shade || '—'}</TableCell>
-                      <TableCell>{r.client || '—'}</TableCell>
-                      <TableCell className="text-right">{Number(r.net_weight).toFixed(3)} kg</TableCell>
+                      <TableCell>{r.shade_number || r.shade || '—'}</TableCell>
+                      <TableCell className="text-right">{Number(r.gross_weight ?? r.net_weight).toFixed(3)} kg</TableCell>
+                      <TableCell className="text-right">{r.cone_count ?? '—'}</TableCell>
+                      <TableCell>{(r as any).rack_code ? `${(r as any).rack_code} — ${(r as any).rack_name}` : '—'}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" title="Edit" onClick={() => setEditing(r)}>
                           <Pencil className="h-4 w-4" />
