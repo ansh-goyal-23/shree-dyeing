@@ -8,7 +8,7 @@ import type { ItemData } from '@/components/ChallanItemRow';
 import { toast } from 'sonner';
 import { useChallanFooterOptions } from '@/hooks/useChallanFooterOptions';
 import { useClientRates } from '@/hooks/useClientRates';
-import { useEDYCurrentStock } from '@/hooks/useStore';
+
 import FooterAutocomplete from '@/components/FooterAutocomplete';
 import { PlusCircle, Loader2 } from 'lucide-react';
 import { getDraft, setDraft, clearDraft } from '@/lib/draftCache';
