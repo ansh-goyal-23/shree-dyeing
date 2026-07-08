@@ -164,13 +164,13 @@ const ExternalDyedYarnList: React.FC = () => {
                   <TableRow>
                     <TableHead>Receipt #</TableHead>
                     <TableHead>Date</TableHead>
-                    <TableHead>Supplier</TableHead>
                     <TableHead>Challan #</TableHead>
-                    <TableHead>Yarn Type</TableHead>
-                    <TableHead>Shade</TableHead>
-                    <TableHead className="text-right">Net Weight</TableHead>
-                    <TableHead className="text-right">Rate</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Dyer</TableHead>
+                    <TableHead>Lot #</TableHead>
+                    <TableHead>Shade #</TableHead>
+                    <TableHead className="text-right">Gross Wt</TableHead>
+                    <TableHead className="text-right"># of Cones</TableHead>
+                    <TableHead>Rack No.</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -183,13 +183,13 @@ const ExternalDyedYarnList: React.FC = () => {
                     <TableRow key={r.id}>
                       <TableCell className="font-mono text-xs">{r.receipt_number}</TableCell>
                       <TableCell>{r.receipt_date}</TableCell>
-                      <TableCell>{r.supplier || '—'}</TableCell>
                       <TableCell>{r.challan_number || '—'}</TableCell>
-                      <TableCell>{r.yarn_type || '—'}</TableCell>
-                      <TableCell>{r.shade || '—'}</TableCell>
-                      <TableCell className="text-right">{Number(r.net_weight).toFixed(3)} kg</TableCell>
-                      <TableCell className="text-right">{r.rate != null ? Number(r.rate).toFixed(2) : '—'}</TableCell>
-                      <TableCell className="text-right">{r.amount != null ? Number(r.amount).toFixed(2) : '—'}</TableCell>
+                      <TableCell>{r.supplier || '—'}</TableCell>
+                      <TableCell className="font-mono text-xs">{r.lot_no || '—'}</TableCell>
+                      <TableCell>{r.shade_number || r.shade || '—'}</TableCell>
+                      <TableCell className="text-right">{Number(r.gross_weight ?? r.net_weight).toFixed(3)} kg</TableCell>
+                      <TableCell className="text-right">{r.cone_count ?? '—'}</TableCell>
+                      <TableCell>{(r as any).rack_code ? `${(r as any).rack_code} — ${(r as any).rack_name}` : '—'}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" title="Edit" onClick={() => setEditing(r)}>
                           <Pencil className="h-4 w-4" />
