@@ -105,11 +105,12 @@ const FinishedGoodsList: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Lot Number</TableHead>
-                    <TableHead>Shade</TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Yarn Type</TableHead>
-                    <TableHead>Rack</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Lot #</TableHead>
+                    <TableHead>Shade #</TableHead>
+                    <TableHead className="text-right">Gross Wt</TableHead>
+                    <TableHead className="text-right"># of Cones</TableHead>
+                    <TableHead>Rack No.</TableHead>
                     <TableHead className="text-right">Current Balance</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Timeline</TableHead>
@@ -117,15 +118,16 @@ const FinishedGoodsList: React.FC = () => {
                 </TableHeader>
                 <TableBody>
                   {stockLoading ? (
-                    <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>
                   ) : filteredStock.length === 0 ? (
-                    <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">No finished goods in stock.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">No finished goods in stock.</TableCell></TableRow>
                   ) : filteredStock.map(s => (
                     <TableRow key={s.receipt_id}>
+                      <TableCell>{s.receipt_date}</TableCell>
                       <TableCell className="font-mono text-xs">{s.lot_no}</TableCell>
-                      <TableCell>{s.shade || '—'}</TableCell>
-                      <TableCell>{s.client || '—'}</TableCell>
-                      <TableCell>{s.yarn_type || '—'}</TableCell>
+                      <TableCell>{s.shade_number || s.shade || '—'}</TableCell>
+                      <TableCell className="text-right">{Number(s.received_weight).toFixed(3)} kg</TableCell>
+                      <TableCell className="text-right">{s.cone_count ?? '—'}</TableCell>
                       <TableCell>{s.rack_code ? `${s.rack_code} — ${s.rack_name}` : '—'}</TableCell>
                       <TableCell className="text-right font-medium">
                         {Number(s.current_balance).toFixed(3)} {s.unit || 'kg'}
@@ -144,6 +146,7 @@ const FinishedGoodsList: React.FC = () => {
                   ))}
                 </TableBody>
               </Table>
+
             </CardContent>
           </Card>
         </TabsContent>

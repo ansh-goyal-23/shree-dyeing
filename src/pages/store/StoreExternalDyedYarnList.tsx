@@ -107,28 +107,32 @@ const ExternalDyedYarnList: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Receipt #</TableHead>
-                    <TableHead>Supplier / Dyer</TableHead>
-                    <TableHead>Yarn Type</TableHead>
-                    <TableHead>Shade</TableHead>
+                    <TableHead>Date</TableHead>
                     <TableHead>Challan #</TableHead>
-                    <TableHead>Rack</TableHead>
+                    <TableHead>Dyer</TableHead>
+                    <TableHead>Lot #</TableHead>
+                    <TableHead>Shade #</TableHead>
+                    <TableHead className="text-right">Gross Wt</TableHead>
+                    <TableHead className="text-right"># of Cones</TableHead>
+                    <TableHead>Rack No.</TableHead>
                     <TableHead className="text-right">Current Balance</TableHead>
                     <TableHead className="text-right">Timeline</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {stockLoading ? (
-                    <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>
                   ) : filteredStock.length === 0 ? (
-                    <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">No external dyed yarn in stock.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center py-6 text-muted-foreground">No external dyed yarn in stock.</TableCell></TableRow>
                   ) : filteredStock.map(s => (
                     <TableRow key={s.receipt_id}>
-                      <TableCell className="font-mono text-xs">{s.receipt_number}</TableCell>
-                      <TableCell>{s.supplier || '—'}</TableCell>
-                      <TableCell>{s.yarn_type || '—'}</TableCell>
-                      <TableCell>{s.shade || '—'}</TableCell>
+                      <TableCell>{s.receipt_date}</TableCell>
                       <TableCell>{s.challan_number || '—'}</TableCell>
+                      <TableCell>{s.supplier || '—'}</TableCell>
+                      <TableCell className="font-mono text-xs">{s.lot_no || '—'}</TableCell>
+                      <TableCell>{s.shade_number || s.shade || '—'}</TableCell>
+                      <TableCell className="text-right">{Number(s.received_weight).toFixed(3)} kg</TableCell>
+                      <TableCell className="text-right">{s.cone_count ?? '—'}</TableCell>
                       <TableCell>{s.rack_code ? `${s.rack_code} — ${s.rack_name}` : '—'}</TableCell>
                       <TableCell className="text-right font-medium">
                         {Number(s.current_balance).toFixed(3)} {s.unit || 'kg'}
@@ -144,6 +148,7 @@ const ExternalDyedYarnList: React.FC = () => {
                   ))}
                 </TableBody>
               </Table>
+
             </CardContent>
           </Card>
         </TabsContent>
