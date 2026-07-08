@@ -68,6 +68,7 @@ async function applyChallanStockDelta(
 const mapChallan = (r: any): Challan => ({
   id: r.id,
   challan_number: r.challan_number,
+  challan_kind: (r.challan_kind === 'edy' ? 'edy' : 'production'),
   date: r.date,
   client_id: r.client_id,
   client_name: r.clients?.client_name || '',
