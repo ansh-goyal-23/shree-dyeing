@@ -19,6 +19,7 @@ import MasterData from "@/pages/MasterData";
 import PlaceholderModule from "@/pages/PlaceholderModule";
 import ChallanList from "@/pages/ChallanList";
 import CreateChallan from "@/pages/CreateChallan";
+import CreateEDYChallan from "@/pages/CreateEDYChallan";
 import ClientRateMaster from "@/pages/ClientRateMaster";
 import ChallanDetail from "@/pages/ChallanDetail";
 import OilConsumptionReport from "@/pages/OilConsumptionReport";
@@ -107,6 +108,7 @@ const App = () => (
                         <Route path="/expenses/create" element={<WriteRoute redirectTo="/expenses"><ExpenseCreatePage /></WriteRoute>} />
                         <Route path="/dispatch" element={<ChallanList />} />
                         <Route path="/dispatch/create" element={<WriteRoute redirectTo="/dispatch"><CreateChallan /></WriteRoute>} />
+                        <Route path="/dispatch/create-edy" element={<WriteRoute redirectTo="/dispatch"><CreateEDYChallan /></WriteRoute>} />
                         <Route path="/dispatch/client-rates" element={<ClientRateMaster />} />
                         <Route path="/dispatch/oil-consumption" element={<OilConsumptionReport />} />
                         <Route path="/dispatch/:id" element={<ChallanDetail />} />

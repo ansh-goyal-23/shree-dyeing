@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Trash2 } from 'lucide-react';
 import DecimalInput from '@/components/DecimalInput';
 import type { Lot } from '@/types';
@@ -26,100 +27,108 @@ interface ChallanItemRowProps {
   index: number;
   item: ItemData;
   lots: Lot[];
-  edyStock?: StoreEDYCurrentStockRow[];
+  edyStock?: StoreEDYCurrentStockRow[]; // kept for API compatibility; unused
   clientId: string;
   clientRates: ClientRate[];
   onChange: (index: number, updated: ItemData) => void;
   onRemove: (index: number) => void;
 }
 
-type LotOption =
-  | { kind: 'production'; lot_no: string; label: string; sub: string }
-  | { kind: 'edy'; lot_no: string; label: string; sub: string; edy: StoreEDYCurrentStockRow };
+type LotOption = { lot_no: string; label: string; sub: string };
+
+export const PortalDropdown: React.FC<{
+  anchor: HTMLElement | null;
+  open: boolean;
+  children: React.ReactNode;
+}> = ({ anchor, open, children }) => {
+  const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!open || !anchor) return;
+    const update = () => {
+      const r = anchor.getBoundingClientRect();
+      setRect({ top: r.bottom + 4, left: r.left, width: r.width });
+    };
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [open, anchor]);
+
+  if (!open || !rect) return null;
+  return createPortal(
+    <div
+      style={{ position: 'fixed', top: rect.top, left: rect.left, width: rect.width, zIndex: 1000 }}
+      className="max-h-64 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md"
+    >
+      {children}
+    </div>,
+    document.body,
+  );
+};
 
 const LotSearchDropdown: React.FC<{
   value: string;
   lots: Lot[];
-  edyStock: StoreEDYCurrentStockRow[];
   onSelect: (opt: LotOption) => void;
-}> = ({ value, lots, edyStock, onSelect }) => {
+}> = ({ value, lots, onSelect }) => {
   const [search, setSearch] = useState(value);
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setSearch(value); }, [value]);
 
   useEffect(() => {
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const h = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (wrapRef.current && !wrapRef.current.contains(target)) {
+        // Also ignore clicks inside the portal by checking if target is inside popover
+        const popover = (target as HTMLElement).closest?.('[data-lot-portal="1"]');
+        if (!popover) setOpen(false);
+      }
+    };
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
-  const prodOptions: LotOption[] = useMemo(() =>
+  const options: LotOption[] = useMemo(() =>
     [...lots]
       .sort((a, b) => (parseFloat(b.lot_no) || 0) - (parseFloat(a.lot_no) || 0))
       .map(l => ({
-        kind: 'production' as const,
         lot_no: l.lot_no,
         label: l.lot_no,
         sub: `${l.color_name || ''}${l.shade_number ? ` · ${l.shade_number}` : ''}`,
       })),
     [lots]);
 
-  const edyOptions: LotOption[] = useMemo(() =>
-    edyStock
-      .filter(e => Number(e.current_balance || 0) > 0)
-      .map(e => ({
-        kind: 'edy' as const,
-        lot_no: e.receipt_number,
-        label: e.receipt_number,
-        sub: `${e.supplier || 'Dyer'}${e.shade ? ` · ${e.shade}` : ''} · ${Number(e.current_balance).toFixed(3)} kg`,
-        edy: e,
-      })),
-    [edyStock]);
-
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const match = (o: LotOption) => !q || o.label.toLowerCase().includes(q) || o.sub.toLowerCase().includes(q);
-    return { prod: prodOptions.filter(match), edy: edyOptions.filter(match) };
-  }, [prodOptions, edyOptions, search]);
+    if (!q) return options;
+    return options.filter(o => o.label.toLowerCase().includes(q) || o.sub.toLowerCase().includes(q));
+  }, [options, search]);
 
   return (
-    <div ref={ref} className="relative">
-      <input type="text" value={search}
+    <div ref={wrapRef} className="relative">
+      <input ref={inputRef} type="text" value={search}
         onChange={e => { setSearch(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
-        className="input-industrial w-full text-sm" placeholder="Search lot or EDY..." />
-      {open && (filtered.prod.length > 0 || filtered.edy.length > 0) && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-64 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md">
-          {filtered.prod.length > 0 && (
-            <>
-              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground bg-secondary/40">Production Lots</div>
-              {filtered.prod.map(o => (
-                <button key={`p-${o.lot_no}`} type="button" onMouseDown={e => e.preventDefault()}
-                  onClick={() => { onSelect(o); setSearch(o.label); setOpen(false); }}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground btn-transition">
-                  <span className="font-medium">{o.label}</span>
-                  {o.sub && <span className="text-muted-foreground ml-2 text-xs">{o.sub}</span>}
-                </button>
-              ))}
-            </>
-          )}
-          {filtered.edy.length > 0 && (
-            <>
-              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground bg-secondary/40 border-t">External Dyed Yarn (Store)</div>
-              {filtered.edy.map(o => (
-                <button key={`e-${o.lot_no}`} type="button" onMouseDown={e => e.preventDefault()}
-                  onClick={() => { onSelect(o); setSearch(o.label); setOpen(false); }}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground btn-transition">
-                  <span className="font-medium">EDY · {o.label}</span>
-                  <span className="text-muted-foreground ml-2 text-xs">{o.sub}</span>
-                </button>
-              ))}
-            </>
-          )}
+        className="input-industrial w-full text-sm" placeholder="Search lot..." />
+      <PortalDropdown anchor={inputRef.current} open={open && filtered.length > 0}>
+        <div data-lot-portal="1">
+          {filtered.map(o => (
+            <button key={o.lot_no} type="button" onMouseDown={e => e.preventDefault()}
+              onClick={() => { onSelect(o); setSearch(o.label); setOpen(false); }}
+              className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground btn-transition">
+              <span className="font-medium">{o.label}</span>
+              {o.sub && <span className="text-muted-foreground ml-2 text-xs">{o.sub}</span>}
+            </button>
+          ))}
         </div>
-      )}
+      </PortalDropdown>
     </div>
   );
 };
@@ -132,7 +141,7 @@ const DEDUCTION: Record<PackagingType, number> = {
 const calcNet = (gross: number, units: number, type: PackagingType) =>
   parseFloat((gross - DEDUCTION[type] * units).toFixed(3));
 
-const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, edyStock = [], clientId, clientRates, onChange, onRemove }) => {
+const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, clientId, clientRates, onChange, onRemove }) => {
   const resolveRate = (denier: string, lotType: LotType, currentRate: number) => {
     if (clientId && denier) {
       const found = lookupRate(clientRates, clientId, denier, lotType);
@@ -142,56 +151,38 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, edyS
   };
 
   const handleSelect = (opt: LotOption) => {
-    if (opt.kind === 'production') {
-      const lot = lots.find(l => l.lot_no === opt.lot_no);
-      const denier = lot?.denier || '';
-      const autoRate = resolveRate(denier, item.lot_type, item.rate);
-      onChange(index, {
-        ...item,
-        lot_no: opt.lot_no,
-        shade_number: lot?.shade_number || '',
-        color_name: lot?.color_name || '',
-        denier,
-        rate: autoRate,
-        amount: parseFloat((item.net_weight * autoRate).toFixed(2)),
-      });
-    } else {
-      const e = opt.edy;
-      const denier = e.yarn_type || '';
-      const autoRate = resolveRate(denier, item.lot_type, item.rate);
-      onChange(index, {
-        ...item,
-        lot_no: opt.lot_no, // = receipt_number; matches item_code EDY-<receipt_number>
-        shade_number: e.shade || '',
-        color_name: `EDY: ${e.supplier || 'Dyer'}`,
-        denier,
-        rate: autoRate,
-        amount: parseFloat((item.net_weight * autoRate).toFixed(2)),
-      });
-    }
+    const lot = lots.find(l => l.lot_no === opt.lot_no);
+    const denier = lot?.denier || '';
+    const autoRate = resolveRate(denier, item.lot_type, item.rate);
+    onChange(index, {
+      ...item,
+      lot_no: opt.lot_no,
+      shade_number: lot?.shade_number || '',
+      color_name: lot?.color_name || '',
+      denier,
+      rate: autoRate,
+      amount: parseFloat((item.net_weight * autoRate).toFixed(2)),
+    });
   };
-
 
   const handleLotTypeChange = (lotType: LotType) => {
     const autoRate = resolveRate(item.denier, lotType, item.rate);
-    const updated: ItemData = {
+    onChange(index, {
       ...item,
       lot_type: lotType,
       rate: autoRate,
       amount: parseFloat((item.net_weight * autoRate).toFixed(2)),
-    };
-    onChange(index, updated);
+    });
   };
 
   const handlePackagingChange = (type: PackagingType) => {
     const net = calcNet(item.gross_weight, item.num_of_units, type);
-    const updated: ItemData = {
+    onChange(index, {
       ...item,
       packaging_type: type,
       net_weight: net,
       amount: parseFloat((net * item.rate).toFixed(2)),
-    };
-    onChange(index, updated);
+    });
   };
 
   const handleField = (field: keyof ItemData, val: number) => {
@@ -213,7 +204,7 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, edyS
   return (
     <tr className="border-b border-border hover:bg-secondary/30">
       <td className="p-2">
-        <LotSearchDropdown value={item.lot_no} lots={lots} edyStock={edyStock} onSelect={handleSelect} />
+        <LotSearchDropdown value={item.lot_no} lots={lots} onSelect={handleSelect} />
       </td>
       <td className="p-2 text-sm text-muted-foreground">{item.shade_number}</td>
       <td className="p-2 text-sm text-muted-foreground">{item.color_name}</td>

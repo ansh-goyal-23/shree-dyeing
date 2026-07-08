@@ -1,8 +1,11 @@
 export type PackagingType = 'paper_tube' | 'chesse';
 
+export type ChallanKind = 'production' | 'edy';
+
 export interface Challan {
   id: string;
   challan_number: string;
+  challan_kind: ChallanKind;
   date: string;
   client_id: string;
   client_name: string;

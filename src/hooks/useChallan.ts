@@ -68,6 +68,7 @@ async function applyChallanStockDelta(
 const mapChallan = (r: any): Challan => ({
   id: r.id,
   challan_number: r.challan_number,
+  challan_kind: (r.challan_kind === 'edy' ? 'edy' : 'production'),
   date: r.date,
   client_id: r.client_id,
   client_name: r.clients?.client_name || '',
@@ -157,13 +158,14 @@ export function useCreateChallan() {
         .from('challans')
         .insert({
           challan_number: payload.challan_number,
+          challan_kind: 'production',
           date: payload.date,
           client_id: payload.client_id,
           notes: payload.notes,
           prepared_by_name: payload.prepared_by_name,
           receiver_name: payload.receiver_name,
           receiver_contact_number: payload.receiver_contact_number,
-        })
+        } as any)
         .select()
         .single();
       if (cErr) throw cErr;
@@ -329,6 +331,138 @@ export function useDeleteChallan() {
       logBusinessEvent({
         module: 'dispatch', eventType: 'challan.deleted', severity: 'warning',
         entityType: 'challan', entityId: id, summary: 'Challan deleted',
+      });
+    },
+  });
+}
+
+// ------------------------------------------------------------------
+// EDY Challan creation. Reuses the same challans/challan_items tables
+// but marks the header with challan_kind='edy' and stores
+//   lot_no        = EDY receipt number
+//   color_name    = Dyer (supplier) name
+//   shade_number  = Shade
+//   gross_weight  = dispatched gross weight
+//   num_of_units  = # of cones
+//   packaging_type / net_weight / rate / amount default to chesse / 0
+// Stock deduction still hits store (EDY-<lot_no>) but by gross weight.
+// ------------------------------------------------------------------
+export interface EDYChallanItemInput {
+  lot_no: string;         // EDY receipt number
+  dyer: string;
+  shade_number: string;
+  gross_weight: number;
+  num_of_units: number;   // cones
+}
+
+async function applyEDYStockDelta(
+  challan_number: string,
+  challan_date: string,
+  prev: { lot_no: string; gross_weight: number }[],
+  next: { lot_no: string; gross_weight: number }[],
+) {
+  const agg = new Map<string, number>();
+  for (const it of prev) {
+    if (!it.lot_no) continue;
+    agg.set(it.lot_no, (agg.get(it.lot_no) ?? 0) - Number(it.gross_weight || 0));
+  }
+  for (const it of next) {
+    if (!it.lot_no) continue;
+    agg.set(it.lot_no, (agg.get(it.lot_no) ?? 0) + Number(it.gross_weight || 0));
+  }
+  const withDelta = [...agg.entries()].filter(([, d]) => Math.abs(d) > 0.00001);
+  if (withDelta.length === 0) return;
+
+  const codes = withDelta.map(([l]) => `EDY-${l}`);
+  const { data: items, error } = await sb
+    .from('store_items').select('id, item_code, unit').in('item_code', codes);
+  if (error) return;
+  const byCode = new Map((items ?? []).map((i: any) => [i.item_code, i]));
+
+  for (const [lot, delta] of withDelta) {
+    const item: any = byCode.get(`EDY-${lot}`);
+    if (!item) continue;
+    const { data: txnNum, error: nErr } = await sb.rpc('next_store_txn_number');
+    if (nErr) continue;
+    await sb.from('store_stock_transactions').insert({
+      transaction_number: txnNum,
+      transaction_date: challan_date,
+      transaction_type: 'challan_dispatch',
+      item_id: item.id,
+      quantity: -delta,
+      unit: item.unit,
+      reference_type: 'challan',
+      reference_number: challan_number,
+      remarks: `EDY Challan ${challan_number}`,
+    });
+  }
+}
+
+export function useCreateEDYChallan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      challan_number: string;
+      date: string;
+      client_id: string;
+      notes: string;
+      prepared_by_name: string;
+      receiver_name: string;
+      receiver_contact_number: string;
+      items: EDYChallanItemInput[];
+    }) => {
+      const { data: challan, error: cErr } = await supabase
+        .from('challans')
+        .insert({
+          challan_number: payload.challan_number,
+          challan_kind: 'edy',
+          date: payload.date,
+          client_id: payload.client_id,
+          notes: payload.notes,
+          prepared_by_name: payload.prepared_by_name,
+          receiver_name: payload.receiver_name,
+          receiver_contact_number: payload.receiver_contact_number,
+        } as any)
+        .select()
+        .single();
+      if (cErr) throw cErr;
+
+      if (payload.items.length > 0) {
+        const { error: iErr } = await supabase.from('challan_items').insert(
+          payload.items.map(item => ({
+            challan_id: challan.id,
+            lot_no: item.lot_no,
+            shade_number: item.shade_number,
+            color_name: item.dyer,        // dyer stored in color_name for reuse
+            packaging_type: 'chesse',
+            gross_weight: item.gross_weight,
+            num_of_units: item.num_of_units,
+            net_weight: 0,
+            rate: 0,
+            amount: 0,
+          }))
+        );
+        if (iErr) throw iErr;
+      }
+
+      await applyEDYStockDelta(
+        payload.challan_number, payload.date, [],
+        payload.items.map(i => ({ lot_no: i.lot_no, gross_weight: i.gross_weight })),
+      );
+
+      return challan;
+    },
+    onSuccess: (challan, vars) => {
+      qc.invalidateQueries({ queryKey: ['challans'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock_by_item'] });
+      qc.invalidateQueries({ queryKey: ['store_transactions'] });
+      const totalKg = vars.items.reduce((s, i) => s + (Number(i.gross_weight) || 0), 0);
+      logBusinessEvent({
+        module: 'dispatch', eventType: 'challan.created', severity: 'success',
+        entityType: 'challan', entityId: challan.id, referenceNumber: vars.challan_number,
+        summary: `Created EDY Challan ${vars.challan_number} — ${vars.items.length} lot(s), ${totalKg.toFixed(2)} kg`,
+        details: { items: vars.items.length, total_kg: totalKg, date: vars.date, kind: 'edy' },
       });
     },
   });

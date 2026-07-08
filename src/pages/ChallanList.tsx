@@ -174,12 +174,18 @@ const ChallanList: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Dispatch — Challans</h1>
-        <Link to="/dispatch/create"
-          className="inline-flex items-center gap-2 px-4 h-11 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 focus-ring">
-          <PlusCircle className="w-4 h-4" /> New Challan
-        </Link>
+        <div className="flex gap-2">
+          <Link to="/dispatch/create"
+            className="inline-flex items-center gap-2 px-4 h-11 bg-primary text-primary-foreground rounded-md text-sm font-medium btn-transition hover:opacity-90 focus-ring">
+            <PlusCircle className="w-4 h-4" /> New Challan
+          </Link>
+          <Link to="/dispatch/create-edy"
+            className="inline-flex items-center gap-2 px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring">
+            <PlusCircle className="w-4 h-4" /> New EDY Challan
+          </Link>
+        </div>
       </div>
 
       {/* Search + Filter toggle */}
@@ -259,6 +265,7 @@ const ChallanList: React.FC = () => {
             <thead>
               <tr className="border-b border-border text-left text-muted-foreground">
                 <SortHeader label="Challan #" field="challan" current={sortField} dir={sortDir} onSort={handleSort} />
+                <th className="p-3 font-medium">Type</th>
                 <SortHeader label="Date" field="date" current={sortField} dir={sortDir} onSort={handleSort} />
                 <SortHeader label="Client" field="client" current={sortField} dir={sortDir} onSort={handleSort} />
                 <th className="p-3 font-medium text-right">Items</th>
@@ -269,21 +276,37 @@ const ChallanList: React.FC = () => {
             <tbody>
               {filtered.map(c => {
                 const s = itemSummaryMap[c.id] || { totalItems: 0, totalNetWeight: 0, totalAmount: 0 };
+                const isEDY = c.challan_kind === 'edy';
+                // For EDY challans, "net weight" isn't tracked — show gross weight sum instead.
+                const edyGross = isEDY
+                  ? allItems.filter((i: any) => i.challan_id === c.id).reduce((sum: number, i: any) => sum + (Number(i.gross_weight) || 0), 0)
+                  : 0;
                 return (
                   <tr key={c.id} className="border-b border-border hover:bg-secondary/30 btn-transition">
                     <td className="p-3">
                       <Link to={`/dispatch/${c.id}`} className="text-primary font-medium hover:underline">{c.challan_number}</Link>
                     </td>
+                    <td className="p-3">
+                      {isEDY ? (
+                        <span className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200">EDY</span>
+                      ) : (
+                        <span className="text-xs px-2 py-0.5 rounded bg-secondary text-secondary-foreground">Production</span>
+                      )}
+                    </td>
                     <td className="p-3">{formatYmdLocal(c.date)}</td>
                     <td className="p-3">{c.client_name}</td>
                     <td className="p-3 text-right">{s.totalItems}</td>
-                    <td className="p-3 text-right">{s.totalNetWeight.toFixed(3)} kg</td>
-                    <td className="p-3 text-right font-medium">₹{s.totalAmount.toFixed(2)}</td>
+                    <td className="p-3 text-right">
+                      {isEDY ? `${edyGross.toFixed(3)} kg (gross)` : `${s.totalNetWeight.toFixed(3)} kg`}
+                    </td>
+                    <td className="p-3 text-right font-medium">
+                      {isEDY ? '—' : `₹${s.totalAmount.toFixed(2)}`}
+                    </td>
                   </tr>
                 );
               })}
               <tr className="bg-muted/50 font-semibold">
-                <td className="p-3" colSpan={4}>Total ({filtered.length} challans)</td>
+                <td className="p-3" colSpan={5}>Total ({filtered.length} challans)</td>
                 <td className="p-3 text-right">{totals.totalNetWeight.toFixed(3)} kg</td>
                 <td className="p-3 text-right">₹{totals.totalAmount.toFixed(2)}</td>
               </tr>
