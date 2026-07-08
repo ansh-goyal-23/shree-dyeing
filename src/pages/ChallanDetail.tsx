@@ -8,7 +8,6 @@ import type { ItemData } from '@/components/ChallanItemRow';
 import { downloadChallanPdf, shareChallanPdf } from '@/lib/challanPdf';
 import { formatYmdLocal } from '@/lib/formatDate';
 import { useClientRates } from '@/hooks/useClientRates';
-import { useEDYCurrentStock } from '@/hooks/useStore';
 import { toast } from 'sonner';
 import { PlusCircle, Loader2, Pencil, Trash2, ArrowLeft, Download, Share2 } from 'lucide-react';
 
@@ -32,7 +31,6 @@ const ChallanDetail: React.FC = () => {
   const { lots } = useApp();
   const clientId = challan?.client_id || '';
   const { data: clientRates = [] } = useClientRates(clientId || undefined);
-  const { data: edyStock = [] } = useEDYCurrentStock();
   
 
   const [editing, setEditing] = useState(false);
