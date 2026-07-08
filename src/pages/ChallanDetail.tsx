@@ -198,69 +198,106 @@ const ChallanDetail: React.FC = () => {
       {/* Items */}
       <div className="card-industrial overflow-x-auto">
         <div className="p-4 border-b border-border flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Items</h2>
-          {editing && (
+          <h2 className="text-sm font-semibold">
+            Items {challan.challan_kind === 'edy' && <span className="ml-2 text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200">External Dyed Yarn</span>}
+          </h2>
+          {editing && challan.challan_kind !== 'edy' && (
             <button type="button" onClick={addItem}
               className="inline-flex items-center gap-1.5 px-3 h-8 text-xs font-medium border border-input rounded-md hover:bg-secondary btn-transition">
               <PlusCircle className="w-3.5 h-3.5" /> Add Row
             </button>
           )}
         </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left text-muted-foreground">
-              <th className="p-2 font-medium">Lot No</th>
-              <th className="p-2 font-medium">Shade #</th>
-               <th className="p-2 font-medium">Color</th>
-               <th className="p-2 font-medium">Denier</th>
-               <th className="p-2 font-medium">Type</th>
-               <th className="p-2 font-medium">Packaging</th>
-              <th className="p-2 font-medium">Gross Wt (kg)</th>
-              <th className="p-2 font-medium">Units</th>
-              <th className="p-2 font-medium">Net Wt (kg)</th>
-              <th className="p-2 font-medium">Rate/kg</th>
-              <th className="p-2 font-medium">Amount</th>
-              {editing && <th className="p-2"></th>}
-            </tr>
-          </thead>
-          <tbody>
-            {editing ? (
-              items.map((item, i) => (
-                <ChallanItemRow key={i} index={i} item={item} lots={lots} clientId={clientId} clientRates={clientRates} onChange={updateItem} onRemove={removeItem} />
-              ))
-            ) : (
-              (challanItems.length === 0 ? (
-                <tr><td colSpan={11} className="p-6 text-center text-muted-foreground">No items.</td></tr>
+        {challan.challan_kind === 'edy' ? (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-muted-foreground">
+                <th className="p-2 font-medium">Dyer</th>
+                <th className="p-2 font-medium">Shade</th>
+                <th className="p-2 font-medium">Lot (EDY Receipt)</th>
+                <th className="p-2 font-medium">Gross Wt (kg)</th>
+                <th className="p-2 font-medium"># of Cones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {challanItems.length === 0 ? (
+                <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">No items.</td></tr>
               ) : challanItems.map(item => (
                 <tr key={item.id} className="border-b border-border">
-                  <td className="p-2 font-medium">
-                    <Link to={`/shade-management/lots/${item.lot_no}`} className="text-primary hover:underline">{item.lot_no}</Link>
-                  </td>
-                  <td className="p-2">{item.shade_number}</td>
-                  <td className="p-2">{item.color_name}</td>
-                  <td className="p-2">{(item as any).denier || lots.find(l => l.lot_no === item.lot_no)?.denier || ''}</td>
-                  <td className="p-2">{(item as any).lot_type || 'Production'}</td>
-                  <td className="p-2">{PACKAGING_LABEL[item.packaging_type] || item.packaging_type}</td>
+                  <td className="p-2">{item.color_name || '—'}</td>
+                  <td className="p-2">{item.shade_number || '—'}</td>
+                  <td className="p-2 font-medium">{item.lot_no}</td>
                   <td className="p-2">{item.gross_weight.toFixed(3)}</td>
                   <td className="p-2">{item.num_of_units}</td>
-                  <td className="p-2">{item.net_weight.toFixed(3)}</td>
-                  <td className="p-2">₹{item.rate.toFixed(2)}</td>
-                  <td className="p-2 font-medium">₹{item.amount.toFixed(2)}</td>
                 </tr>
-              )))
-            )}
-          </tbody>
-          <tfoot>
-            <tr className="border-t-2 border-border font-semibold">
-              <td colSpan={8} className="p-3 text-right">Totals:</td>
-              <td className="p-3">{totalNetWeight.toFixed(3)} kg</td>
-              <td className="p-3"></td>
-              <td className="p-3">₹{totalAmount.toFixed(2)}</td>
-              {editing && <td></td>}
-            </tr>
-          </tfoot>
-        </table>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-border font-semibold">
+                <td colSpan={3} className="p-3 text-right">Totals:</td>
+                <td className="p-3">{challanItems.reduce((s, i) => s + (Number(i.gross_weight) || 0), 0).toFixed(3)} kg</td>
+                <td className="p-3">{challanItems.reduce((s, i) => s + (Number(i.num_of_units) || 0), 0)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-muted-foreground">
+                <th className="p-2 font-medium">Lot No</th>
+                <th className="p-2 font-medium">Shade #</th>
+                <th className="p-2 font-medium">Color</th>
+                <th className="p-2 font-medium">Denier</th>
+                <th className="p-2 font-medium">Type</th>
+                <th className="p-2 font-medium">Packaging</th>
+                <th className="p-2 font-medium">Gross Wt (kg)</th>
+                <th className="p-2 font-medium">Units</th>
+                <th className="p-2 font-medium">Net Wt (kg)</th>
+                <th className="p-2 font-medium">Rate/kg</th>
+                <th className="p-2 font-medium">Amount</th>
+                {editing && <th className="p-2"></th>}
+              </tr>
+            </thead>
+            <tbody>
+              {editing ? (
+                items.map((item, i) => (
+                  <ChallanItemRow key={i} index={i} item={item} lots={lots} clientId={clientId} clientRates={clientRates} onChange={updateItem} onRemove={removeItem} />
+                ))
+              ) : (
+                (challanItems.length === 0 ? (
+                  <tr><td colSpan={11} className="p-6 text-center text-muted-foreground">No items.</td></tr>
+                ) : challanItems.map(item => (
+                  <tr key={item.id} className="border-b border-border">
+                    <td className="p-2 font-medium">
+                      <Link to={`/shade-management/lots/${item.lot_no}`} className="text-primary hover:underline">{item.lot_no}</Link>
+                    </td>
+                    <td className="p-2">{item.shade_number}</td>
+                    <td className="p-2">{item.color_name}</td>
+                    <td className="p-2">{(item as any).denier || lots.find(l => l.lot_no === item.lot_no)?.denier || ''}</td>
+                    <td className="p-2">{(item as any).lot_type || 'Production'}</td>
+                    <td className="p-2">{PACKAGING_LABEL[item.packaging_type] || item.packaging_type}</td>
+                    <td className="p-2">{item.gross_weight.toFixed(3)}</td>
+                    <td className="p-2">{item.num_of_units}</td>
+                    <td className="p-2">{item.net_weight.toFixed(3)}</td>
+                    <td className="p-2">₹{item.rate.toFixed(2)}</td>
+                    <td className="p-2 font-medium">₹{item.amount.toFixed(2)}</td>
+                  </tr>
+                )))
+              )}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-border font-semibold">
+                <td colSpan={8} className="p-3 text-right">Totals:</td>
+                <td className="p-3">{totalNetWeight.toFixed(3)} kg</td>
+                <td className="p-3"></td>
+                <td className="p-3">₹{totalAmount.toFixed(2)}</td>
+                {editing && <td></td>}
+              </tr>
+            </tfoot>
+          </table>
+        )}
       </div>
+
 
       {/* Footer details */}
       {editing ? (
