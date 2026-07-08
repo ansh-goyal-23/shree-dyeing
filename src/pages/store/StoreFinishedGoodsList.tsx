@@ -21,7 +21,26 @@ import { PackageCheck, Plus, Search, Activity, Pencil, Trash2 } from 'lucide-rea
 const FinishedGoodsList: React.FC = () => {
   const { data: receipts = [], isLoading } = useFGReceiptList();
   const { data: stock = [], isLoading: stockLoading } = useFGCurrentStock();
+  const deleteReceipt = useDeleteYarnReceipt();
   const [q, setQ] = useState('');
+  const [editing, setEditing] = useState<StoreFinishedGoodsReceipt | null>(null);
+  const [confirmDel, setConfirmDel] = useState<StoreFinishedGoodsReceipt | null>(null);
+
+  const handleDelete = async () => {
+    if (!confirmDel) return;
+    try {
+      await deleteReceipt.mutateAsync({
+        id: confirmDel.id,
+        receipt_number: confirmDel.receipt_number,
+        item_id: confirmDel.item_id,
+        source: 'finished_goods',
+      });
+      toast.success(`Receipt ${confirmDel.receipt_number} deleted`);
+      setConfirmDel(null);
+    } catch (e: any) {
+      toast.error(e.message || 'Delete failed');
+    }
+  };
 
   const filteredStock = useMemo(() => {
     const needle = q.trim().toLowerCase();
