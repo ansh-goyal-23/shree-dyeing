@@ -988,6 +988,163 @@ export const useCreateEDYReceipt = () => {
   });
 };
 
+// ---------- Yarn Receipts: shared update / delete (FG + EDY) ----------
+
+export interface UpdateYarnReceiptPayload {
+  id: string;
+  receipt_number: string;
+  item_id: string | null;
+  receipt_date: string;
+  lot_no?: string | null;
+  shade?: string | null;
+  shade_number?: string | null;
+  yarn_type?: string | null;
+  client?: string | null;
+  supplier?: string | null;
+  challan_number?: string | null;
+  cone_count?: number | null;
+  received_weight: number;
+  rate?: number | null;
+  rack_id?: string | null;
+  remarks?: string | null;
+}
+
+export const useUpdateYarnReceipt = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: UpdateYarnReceiptPayload) => {
+      if (!(payload.received_weight > 0)) throw new Error('Weight must be positive');
+
+      // Guard: cannot reduce below what has already been issued out.
+      if (payload.item_id) {
+        const { data: txns, error: txErr } = await sb
+          .from('store_stock_transactions')
+          .select('quantity, reference_number')
+          .eq('item_id', payload.item_id);
+        if (txErr) throw txErr;
+        const currentBalance = (txns ?? []).reduce((s: number, t: any) => s + Number(t.quantity || 0), 0);
+        const receiptTxns = (txns ?? []).filter((t: any) => t.reference_number === payload.receipt_number);
+        const receiptQty = receiptTxns.reduce((s: number, t: any) => s + Number(t.quantity || 0), 0);
+        const otherBalance = currentBalance - receiptQty;
+        if (payload.received_weight + otherBalance < 0) {
+          throw new Error('Cannot reduce weight below what has already been issued out of stock.');
+        }
+      }
+
+      const amount = payload.rate != null ? Number(payload.rate) * Number(payload.received_weight) : null;
+
+      const { error: headerErr } = await sb
+        .from('store_yarn_receipts')
+        .update({
+          receipt_date: payload.receipt_date,
+          lot_no: payload.lot_no ?? null,
+          shade: payload.shade ?? null,
+          shade_number: payload.shade_number ?? null,
+          yarn_type: payload.yarn_type ?? null,
+          client: payload.client ?? null,
+          supplier: payload.supplier ?? null,
+          challan_number: payload.challan_number ?? null,
+          cone_count: payload.cone_count ?? null,
+          received_weight: payload.received_weight,
+          rate: payload.rate ?? null,
+          amount,
+          rack_id: payload.rack_id || null,
+          remarks: payload.remarks || null,
+        })
+        .eq('id', payload.id);
+      if (headerErr) throw headerErr;
+
+      // Sync the linked receipt transaction (identified by reference_number).
+      const { error: txnErr } = await sb
+        .from('store_stock_transactions')
+        .update({
+          transaction_date: payload.receipt_date,
+          quantity: Math.abs(Number(payload.received_weight)),
+          rack_id: payload.rack_id || null,
+          supplier: payload.supplier ?? null,
+          rate: payload.rate ?? null,
+          amount,
+          remarks: payload.remarks || null,
+        })
+        .eq('reference_number', payload.receipt_number)
+        .in('reference_type', ['fg_receipt', 'edy_receipt']);
+      if (txnErr) throw txnErr;
+
+      return payload;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fg_receipt_list'] });
+      qc.invalidateQueries({ queryKey: ['fg_current_stock'] });
+      qc.invalidateQueries({ queryKey: ['edy_receipt_list'] });
+      qc.invalidateQueries({ queryKey: ['edy_current_stock'] });
+      qc.invalidateQueries({ queryKey: ['store_transactions'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+    },
+  });
+};
+
+export const useDeleteYarnReceipt = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      id: string;
+      receipt_number: string;
+      item_id: string | null;
+      source: 'finished_goods' | 'external_dyed_yarn';
+    }) => {
+      // Block delete if the item has any transactions beyond the receipt itself
+      // (i.e. stock was already issued, dispatched, etc.).
+      if (payload.item_id) {
+        const { data: txns, error: txErr } = await sb
+          .from('store_stock_transactions')
+          .select('id, reference_number, reference_type')
+          .eq('item_id', payload.item_id);
+        if (txErr) throw txErr;
+        const others = (txns ?? []).filter(
+          (t: any) => !(t.reference_number === payload.receipt_number
+            && (t.reference_type === 'fg_receipt' || t.reference_type === 'edy_receipt')),
+        );
+        if (others.length > 0) {
+          throw new Error(
+            'Cannot delete: this stock has downstream transactions (issues/dispatches). Reverse those first.',
+          );
+        }
+      }
+
+      // 1. Delete the receipt transaction(s).
+      const { error: dTxErr } = await sb
+        .from('store_stock_transactions')
+        .delete()
+        .eq('reference_number', payload.receipt_number)
+        .in('reference_type', ['fg_receipt', 'edy_receipt']);
+      if (dTxErr) throw dTxErr;
+
+      // 2. Delete the receipt header.
+      const { error: dHdrErr } = await sb
+        .from('store_yarn_receipts')
+        .delete()
+        .eq('id', payload.id);
+      if (dHdrErr) throw dHdrErr;
+
+      // 3. Best-effort: remove the auto-created catalogue item (ignore errors).
+      if (payload.item_id) {
+        await sb.from('store_items').delete().eq('id', payload.item_id);
+      }
+      return payload;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fg_receipt_list'] });
+      qc.invalidateQueries({ queryKey: ['fg_current_stock'] });
+      qc.invalidateQueries({ queryKey: ['fg_eligible_lots'] });
+      qc.invalidateQueries({ queryKey: ['edy_receipt_list'] });
+      qc.invalidateQueries({ queryKey: ['edy_current_stock'] });
+      qc.invalidateQueries({ queryKey: ['store_items'] });
+      qc.invalidateQueries({ queryKey: ['store_transactions'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+    },
+  });
+};
+
 export const useAssetItems = () =>
   useQuery({
     queryKey: ['store_items', 'asset_only'],
