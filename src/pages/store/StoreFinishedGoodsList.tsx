@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useFGReceiptList, useFGCurrentStock } from '@/hooks/useStore';
+import { useFGReceiptList, useFGCurrentStock, useDeleteYarnReceipt } from '@/hooks/useStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,12 +9,38 @@ import { Badge } from '@/components/ui/badge';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { PackageCheck, Plus, Search, Activity } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import EditYarnReceiptDialog from '@/components/store/EditYarnReceiptDialog';
+import type { StoreFinishedGoodsReceipt } from '@/types/store';
+import { toast } from 'sonner';
+import { PackageCheck, Plus, Search, Activity, Pencil, Trash2 } from 'lucide-react';
 
 const FinishedGoodsList: React.FC = () => {
   const { data: receipts = [], isLoading } = useFGReceiptList();
   const { data: stock = [], isLoading: stockLoading } = useFGCurrentStock();
+  const deleteReceipt = useDeleteYarnReceipt();
   const [q, setQ] = useState('');
+  const [editing, setEditing] = useState<StoreFinishedGoodsReceipt | null>(null);
+  const [confirmDel, setConfirmDel] = useState<StoreFinishedGoodsReceipt | null>(null);
+
+  const handleDelete = async () => {
+    if (!confirmDel) return;
+    try {
+      await deleteReceipt.mutateAsync({
+        id: confirmDel.id,
+        receipt_number: confirmDel.receipt_number,
+        item_id: confirmDel.item_id,
+        source: 'finished_goods',
+      });
+      toast.success(`Receipt ${confirmDel.receipt_number} deleted`);
+      setConfirmDel(null);
+    } catch (e: any) {
+      toast.error(e.message || 'Delete failed');
+    }
+  };
 
   const filteredStock = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -137,13 +163,14 @@ const FinishedGoodsList: React.FC = () => {
                     <TableHead>Shade</TableHead>
                     <TableHead>Client</TableHead>
                     <TableHead className="text-right">Net Weight</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>
                   ) : filteredReceipts.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">No receipts yet.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">No receipts yet.</TableCell></TableRow>
                   ) : filteredReceipts.map(r => (
                     <TableRow key={r.id}>
                       <TableCell className="font-mono text-xs">{r.receipt_number}</TableCell>
@@ -152,6 +179,14 @@ const FinishedGoodsList: React.FC = () => {
                       <TableCell>{r.shade || '—'}</TableCell>
                       <TableCell>{r.client || '—'}</TableCell>
                       <TableCell className="text-right">{Number(r.net_weight).toFixed(3)} kg</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" title="Edit" onClick={() => setEditing(r)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" title="Delete" onClick={() => setConfirmDel(r)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -160,6 +195,30 @@ const FinishedGoodsList: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <EditYarnReceiptDialog
+        receipt={editing}
+        source="finished_goods"
+        open={!!editing}
+        onOpenChange={(o) => { if (!o) setEditing(null); }}
+      />
+
+      <AlertDialog open={!!confirmDel} onOpenChange={(o) => { if (!o) setConfirmDel(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete receipt {confirmDel?.receipt_number}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the receipt and its stock entry. Blocked if any stock has already been issued out.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleteReceipt.isPending}>
+              {deleteReceipt.isPending ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
