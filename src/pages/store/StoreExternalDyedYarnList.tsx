@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useEDYReceiptList, useEDYCurrentStock } from '@/hooks/useStore';
+import { useEDYReceiptList, useEDYCurrentStock, useDeleteYarnReceipt } from '@/hooks/useStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Globe2, Plus, Search, Activity } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import EditYarnReceiptDialog from '@/components/store/EditYarnReceiptDialog';
+import type { StoreExternalDyedYarnReceipt } from '@/types/store';
+import { toast } from 'sonner';
+import { Globe2, Plus, Search, Activity, Pencil, Trash2 } from 'lucide-react';
 
 const ExternalDyedYarnList: React.FC = () => {
   const { data: receipts = [], isLoading } = useEDYReceiptList();
