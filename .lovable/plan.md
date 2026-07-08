@@ -1,75 +1,73 @@
-## Goal
-Consolidate the Store/Inventory schema in Supabase to remove redundant tables, duplicated columns, and overlapping views — without breaking the working Store UI.
+# Challan: Dropdown Fix + Separate EDY Challan Flow
 
-## Redundancies identified
+## 1. Fix Lot dropdown clipping in Create Challan
+The lot search dropdown in `ChallanItemRow` uses `position: absolute` inside a table whose wrapper has `overflow-x-auto`. When only 1–2 items exist, the dropdown gets cut off by the container.
 
-**Dead tables from the decommissioned old inventory module** (kept by old migration `20260430_inventory_system.sql`, no longer referenced by any code):
-- `yarn_inventory`
-- `material_inventory`
-- `oil_inventory`
-- `finished_goods_stock`
-- `inventory_transactions_v2`
-- Tracking columns on `lots` (`last_yarn_consumed`, `last_dye_consumption`, `last_chemical_consumption`, `inventory_synced`)
-- Tracking columns on `challans` (`last_oil_by_lot`, `last_fg_by_lot`, `inventory_synced`)
+**Fix:** Render the dropdown in a portal so it escapes any parent overflow.
+- Rewrite `LotSearchDropdown` in `src/components/ChallanItemRow.tsx` to use a fixed-position panel via `ReactDOM.createPortal`, positioned relative to the input using `getBoundingClientRect()`.
+- Keeps existing keyboard/mouse behavior; no visual change beyond no-longer-clipped list.
 
-**Overlapping receipt tables** — FG and EDY are 90% the same shape:
-- `store_finished_goods_receipts` and `store_external_dyed_yarn_receipts` both carry: receipt_number, receipt_date, shade, lot_no, cone_count, gross_weight, net_weight, rack_id, item_id, remarks. Plus EDY‑only: supplier, challan_number, challan_pdf, rate, amount.
+## 2. Separate EDY Challan creation
+Instead of mixing EDY entries in the production-lot dropdown, EDY challans get their own dedicated flow. Headers and footer identical to production challans; only the items table differs.
 
-**Duplicate views**:
-- `store_current_stock` (per item+rack) and `store_current_stock_by_item` (per item) — only the by_item one is actually used by the UI.
-- `store_fg_current_stock` and `store_edy_current_stock` are structurally identical aggregations.
+### 2a. Data model (reuse existing `challans` + `challan_items`)
+Add a single column so we don't need parallel tables.
 
-**Columns duplicated between headers and `store_stock_transactions`**:
-- supplier, remarks, rack_id, person, department are already on the transaction row and on the header. The header copy is the redundant one.
-- `store_stock_inward.total_amount` is derivable from SUM(amount) on its transactions.
-
-## Plan
-
-### Migration 1 — `20260627_drop_legacy_inventory.sql`
-Drop the old inventory module entirely:
-- `DROP TABLE` (CASCADE) `yarn_inventory`, `material_inventory`, `oil_inventory`, `finished_goods_stock`, `inventory_transactions_v2`.
-- `ALTER TABLE lots DROP COLUMN` the 4 inventory tracking columns.
-- `ALTER TABLE challans DROP COLUMN` the 3 inventory tracking columns.
-- Drop the now-unused `store_current_stock` view (UI uses `store_current_stock_by_item`).
-
-### Migration 2 — `20260627_unify_receipts.sql`
-Replace `store_finished_goods_receipts` and `store_external_dyed_yarn_receipts` with a single table `store_yarn_receipts`:
-
-```text
-store_yarn_receipts
-  id, receipt_number, receipt_date,
-  source            enum('finished_goods','external_dyed_yarn')
-  lot_no, shade, shade_number, yarn_type,
-  client            -- null for EDY
-  supplier          -- null for FG (the external dyer)
-  challan_number, challan_pdf_url, challan_pdf_path,
-  cone_count, gross_weight, net_weight,
-  rate, amount,
-  rack_id, item_id, remarks,
-  created_at, updated_at, created_by
+```sql
+-- sql_migrations/20260708_edy_challan_kind.sql
+alter table public.challans
+  add column if not exists challan_kind text not null default 'production'
+  check (challan_kind in ('production','edy'));
+create index if not exists idx_challans_kind on public.challans(challan_kind);
 ```
 
-- Data migration: copy both existing tables into the new one (source = 'finished_goods' / 'external_dyed_yarn'), then drop the old tables.
-- Replace `store_fg_current_stock` and `store_edy_current_stock` with one view `store_yarn_receipt_stock` filtered by `source`.
-- Update `useStore.ts` (`useCreateFGReceipt`, `useCreateEDYReceipt`, list hooks) and the FG/EDY pages to read/write the unified table.
+EDY line items store:
+- `lot_no` = EDY receipt number (already used as `EDY-<receipt_number>` for stock lookup — unchanged)
+- `shade_number`, `color_name` (dyer name stored here for display), `gross_weight`, `num_of_units`
+- `packaging_type` = `'chesse'` (default; user only sees # of cones)
+- `net_weight`, `rate`, `amount` = 0 (no billing on EDY challans)
 
-### Migration 3 — `20260627_trim_header_columns.sql`
-Remove redundant columns now that transactions are authoritative:
-- `store_stock_inward`: drop `supplier`, `remarks` (kept on the transaction rows). Replace `total_amount` column with a computed view, or keep but document it as a cache — your call (default: drop it, sum on read).
-- `store_internal_issues`: drop `department`, `issued_to`, `remarks`.
-- `store_assets`: drop `department`, `rack_id`, `remarks` from the table (latest values are already derivable from `store_asset_movements` + last `store_stock_transactions`). Keep `current_holder` and `status` because they're queried hot.
+No new tables, no schema change to `challan_items`.
 
-### App code updates
-- `src/types/store.ts` — collapse FG/EDY interfaces into `StoreYarnReceipt`, remove dropped header fields.
-- `src/hooks/useStore.ts` — update receipt creation hooks; replace `store_fg_current_stock` / `store_edy_current_stock` reads with `store_yarn_receipt_stock`.
-- `src/pages/store/StoreFinishedGoodsReceive.tsx`, `StoreFinishedGoodsList.tsx`, `StoreExternalDyedYarnReceive.tsx`, `StoreExternalDyedYarnList.tsx` — point at the unified table/view.
-- `src/pages/store/StoreInwardCreate.tsx`, `StoreInwardList.tsx`, `StoreIssueForm.tsx`, `StoreIssueList.tsx`, `StoreAssetManagement.tsx` — stop writing/reading the trimmed header columns.
+### 2b. New page: `src/pages/CreateEDYChallan.tsx`
+- Header identical to `CreateChallan` (challan number, date, client, notes).
+- Item rows: **Dyer · Shade · Lot (EDY receipt) · Gross Wt (kg) · # of Cones · Delete**.
+- Lot picker: portal-based dropdown filtered to EDY stock only (`useEDYCurrentStock`), showing Dyer + Shade + balance. Selecting auto-fills Dyer & Shade.
+- Totals row shows sum of Gross Wt.
+- Footer identical (Prepared By, Receiver Name, Receiver Contact) reusing `FooterAutocomplete` + `useChallanFooterOptions`.
+- Uses new `useCreateEDYChallan` hook that inserts with `challan_kind='edy'`.
 
-## What stays untouched
-- `store_items`, `store_racks`, `store_stock_transactions`, `store_stock_ledger`, `store_current_stock_by_item`, `store_asset_movements`, `store_stock_verifications` — these are the lean core and stay as-is.
-- All Store UI behavior, screens, and routes remain functionally identical to users.
+### 2c. Hook changes (`src/hooks/useChallan.ts`)
+- `mapChallan` reads `challan_kind` (default `production`).
+- `useCreateChallan` inserts with `challan_kind: 'production'`.
+- Add `useCreateEDYChallan` mirroring insert but with `challan_kind: 'edy'` and rate/amount/net_weight = 0. Stock deduction still fires (net_weight = 0 for EDY, so deduct by gross_weight instead: pass `gross_weight` into `applyChallanStockDelta` for EDY).
 
-## Risks / confirmation needed
-1. The legacy inventory tables in Migration 1 may still hold historical data. **Drop them outright, or export to a `legacy_*` schema first?**
-2. Unifying FG + EDY changes table names existing reports/exports rely on. OK to migrate data and remove the originals?
-3. Are you OK losing `store_stock_inward.total_amount` as a stored column (computed on read instead)?
+### 2d. Remove EDY entries from production dropdown
+In `ChallanItemRow.tsx`, drop the `edyOptions` block entirely. The production Create Challan reverts to production-lots-only.
+
+### 2e. `ChallanList` (All Challans tab)
+- Add a **Type** column (badge: "Production" / "EDY").
+- Add a "New EDY Challan" button next to the existing "New Challan" button (or a split dropdown).
+- Optional filter: Type = All / Production / EDY.
+- EDY rows: Net Weight column shows gross weight total; Amount shows "—".
+
+### 2f. `ChallanDetail`
+- If `challan_kind === 'edy'`, render an EDY-specific items table (Dyer, Shade, Lot, Gross Wt, # of Cones, no rate/amount), and hide amount totals.
+- Otherwise unchanged.
+
+### 2g. Routing (`src/App.tsx`)
+- Add `/dispatch/create-edy` → `CreateEDYChallan`.
+
+## Files touched
+- new: `sql_migrations/20260708_edy_challan_kind.sql`
+- new: `src/pages/CreateEDYChallan.tsx`
+- edited: `src/components/ChallanItemRow.tsx` (portal dropdown, drop EDY options)
+- edited: `src/hooks/useChallan.ts` (`challan_kind`, `useCreateEDYChallan`, EDY stock delta by gross)
+- edited: `src/types/challan.ts` (`challan_kind` field)
+- edited: `src/pages/ChallanList.tsx` (Type column, New EDY button, type filter)
+- edited: `src/pages/ChallanDetail.tsx` (EDY view mode)
+- edited: `src/App.tsx` (route)
+
+## Out of scope
+- Editing EDY challans (Edit dialog) — can be added later; delete already works via existing flow.
+- PDF layout tweaks for EDY challans — will use existing PDF for now unless you want a distinct layout.
