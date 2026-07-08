@@ -56,7 +56,7 @@ const CreateChallan: React.FC = () => {
   });
   useEffect(() => { setDraft(DRAFT_KEY, { form, items }); }, [form, items]);
   const { data: clientRates = [] } = useClientRates(form.client_id || undefined);
-  const { data: edyStock = [] } = useEDYCurrentStock();
+  
 
   const updateItem = (index: number, updated: ItemData) => {
     setItems(prev => prev.map((it, i) => i === index ? updated : it));
