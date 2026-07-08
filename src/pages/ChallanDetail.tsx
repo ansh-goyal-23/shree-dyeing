@@ -139,10 +139,12 @@ const ChallanDetail: React.FC = () => {
                 className="inline-flex items-center gap-1.5 px-3 h-9 border border-input rounded-md text-sm font-medium hover:bg-secondary btn-transition">
                 <Share2 className="w-3.5 h-3.5" /> Share
               </button>
-              <button onClick={() => setEditing(true)}
-                className="inline-flex items-center gap-1.5 px-3 h-9 border border-input rounded-md text-sm font-medium hover:bg-secondary btn-transition">
-                <Pencil className="w-3.5 h-3.5" /> Edit
-              </button>
+              {challan.challan_kind !== 'edy' && (
+                <button onClick={() => setEditing(true)}
+                  className="inline-flex items-center gap-1.5 px-3 h-9 border border-input rounded-md text-sm font-medium hover:bg-secondary btn-transition">
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </button>
+              )}
               <button onClick={handleDelete}
                 className="inline-flex items-center gap-1.5 px-3 h-9 border border-destructive text-destructive rounded-md text-sm font-medium hover:bg-destructive/10 btn-transition">
                 <Trash2 className="w-3.5 h-3.5" /> Delete
