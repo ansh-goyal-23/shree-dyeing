@@ -208,6 +208,7 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, clie
       <td className="p-2">
         <LotSearchDropdown value={item.lot_no} lots={lots} onSelect={handleSelect} />
       </td>
+      <td className="p-2 text-sm text-muted-foreground">{item.ref_no || '—'}</td>
       <td className="p-2 text-sm text-muted-foreground">{item.shade_number}</td>
       <td className="p-2 text-sm text-muted-foreground">{item.color_name}</td>
       <td className="p-2 text-sm text-muted-foreground">{item.denier}</td>
