@@ -29,5 +29,6 @@ export interface ChallanItem {
   net_weight: number;
   rate: number;
   amount: number;
+  ref_no?: string | null;
   created_by?: string | null;
 }
