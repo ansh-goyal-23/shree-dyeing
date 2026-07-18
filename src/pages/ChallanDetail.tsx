@@ -13,7 +13,7 @@ import { PlusCircle, Loader2, Pencil, Trash2, ArrowLeft, Download, Share2 } from
 
 const emptyItem = (): ItemData => ({
   lot_no: '', shade_number: '', color_name: '', denier: '', packaging_type: 'paper_tube',
-  gross_weight: 0, num_of_units: 0, net_weight: 0, rate: 0, amount: 0, lot_type: 'Production',
+  gross_weight: 0, num_of_units: 0, net_weight: 0, rate: 0, amount: 0, lot_type: 'Production', ref_no: '',
 });
 
 const PACKAGING_LABEL: Record<string, string> = {
@@ -62,6 +62,7 @@ const ChallanDetail: React.FC = () => {
         packaging_type: i.packaging_type, gross_weight: i.gross_weight,
         num_of_units: i.num_of_units, net_weight: i.net_weight, rate: i.rate, amount: i.amount,
         lot_type: ((i as any).lot_type as 'Production' | 'Sampling') || 'Production',
+        ref_no: i.ref_no || '',
       })));
     }
   }, [challanItems]);
@@ -247,6 +248,7 @@ const ChallanDetail: React.FC = () => {
             <thead>
               <tr className="border-b border-border text-left text-muted-foreground">
                 <th className="p-2 font-medium">Lot No</th>
+                <th className="p-2 font-medium">Ref No</th>
                 <th className="p-2 font-medium">Shade #</th>
                 <th className="p-2 font-medium">Color</th>
                 <th className="p-2 font-medium">Denier</th>
@@ -267,12 +269,13 @@ const ChallanDetail: React.FC = () => {
                 ))
               ) : (
                 (challanItems.length === 0 ? (
-                  <tr><td colSpan={11} className="p-6 text-center text-muted-foreground">No items.</td></tr>
+                  <tr><td colSpan={12} className="p-6 text-center text-muted-foreground">No items.</td></tr>
                 ) : challanItems.map(item => (
                   <tr key={item.id} className="border-b border-border">
                     <td className="p-2 font-medium">
                       <Link to={`/shade-management/lots/${item.lot_no}`} className="text-primary hover:underline">{item.lot_no}</Link>
                     </td>
+                    <td className="p-2">{item.ref_no || '—'}</td>
                     <td className="p-2">{item.shade_number}</td>
                     <td className="p-2">{item.color_name}</td>
                     <td className="p-2">{(item as any).denier || lots.find(l => l.lot_no === item.lot_no)?.denier || ''}</td>
@@ -289,7 +292,7 @@ const ChallanDetail: React.FC = () => {
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-border font-semibold">
-                <td colSpan={8} className="p-3 text-right">Totals:</td>
+                <td colSpan={9} className="p-3 text-right">Totals:</td>
                 <td className="p-3">{totalNetWeight.toFixed(3)} kg</td>
                 <td className="p-3"></td>
                 <td className="p-3">₹{totalAmount.toFixed(2)}</td>

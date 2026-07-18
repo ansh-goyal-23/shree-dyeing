@@ -33,7 +33,7 @@ const LotDetail: React.FC = () => {
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState({
     date: '', yarn_company_name: '', color_name: '', denier: '',
-    number_of_chesses: 0, gross_weight: 0,
+    number_of_chesses: 0, gross_weight: 0, ref_no: '',
   });
   const [editingRemarks, setEditingRemarks] = useState(false);
   const [remarksDraft, setRemarksDraft] = useState('');
@@ -53,6 +53,7 @@ const LotDetail: React.FC = () => {
       date: lot.date, yarn_company_name: lot.yarn_company_name,
       color_name: lot.color_name, denier: lot.denier,
       number_of_chesses: lot.number_of_chesses, gross_weight: lot.gross_weight,
+      ref_no: lot.ref_no || '',
     });
     setEditing(true);
   };
@@ -66,6 +67,7 @@ const LotDetail: React.FC = () => {
       denier: editData.denier,
       number_of_chesses: editData.number_of_chesses,
       gross_weight: editData.gross_weight,
+      ref_no: editData.ref_no.trim() || null,
     });
     if (success) {
       toast.success('Lot details updated.');
@@ -227,6 +229,10 @@ const LotDetail: React.FC = () => {
               <label className="text-muted-foreground text-xs">Shade Number</label>
               <p className="font-data font-medium mt-2">{lot.shade_number}</p>
             </div>
+            <div>
+              <label className="text-muted-foreground text-xs">Ref No</label>
+              <Input value={editData.ref_no} onChange={e => setEditData(p => ({ ...p, ref_no: e.target.value }))} className="mt-1" placeholder="Optional" />
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -240,6 +246,10 @@ const LotDetail: React.FC = () => {
             <div>
               <span className="text-muted-foreground">Shade Number</span>
               <p className="font-data font-medium mt-0.5">{lot.shade_number}</p>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Ref No</span>
+              <p className="font-data font-medium mt-0.5">{lot.ref_no || '—'}</p>
             </div>
           </div>
         )}

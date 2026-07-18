@@ -92,6 +92,7 @@ const mapItem = (r: any): ChallanItem => ({
   net_weight: Number(r.net_weight) || 0,
   rate: Number(r.rate) || 0,
   amount: Number(r.amount) || 0,
+  ref_no: r.ref_no || null,
   created_by: r.created_by || null,
 });
 
@@ -183,6 +184,7 @@ export function useCreateChallan() {
             net_weight: item.net_weight,
             rate: item.rate,
             amount: item.amount,
+            ref_no: item.ref_no || null,
           }))
         );
         if (iErr) throw iErr;
@@ -271,6 +273,7 @@ export function useUpdateChallan() {
             net_weight: item.net_weight,
             rate: item.rate,
             amount: item.amount,
+            ref_no: item.ref_no || null,
           }))
         );
         if (iErr) throw iErr;

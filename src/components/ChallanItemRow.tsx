@@ -21,6 +21,7 @@ export interface ItemData {
   rate: number;
   amount: number;
   lot_type: LotType;
+  ref_no?: string;
 }
 
 interface ChallanItemRowProps {
@@ -160,6 +161,7 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, clie
       shade_number: lot?.shade_number || '',
       color_name: lot?.color_name || '',
       denier,
+      ref_no: (lot as any)?.ref_no || '',
       rate: autoRate,
       amount: parseFloat((item.net_weight * autoRate).toFixed(2)),
     });
@@ -206,6 +208,7 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, clie
       <td className="p-2">
         <LotSearchDropdown value={item.lot_no} lots={lots} onSelect={handleSelect} />
       </td>
+      <td className="p-2 text-sm text-muted-foreground">{item.ref_no || '—'}</td>
       <td className="p-2 text-sm text-muted-foreground">{item.shade_number}</td>
       <td className="p-2 text-sm text-muted-foreground">{item.color_name}</td>
       <td className="p-2 text-sm text-muted-foreground">{item.denier}</td>
