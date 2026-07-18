@@ -17,7 +17,7 @@ const DRAFT_KEY = 'createChallan:draft';
 
 const emptyItem = (): ItemData => ({
   lot_no: '', shade_number: '', color_name: '', denier: '', packaging_type: 'paper_tube',
-  gross_weight: 0, num_of_units: 0, net_weight: 0, rate: 0, amount: 0, lot_type: 'Production',
+  gross_weight: 0, num_of_units: 0, net_weight: 0, rate: 0, amount: 0, lot_type: 'Production', ref_no: '',
 });
 
 const CreateChallan: React.FC = () => {
@@ -145,6 +145,7 @@ const CreateChallan: React.FC = () => {
             <thead>
               <tr className="border-b border-border text-left text-muted-foreground">
                 <th className="p-2 font-medium">Lot No</th>
+                <th className="p-2 font-medium">Ref No</th>
                 <th className="p-2 font-medium">Shade #</th>
                 <th className="p-2 font-medium">Color</th>
                 <th className="p-2 font-medium">Denier</th>
@@ -165,7 +166,7 @@ const CreateChallan: React.FC = () => {
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-border font-semibold">
-                <td colSpan={8} className="p-3 text-right">Totals:</td>
+                <td colSpan={9} className="p-3 text-right">Totals:</td>
                 <td className="p-3">{totalNetWeight.toFixed(3)} kg</td>
                 <td className="p-3"></td>
                 <td className="p-3">₹{totalAmount.toFixed(2)}</td>
