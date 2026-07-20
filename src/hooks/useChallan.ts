@@ -139,6 +139,7 @@ const mapItem = (r: any): ChallanItem => ({
   lot_no: r.lot_no,
   shade_number: r.shade_number || '',
   color_name: r.color_name || '',
+  denier: r.denier || '',
   packaging_type: r.packaging_type || 'paper_tube',
   gross_weight: Number(r.gross_weight) || 0,
   num_of_units: Number(r.num_of_units) ?? Number(r.num_of_paper_tubes) ?? 0,
