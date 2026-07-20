@@ -79,12 +79,15 @@ const ChallanList: React.FC = () => {
 
   // Build a map of challanId -> item summary for performance
   const itemSummaryMap = useMemo(() => {
-    const map: Record<string, { totalItems: number; totalNetWeight: number; totalAmount: number }> = {};
+    const map: Record<string, { totalItems: number; totalNetWeight: number; totalAmount: number; types: string[] }> = {};
     allItems.forEach((i: any) => {
-      if (!map[i.challan_id]) map[i.challan_id] = { totalItems: 0, totalNetWeight: 0, totalAmount: 0 };
+      if (!map[i.challan_id]) map[i.challan_id] = { totalItems: 0, totalNetWeight: 0, totalAmount: 0, types: [] };
       map[i.challan_id].totalItems += 1;
       map[i.challan_id].totalNetWeight += Number(i.net_weight) || 0;
       map[i.challan_id].totalAmount += Number(i.amount) || 0;
+      if (i.lot_type && !map[i.challan_id].types.includes(i.lot_type)) {
+        map[i.challan_id].types.push(i.lot_type);
+      }
     });
     return map;
   }, [allItems]);
@@ -275,7 +278,7 @@ const ChallanList: React.FC = () => {
             </thead>
             <tbody>
               {filtered.map(c => {
-                const s = itemSummaryMap[c.id] || { totalItems: 0, totalNetWeight: 0, totalAmount: 0 };
+                const s = itemSummaryMap[c.id] || { totalItems: 0, totalNetWeight: 0, totalAmount: 0, types: [] };
                 const isEDY = c.challan_kind === 'edy';
                 // For EDY challans, "net weight" isn't tracked — show gross weight sum instead.
                 const edyGross = isEDY
@@ -290,7 +293,11 @@ const ChallanList: React.FC = () => {
                       {isEDY ? (
                         <span className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200">EDY</span>
                       ) : (
-                        <span className="text-xs px-2 py-0.5 rounded bg-secondary text-secondary-foreground">Production</span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-secondary text-secondary-foreground">
+                          {(s.types.length ? s.types : ['production'])
+                            .map(t => t === 'production' ? 'Production' : t === 'sampling' ? 'Sampling' : t)
+                            .join(' + ')}
+                        </span>
                       )}
                     </td>
                     <td className="p-3">{formatYmdLocal(c.date)}</td>
