@@ -41,7 +41,8 @@ export const PortalDropdown: React.FC<{
   anchor: HTMLElement | null;
   open: boolean;
   children: React.ReactNode;
-}> = ({ anchor, open, children }) => {
+  contentRef?: React.RefObject<HTMLDivElement>;
+}> = ({ anchor, open, children, contentRef }) => {
   const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null);
 
   useLayoutEffect(() => {
@@ -62,6 +63,7 @@ export const PortalDropdown: React.FC<{
   if (!open || !rect) return null;
   return createPortal(
     <div
+      ref={contentRef}
       style={{ position: 'fixed', top: rect.top, left: rect.left, width: rect.width, zIndex: 1000 }}
       className="max-h-64 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md"
     >
@@ -78,8 +80,10 @@ const LotSearchDropdown: React.FC<{
 }> = ({ value, lots, onSelect }) => {
   const [search, setSearch] = useState(value);
   const [open, setOpen] = useState(false);
+  const [highlight, setHighlight] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setSearch(value); }, [value]);
 
@@ -87,7 +91,6 @@ const LotSearchDropdown: React.FC<{
     const h = (e: MouseEvent) => {
       const target = e.target as Node;
       if (wrapRef.current && !wrapRef.current.contains(target)) {
-        // Also ignore clicks inside the portal by checking if target is inside popover
         const popover = (target as HTMLElement).closest?.('[data-lot-portal="1"]');
         if (!popover) setOpen(false);
       }
@@ -112,18 +115,50 @@ const LotSearchDropdown: React.FC<{
     return options.filter(o => o.label.toLowerCase().includes(q) || o.sub.toLowerCase().includes(q));
   }, [options, search]);
 
+  useEffect(() => { setHighlight(0); }, [search, open]);
+
+  useEffect(() => {
+    if (!open || !listRef.current) return;
+    const el = listRef.current.querySelector<HTMLElement>(`[data-idx="${highlight}"]`);
+    if (el) el.scrollIntoView({ block: 'nearest' });
+  }, [highlight, open]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!open) setOpen(true);
+      setHighlight(h => Math.min(h + 1, Math.max(filtered.length - 1, 0)));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlight(h => Math.max(h - 1, 0));
+    } else if (e.key === 'Enter') {
+      if (open && filtered[highlight]) {
+        e.preventDefault();
+        const opt = filtered[highlight];
+        onSelect(opt);
+        setSearch(opt.label);
+        setOpen(false);
+      }
+    } else if (e.key === 'Escape') {
+      setOpen(false);
+    }
+  };
+
   return (
     <div ref={wrapRef} className="relative">
       <input ref={inputRef} type="text" value={search}
         onChange={e => { setSearch(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
+        onKeyDown={handleKeyDown}
         className="input-industrial w-full text-sm" placeholder="Search lot..." />
-      <PortalDropdown anchor={inputRef.current} open={open && filtered.length > 0}>
+      <PortalDropdown anchor={inputRef.current} open={open && filtered.length > 0} contentRef={listRef}>
         <div data-lot-portal="1">
-          {filtered.map(o => (
-            <button key={o.lot_no} type="button" onMouseDown={e => e.preventDefault()}
+          {filtered.map((o, idx) => (
+            <button key={o.lot_no} type="button" data-idx={idx}
+              onMouseDown={e => e.preventDefault()}
+              onMouseEnter={() => setHighlight(idx)}
               onClick={() => { onSelect(o); setSearch(o.label); setOpen(false); }}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground btn-transition">
+              className={`w-full text-left px-3 py-2 text-sm btn-transition ${idx === highlight ? 'bg-accent text-accent-foreground' : 'hover:bg-accent hover:text-accent-foreground'}`}>
               <span className="font-medium">{o.label}</span>
               {o.sub && <span className="text-muted-foreground ml-2 text-xs">{o.sub}</span>}
             </button>
@@ -133,6 +168,7 @@ const LotSearchDropdown: React.FC<{
     </div>
   );
 };
+
 
 const DEDUCTION: Record<PackagingType, number> = {
   paper_tube: 0.12,
