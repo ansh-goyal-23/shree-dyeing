@@ -30,5 +30,6 @@ export interface ChallanItem {
   rate: number;
   amount: number;
   ref_no?: string | null;
+  lot_type?: 'Production' | 'Sampling';
   created_by?: string | null;
 }

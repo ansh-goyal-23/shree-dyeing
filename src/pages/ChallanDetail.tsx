@@ -61,7 +61,7 @@ const ChallanDetail: React.FC = () => {
         denier: (i as any).denier || '',
         packaging_type: i.packaging_type, gross_weight: i.gross_weight,
         num_of_units: i.num_of_units, net_weight: i.net_weight, rate: i.rate, amount: i.amount,
-        lot_type: ((i as any).lot_type as 'Production' | 'Sampling') || 'Production',
+        lot_type: (i.lot_type as 'Production' | 'Sampling') || 'Production',
         ref_no: i.ref_no || '',
       })));
     }
@@ -279,7 +279,7 @@ const ChallanDetail: React.FC = () => {
                     <td className="p-2">{item.shade_number}</td>
                     <td className="p-2">{item.color_name}</td>
                     <td className="p-2">{(item as any).denier || lots.find(l => l.lot_no === item.lot_no)?.denier || ''}</td>
-                    <td className="p-2">{(item as any).lot_type || 'Production'}</td>
+                    <td className="p-2">{item.lot_type || 'Production'}</td>
                     <td className="p-2">{PACKAGING_LABEL[item.packaging_type] || item.packaging_type}</td>
                     <td className="p-2">{item.gross_weight.toFixed(3)}</td>
                     <td className="p-2">{item.num_of_units}</td>
