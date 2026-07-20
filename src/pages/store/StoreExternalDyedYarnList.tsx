@@ -169,40 +169,40 @@ const ExternalDyedYarnList: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Dyer</Label>
-                <Select value={filters.dyer} onValueChange={(v) => setFilters((f) => ({ ...f, dyer: v }))}>
+                <Select value={filters.dyer || '__all__'} onValueChange={(v) => setFilters((f) => ({ ...f, dyer: v === '__all__' ? '' : v }))}>
                   <SelectTrigger><SelectValue placeholder="All dyers" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All dyers</SelectItem>
+                    <SelectItem value="__all__">All dyers</SelectItem>
                     {dyers.map((d) => <SelectItem key={d} value={d!}>{d}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Shade #</Label>
-                <Select value={filters.shade} onValueChange={(v) => setFilters((f) => ({ ...f, shade: v }))}>
+                <Select value={filters.shade || '__all__'} onValueChange={(v) => setFilters((f) => ({ ...f, shade: v === '__all__' ? '' : v }))}>
                   <SelectTrigger><SelectValue placeholder="All shades" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All shades</SelectItem>
+                    <SelectItem value="__all__">All shades</SelectItem>
                     {shades.map((d) => <SelectItem key={d} value={d!}>{d}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Lot #</Label>
-                <Select value={filters.lot} onValueChange={(v) => setFilters((f) => ({ ...f, lot: v }))}>
+                <Select value={filters.lot || '__all__'} onValueChange={(v) => setFilters((f) => ({ ...f, lot: v === '__all__' ? '' : v }))}>
                   <SelectTrigger><SelectValue placeholder="All lots" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All lots</SelectItem>
+                    <SelectItem value="__all__">All lots</SelectItem>
                     {lots.map((d) => <SelectItem key={d} value={d!}>{d}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Rack No.</Label>
-                <Select value={filters.rack} onValueChange={(v) => setFilters((f) => ({ ...f, rack: v }))}>
+                <Select value={filters.rack || '__all__'} onValueChange={(v) => setFilters((f) => ({ ...f, rack: v === '__all__' ? '' : v }))}>
                   <SelectTrigger><SelectValue placeholder="All racks" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All racks</SelectItem>
+                    <SelectItem value="__all__">All racks</SelectItem>
                     {racks.map((r) => (
                       <SelectItem key={r.id} value={r.id}>{r.rack_code} — {r.rack_name}</SelectItem>
                     ))}
