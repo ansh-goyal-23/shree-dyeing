@@ -279,7 +279,7 @@ const ChallanDetail: React.FC = () => {
                     <td className="p-2">{item.shade_number}</td>
                     <td className="p-2">{item.color_name}</td>
                     <td className="p-2">{(item as any).denier || lots.find(l => l.lot_no === item.lot_no)?.denier || ''}</td>
-                    <td className="p-2">{(item as any).lot_type || 'Production'}</td>
+                    <td className="p-2">{item.lot_type || 'Production'}</td>
                     <td className="p-2">{PACKAGING_LABEL[item.packaging_type] || item.packaging_type}</td>
                     <td className="p-2">{item.gross_weight.toFixed(3)}</td>
                     <td className="p-2">{item.num_of_units}</td>
