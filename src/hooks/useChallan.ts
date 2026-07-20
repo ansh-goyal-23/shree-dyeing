@@ -172,22 +172,12 @@ export function useCreateChallan() {
       if (cErr) throw cErr;
 
       if (payload.items.length > 0) {
-        const { error: iErr } = await supabase.from('challan_items').insert(
-          payload.items.map(item => ({
-            challan_id: challan.id,
-            lot_no: item.lot_no,
-            shade_number: item.shade_number,
-            color_name: item.color_name,
-            packaging_type: item.packaging_type,
-            gross_weight: item.gross_weight,
-            num_of_units: item.num_of_units,
-            net_weight: item.net_weight,
-            rate: item.rate,
-            amount: item.amount,
-            ref_no: item.ref_no || null,
-          }))
-        );
-        if (iErr) throw iErr;
+        const iErr = await insertChallanItems(challan.id, payload.items);
+        if (iErr) {
+          // Rollback header so we don't leave an empty challan behind.
+          await supabase.from('challans').delete().eq('id', challan.id);
+          throw iErr;
+        }
       }
 
       // Store integration: deduct FG / EDY stock for dispatched lots.
