@@ -278,7 +278,7 @@ const ChallanList: React.FC = () => {
             </thead>
             <tbody>
               {filtered.map(c => {
-                const s = itemSummaryMap[c.id] || { totalItems: 0, totalNetWeight: 0, totalAmount: 0 };
+                const s = itemSummaryMap[c.id] || { totalItems: 0, totalNetWeight: 0, totalAmount: 0, types: [] };
                 const isEDY = c.challan_kind === 'edy';
                 // For EDY challans, "net weight" isn't tracked — show gross weight sum instead.
                 const edyGross = isEDY
