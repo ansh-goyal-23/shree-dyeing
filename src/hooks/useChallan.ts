@@ -285,21 +285,7 @@ export function useUpdateChallan() {
 
       await supabase.from('challan_items').delete().eq('challan_id', payload.id);
       if (payload.items.length > 0) {
-        const { error: iErr } = await supabase.from('challan_items').insert(
-          payload.items.map(item => ({
-            challan_id: payload.id,
-            lot_no: item.lot_no,
-            shade_number: item.shade_number,
-            color_name: item.color_name,
-            packaging_type: item.packaging_type,
-            gross_weight: item.gross_weight,
-            num_of_units: item.num_of_units,
-            net_weight: item.net_weight,
-            rate: item.rate,
-            amount: item.amount,
-            ref_no: item.ref_no || null,
-          }))
-        );
+        const iErr = await insertChallanItems(payload.id, payload.items);
         if (iErr) throw iErr;
       }
 
