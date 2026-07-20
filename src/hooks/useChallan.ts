@@ -16,6 +16,40 @@ import { logBusinessEvent } from '@/lib/activityCenter';
 
 const sb = supabase as any;
 
+// Insert challan items with a graceful fallback: if the DB doesn't yet
+// have the `ref_no` column (migration not applied), retry without it
+// so challan creation doesn't fail and leave an empty header behind.
+async function insertChallanItems(
+  challanId: string,
+  items: Omit<ChallanItem, 'id' | 'challan_id'>[],
+): Promise<any | null> {
+  const base = items.map(item => ({
+    challan_id: challanId,
+    lot_no: item.lot_no,
+    shade_number: item.shade_number,
+    color_name: item.color_name,
+    packaging_type: item.packaging_type,
+    gross_weight: item.gross_weight,
+    num_of_units: item.num_of_units,
+    net_weight: item.net_weight,
+    rate: item.rate,
+    amount: item.amount,
+  }));
+  const withRef = base.map((row, i) => ({ ...row, ref_no: items[i].ref_no || null }));
+
+  let { error } = await supabase.from('challan_items').insert(withRef);
+  if (error) {
+    const msg = (error.message || '').toLowerCase();
+    const code = (error as any).code;
+    const missingCol = msg.includes('ref_no') || code === '42703' || code === 'PGRST204';
+    if (missingCol) {
+      const retry = await supabase.from('challan_items').insert(base);
+      error = retry.error;
+    }
+  }
+  return error;
+}
+
 type AggLine = { lot_no: string; net_weight: number };
 
 async function applyChallanStockDelta(
@@ -172,22 +206,12 @@ export function useCreateChallan() {
       if (cErr) throw cErr;
 
       if (payload.items.length > 0) {
-        const { error: iErr } = await supabase.from('challan_items').insert(
-          payload.items.map(item => ({
-            challan_id: challan.id,
-            lot_no: item.lot_no,
-            shade_number: item.shade_number,
-            color_name: item.color_name,
-            packaging_type: item.packaging_type,
-            gross_weight: item.gross_weight,
-            num_of_units: item.num_of_units,
-            net_weight: item.net_weight,
-            rate: item.rate,
-            amount: item.amount,
-            ref_no: item.ref_no || null,
-          }))
-        );
-        if (iErr) throw iErr;
+        const iErr = await insertChallanItems(challan.id, payload.items);
+        if (iErr) {
+          // Rollback header so we don't leave an empty challan behind.
+          await supabase.from('challans').delete().eq('id', challan.id);
+          throw iErr;
+        }
       }
 
       // Store integration: deduct FG / EDY stock for dispatched lots.
@@ -261,21 +285,7 @@ export function useUpdateChallan() {
 
       await supabase.from('challan_items').delete().eq('challan_id', payload.id);
       if (payload.items.length > 0) {
-        const { error: iErr } = await supabase.from('challan_items').insert(
-          payload.items.map(item => ({
-            challan_id: payload.id,
-            lot_no: item.lot_no,
-            shade_number: item.shade_number,
-            color_name: item.color_name,
-            packaging_type: item.packaging_type,
-            gross_weight: item.gross_weight,
-            num_of_units: item.num_of_units,
-            net_weight: item.net_weight,
-            rate: item.rate,
-            amount: item.amount,
-            ref_no: item.ref_no || null,
-          }))
-        );
+        const iErr = await insertChallanItems(payload.id, payload.items);
         if (iErr) throw iErr;
       }
 
