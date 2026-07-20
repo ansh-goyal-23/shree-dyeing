@@ -39,20 +39,24 @@ async function insertChallanItems(
     ...row,
     ref_no: items[i].ref_no || null,
     lot_type: items[i].lot_type || 'Production',
+    denier: (items[i] as any).denier || null,
   }));
 
   // Try full insert; on missing column, drop the offending column and retry.
   let attempt: any = full;
   let hasRef = true;
   let hasLotType = true;
-  for (let i = 0; i < 3; i++) {
+  let hasDenier = true;
+  for (let i = 0; i < 4; i++) {
     const { error } = await supabase.from('challan_items').insert(attempt);
     if (!error) return null;
     const msg = (error.message || '').toLowerCase();
     const code = (error as any).code;
     const missing = code === '42703' || code === 'PGRST204' || msg.includes('column');
     if (!missing) return error;
-    if (msg.includes('lot_type') && hasLotType) {
+    if (msg.includes('denier') && hasDenier) {
+      hasDenier = false;
+    } else if (msg.includes('lot_type') && hasLotType) {
       hasLotType = false;
     } else if (msg.includes('ref_no') && hasRef) {
       hasRef = false;
@@ -63,6 +67,7 @@ async function insertChallanItems(
       const copy: any = { ...r };
       if (!hasRef) delete copy.ref_no;
       if (!hasLotType) delete copy.lot_type;
+      if (!hasDenier) delete copy.denier;
       return copy;
     });
   }
