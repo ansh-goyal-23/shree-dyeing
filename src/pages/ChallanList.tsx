@@ -293,7 +293,11 @@ const ChallanList: React.FC = () => {
                       {isEDY ? (
                         <span className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200">EDY</span>
                       ) : (
-                        <span className="text-xs px-2 py-0.5 rounded bg-secondary text-secondary-foreground">Production</span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-secondary text-secondary-foreground">
+                          {(s.types.length ? s.types : ['production'])
+                            .map(t => t === 'production' ? 'Production' : t === 'sampling' ? 'Sampling' : t)
+                            .join(' + ')}
+                        </span>
                       )}
                     </td>
                     <td className="p-3">{formatYmdLocal(c.date)}</td>
