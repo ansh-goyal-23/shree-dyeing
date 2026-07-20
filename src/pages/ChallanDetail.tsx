@@ -61,7 +61,7 @@ const ChallanDetail: React.FC = () => {
         denier: (i as any).denier || '',
         packaging_type: i.packaging_type, gross_weight: i.gross_weight,
         num_of_units: i.num_of_units, net_weight: i.net_weight, rate: i.rate, amount: i.amount,
-        lot_type: ((i as any).lot_type as 'Production' | 'Sampling') || 'Production',
+        lot_type: (i.lot_type as 'Production' | 'Sampling') || 'Production',
         ref_no: i.ref_no || '',
       })));
     }

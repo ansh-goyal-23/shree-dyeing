@@ -35,19 +35,38 @@ async function insertChallanItems(
     rate: item.rate,
     amount: item.amount,
   }));
-  const withRef = base.map((row, i) => ({ ...row, ref_no: items[i].ref_no || null }));
+  const full = base.map((row, i) => ({
+    ...row,
+    ref_no: items[i].ref_no || null,
+    lot_type: items[i].lot_type || 'Production',
+  }));
 
-  let { error } = await supabase.from('challan_items').insert(withRef);
-  if (error) {
+  // Try full insert; on missing column, drop the offending column and retry.
+  let attempt: any = full;
+  let hasRef = true;
+  let hasLotType = true;
+  for (let i = 0; i < 3; i++) {
+    const { error } = await supabase.from('challan_items').insert(attempt);
+    if (!error) return null;
     const msg = (error.message || '').toLowerCase();
     const code = (error as any).code;
-    const missingCol = msg.includes('ref_no') || code === '42703' || code === 'PGRST204';
-    if (missingCol) {
-      const retry = await supabase.from('challan_items').insert(base);
-      error = retry.error;
+    const missing = code === '42703' || code === 'PGRST204' || msg.includes('column');
+    if (!missing) return error;
+    if (msg.includes('lot_type') && hasLotType) {
+      hasLotType = false;
+    } else if (msg.includes('ref_no') && hasRef) {
+      hasRef = false;
+    } else {
+      return error;
     }
+    attempt = full.map(r => {
+      const copy: any = { ...r };
+      if (!hasRef) delete copy.ref_no;
+      if (!hasLotType) delete copy.lot_type;
+      return copy;
+    });
   }
-  return error;
+  return null;
 }
 
 type AggLine = { lot_no: string; net_weight: number };
@@ -127,6 +146,7 @@ const mapItem = (r: any): ChallanItem => ({
   rate: Number(r.rate) || 0,
   amount: Number(r.amount) || 0,
   ref_no: r.ref_no || null,
+  lot_type: (r.lot_type === 'Sampling' ? 'Sampling' : 'Production'),
   created_by: r.created_by || null,
 });
 
