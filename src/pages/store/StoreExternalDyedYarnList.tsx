@@ -1,10 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useEDYReceiptList, useEDYCurrentStock, useDeleteYarnReceipt } from '@/hooks/useStore';
+import { useEDYReceiptList, useEDYCurrentStock, useDeleteYarnReceipt, useStoreRacks } from '@/hooks/useStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -15,13 +23,26 @@ import {
 import EditYarnReceiptDialog from '@/components/store/EditYarnReceiptDialog';
 import type { StoreExternalDyedYarnReceipt } from '@/types/store';
 import { toast } from 'sonner';
-import { Globe2, Plus, Search, Activity, Pencil, Trash2 } from 'lucide-react';
+import { Globe2, Plus, Search, Activity, Pencil, Trash2, Filter, X } from 'lucide-react';
+
+interface StockFilters {
+  q: string;
+  dyer: string;
+  shade: string;
+  lot: string;
+  rack: string;
+  from: string;
+  to: string;
+}
 
 const ExternalDyedYarnList: React.FC = () => {
   const { data: receipts = [], isLoading } = useEDYReceiptList();
   const { data: stock = [], isLoading: stockLoading } = useEDYCurrentStock();
+  const { data: racks = [] } = useStoreRacks();
   const deleteReceipt = useDeleteYarnReceipt();
-  const [q, setQ] = useState('');
+  const [filters, setFilters] = useState<StockFilters>({
+    q: '', dyer: '', shade: '', lot: '', rack: '', from: '', to: '',
+  });
   const [editing, setEditing] = useState<StoreExternalDyedYarnReceipt | null>(null);
   const [confirmDel, setConfirmDel] = useState<StoreExternalDyedYarnReceipt | null>(null);
 
@@ -41,30 +62,70 @@ const ExternalDyedYarnList: React.FC = () => {
     }
   };
 
+  const dyers = useMemo(
+    () => Array.from(new Set(stock.map((s) => s.supplier).filter(Boolean))).sort((a, b) => a!.localeCompare(b!)),
+    [stock],
+  );
+  const shades = useMemo(
+    () => Array.from(new Set(stock.map((s) => s.shade_number || s.shade).filter(Boolean))).sort((a, b) => a!.localeCompare(b!)),
+    [stock],
+  );
+  const lots = useMemo(
+    () => Array.from(new Set(stock.map((s) => s.lot_no).filter(Boolean))).sort((a, b) => a!.localeCompare(b!)),
+    [stock],
+  );
+
   const filteredStock = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    if (!needle) return stock;
-    return stock.filter(s =>
-      s.receipt_number?.toLowerCase().includes(needle) ||
-      s.supplier?.toLowerCase().includes(needle) ||
-      s.shade?.toLowerCase().includes(needle) ||
-      s.yarn_type?.toLowerCase().includes(needle) ||
-      s.challan_number?.toLowerCase().includes(needle) ||
-      s.rack_code?.toLowerCase().includes(needle),
-    );
-  }, [stock, q]);
+    const needle = filters.q.trim().toLowerCase();
+    return stock.filter((s) => {
+      if (needle && !(
+        s.receipt_number?.toLowerCase().includes(needle) ||
+        s.supplier?.toLowerCase().includes(needle) ||
+        s.shade?.toLowerCase().includes(needle) ||
+        s.shade_number?.toLowerCase().includes(needle) ||
+        s.lot_no?.toLowerCase().includes(needle) ||
+        s.yarn_type?.toLowerCase().includes(needle) ||
+        s.challan_number?.toLowerCase().includes(needle) ||
+        s.rack_code?.toLowerCase().includes(needle)
+      )) return false;
+      if (filters.dyer && s.supplier !== filters.dyer) return false;
+      if (filters.shade && (s.shade_number || s.shade) !== filters.shade) return false;
+      if (filters.lot && s.lot_no !== filters.lot) return false;
+      if (filters.rack && s.rack_id !== filters.rack) return false;
+      if (filters.from && s.receipt_date && s.receipt_date < filters.from) return false;
+      if (filters.to && s.receipt_date && s.receipt_date > filters.to) return false;
+      return true;
+    });
+  }, [stock, filters]);
 
   const filteredReceipts = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    if (!needle) return receipts;
-    return receipts.filter(r =>
-      r.receipt_number?.toLowerCase().includes(needle) ||
-      r.supplier?.toLowerCase().includes(needle) ||
-      r.challan_number?.toLowerCase().includes(needle) ||
-      r.shade?.toLowerCase().includes(needle) ||
-      r.yarn_type?.toLowerCase().includes(needle),
-    );
-  }, [receipts, q]);
+    const needle = filters.q.trim().toLowerCase();
+    return receipts.filter((r) => {
+      if (needle && !(
+        r.receipt_number?.toLowerCase().includes(needle) ||
+        r.supplier?.toLowerCase().includes(needle) ||
+        r.challan_number?.toLowerCase().includes(needle) ||
+        r.shade?.toLowerCase().includes(needle) ||
+        r.shade_number?.toLowerCase().includes(needle) ||
+        r.lot_no?.toLowerCase().includes(needle) ||
+        r.yarn_type?.toLowerCase().includes(needle)
+      )) return false;
+      return true;
+    });
+  }, [receipts, filters.q]);
+
+  const totalGross = useMemo(
+    () => filteredStock.reduce((sum, s) => sum + Number(s.received_weight || 0), 0),
+    [filteredStock],
+  );
+  const totalCones = useMemo(
+    () => filteredStock.reduce((sum, s) => sum + Number(s.cone_count || 0), 0),
+    [filteredStock],
+  );
+
+  const activeFilterCount = [filters.dyer, filters.shade, filters.lot, filters.rack, filters.from, filters.to].filter(Boolean).length;
+
+  const clearFilters = () => setFilters({ q: '', dyer: '', shade: '', lot: '', rack: '', from: '', to: '' });
 
   return (
     <div className="p-6 space-y-4">
@@ -82,14 +143,91 @@ const ExternalDyedYarnList: React.FC = () => {
         </Link>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search receipt, supplier, shade, challan, rack…"
-          className="pl-9"
-        />
+      <div className="space-y-3">
+        <div className="relative max-w-sm">
+          <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={filters.q}
+            onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
+            placeholder="Search receipt, supplier, shade, challan, rack…"
+            className="pl-9"
+          />
+        </div>
+
+        <Card className="overflow-visible">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground">
+              <Filter className="h-4 w-4" />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="ml-2 inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                  {activeFilterCount} active
+                  <button onClick={clearFilters} className="hover:opacity-70"><X className="h-3 w-3" /></button>
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Dyer</Label>
+                <Select value={filters.dyer} onValueChange={(v) => setFilters((f) => ({ ...f, dyer: v }))}>
+                  <SelectTrigger><SelectValue placeholder="All dyers" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All dyers</SelectItem>
+                    {dyers.map((d) => <SelectItem key={d} value={d!}>{d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Shade #</Label>
+                <Select value={filters.shade} onValueChange={(v) => setFilters((f) => ({ ...f, shade: v }))}>
+                  <SelectTrigger><SelectValue placeholder="All shades" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All shades</SelectItem>
+                    {shades.map((d) => <SelectItem key={d} value={d!}>{d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Lot #</Label>
+                <Select value={filters.lot} onValueChange={(v) => setFilters((f) => ({ ...f, lot: v }))}>
+                  <SelectTrigger><SelectValue placeholder="All lots" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All lots</SelectItem>
+                    {lots.map((d) => <SelectItem key={d} value={d!}>{d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Rack No.</Label>
+                <Select value={filters.rack} onValueChange={(v) => setFilters((f) => ({ ...f, rack: v }))}>
+                  <SelectTrigger><SelectValue placeholder="All racks" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All racks</SelectItem>
+                    {racks.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>{r.rack_code} — {r.rack_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">From Date</Label>
+                <Input
+                  type="date"
+                  value={filters.from}
+                  onChange={(e) => setFilters((f) => ({ ...f, from: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">To Date</Label>
+                <Input
+                  type="date"
+                  value={filters.to}
+                  onChange={(e) => setFilters((f) => ({ ...f, to: e.target.value }))}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs defaultValue="stock">
@@ -98,10 +236,24 @@ const ExternalDyedYarnList: React.FC = () => {
           <TabsTrigger value="receipts">Receipt History</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="stock">
+        <TabsContent value="stock" className="space-y-4">
           <Card className="overflow-x-auto">
-            <CardHeader>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <CardTitle className="text-base">External Dyed Yarn — Current Stock</CardTitle>
+              <div className="flex flex-wrap gap-2 text-sm">
+                <span className="bg-muted px-3 py-1 rounded-md">
+                  <span className="text-muted-foreground">Total Gross Wt:</span>{' '}
+                  <strong>{totalGross.toFixed(3)} kg</strong>
+                </span>
+                <span className="bg-muted px-3 py-1 rounded-md">
+                  <span className="text-muted-foreground">Total Cones:</span>{' '}
+                  <strong>{totalCones}</strong>
+                </span>
+                <span className="bg-muted px-3 py-1 rounded-md">
+                  <span className="text-muted-foreground">Rows:</span>{' '}
+                  <strong>{filteredStock.length}</strong>
+                </span>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
