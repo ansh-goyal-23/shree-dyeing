@@ -79,12 +79,15 @@ const ChallanList: React.FC = () => {
 
   // Build a map of challanId -> item summary for performance
   const itemSummaryMap = useMemo(() => {
-    const map: Record<string, { totalItems: number; totalNetWeight: number; totalAmount: number }> = {};
+    const map: Record<string, { totalItems: number; totalNetWeight: number; totalAmount: number; types: string[] }> = {};
     allItems.forEach((i: any) => {
-      if (!map[i.challan_id]) map[i.challan_id] = { totalItems: 0, totalNetWeight: 0, totalAmount: 0 };
+      if (!map[i.challan_id]) map[i.challan_id] = { totalItems: 0, totalNetWeight: 0, totalAmount: 0, types: [] };
       map[i.challan_id].totalItems += 1;
       map[i.challan_id].totalNetWeight += Number(i.net_weight) || 0;
       map[i.challan_id].totalAmount += Number(i.amount) || 0;
+      if (i.lot_type && !map[i.challan_id].types.includes(i.lot_type)) {
+        map[i.challan_id].types.push(i.lot_type);
+      }
     });
     return map;
   }, [allItems]);
