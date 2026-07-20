@@ -23,6 +23,7 @@ export interface ChallanItem {
   lot_no: string;
   shade_number: string;
   color_name: string;
+  denier: string;
   packaging_type: PackagingType;
   gross_weight: number;
   num_of_units: number;
