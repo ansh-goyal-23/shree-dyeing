@@ -1,5 +1,4 @@
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import type { Challan, ChallanItem } from '@/types/challan';
 import { formatYmdLocal } from '@/lib/formatDate';
 
@@ -8,142 +7,214 @@ const PACKAGING_LABEL: Record<string, string> = {
   chesse: 'Chesse',
 };
 
-export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): Blob {
-  const doc = new jsPDF('p', 'mm', 'a4');
-  const pw = doc.internal.pageSize.getWidth();
-  const margin = 15;
-  let y = margin;
+// 2-inch thermal receipt format
+const PAGE_W = 50.8; // mm (2 inches)
+const MARGIN = 3;
+const CONTENT_W = PAGE_W - MARGIN * 2;
 
-  // ── Company Header ──
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.text('SHREE MAHAVEER IMPEX', pw / 2, y, { align: 'center' });
-  y += 6;
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(80);
-  doc.text('B-150 Phase-2 Noida UP 201301  |  +91 9667184789', pw / 2, y, { align: 'center' });
-  y += 4;
-  doc.setDrawColor(50);
-  doc.setLineWidth(0.5);
-  doc.line(margin, y, pw - margin, y);
-  y += 8;
+export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): Blob {
+  const isEdy = challan.challan_kind === 'edy';
+
+  // Estimate page height — we'll grow as needed with addPage-less approach:
+  // jsPDF requires a fixed page size, so precompute total height.
+  const lineH = 3.2;
+  const smallH = 2.8;
+
+  // Rough height calculator
+  let estH = 0;
+  estH += 6; // top pad
+  estH += 5; // company name
+  estH += 3.5; // address
+  estH += 3; // divider
+  estH += 4 * lineH; // challan no / date / client / kind
+  estH += 3; // divider
+  estH += 4; // items header
+  items.forEach(() => {
+    estH += isEdy ? 6 * smallH + 2 : 9 * smallH + 2;
+  });
+  estH += 3; // divider
+  estH += 3 * lineH; // totals
+  if (challan.notes) estH += 2 * lineH + 2;
+  estH += 3; // divider
+  estH += 4 * lineH; // footer
+  estH += 8; // bottom pad
+
+  const pageH = Math.max(estH, 80);
+
+  const doc = new jsPDF({ unit: 'mm', format: [PAGE_W, pageH] });
+  let y = MARGIN + 2;
+
+  const centerText = (txt: string, size: number, bold = false) => {
+    doc.setFontSize(size);
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.text(txt, PAGE_W / 2, y, { align: 'center' });
+  };
+
+  const leftText = (txt: string, size: number, bold = false, x = MARGIN) => {
+    doc.setFontSize(size);
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.text(txt, x, y);
+  };
+
+  const rightText = (txt: string, size: number, bold = false) => {
+    doc.setFontSize(size);
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.text(txt, PAGE_W - MARGIN, y, { align: 'right' });
+  };
+
+  const kvRow = (label: string, value: string) => {
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(110);
+    doc.text(label, MARGIN, y);
+    doc.setTextColor(0);
+    doc.setFont('helvetica', 'bold');
+    doc.text(value, PAGE_W - MARGIN, y, { align: 'right', maxWidth: CONTENT_W - 15 });
+    y += lineH;
+  };
+
+  const divider = (solid = false) => {
+    doc.setDrawColor(solid ? 50 : 160);
+    doc.setLineWidth(solid ? 0.4 : 0.2);
+    if (!solid) doc.setLineDashPattern([0.5, 0.5], 0);
+    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+    doc.setLineDashPattern([], 0);
+    y += 2;
+  };
+
+  // ── Header ──
+  centerText('SHREE MAHAVEER IMPEX', 9, true);
+  y += 3.5;
+  doc.setTextColor(90);
+  centerText('B-150 Phase-2 Noida UP 201301', 6.5);
+  y += 2.5;
+  centerText('+91 9667184789', 6.5);
+  y += 3;
+  doc.setTextColor(0);
+
+  divider(true);
 
   // ── Challan Meta ──
-  doc.setTextColor(0);
-  doc.setFontSize(10);
-  const metaLeft = margin;
-  const metaMid = pw / 2 - 10;
-  const metaRight = pw - margin;
+  kvRow('CHALLAN #', challan.challan_number);
+  kvRow('DATE', formatYmdLocal(challan.date, 'en-IN'));
+  kvRow('CLIENT', challan.client_name);
+  if (isEdy) kvRow('TYPE', 'External Dyed Yarn');
 
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(120);
-  doc.setFontSize(8);
-  doc.text('CHALLAN NO.', metaLeft, y);
-  doc.text('DATE', metaMid, y);
-  doc.text('CLIENT', metaRight - 40, y);
-  y += 4;
+  divider();
 
-  doc.setTextColor(0);
-  doc.setFontSize(11);
+  // ── Items ──
+  doc.setFontSize(7.5);
   doc.setFont('helvetica', 'bold');
-  doc.text(challan.challan_number, metaLeft, y);
-  doc.setFont('helvetica', 'normal');
-  doc.text(formatYmdLocal(challan.date, 'en-IN'), metaMid, y);
-  doc.text(challan.client_name, metaRight - 40, y);
-  y += 10;
+  doc.text('ITEMS', MARGIN, y);
+  y += lineH;
 
-  // ── Items Table ──
-  const totalNetWeight = items.reduce((s, i) => s + i.net_weight, 0);
-  const totalAmount = items.reduce((s, i) => s + i.amount, 0);
+  const itemField = (label: string, value: string) => {
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(110);
+    doc.text(label, MARGIN, y);
+    doc.setTextColor(0);
+    doc.setFont('helvetica', 'bold');
+    doc.text(value, PAGE_W - MARGIN, y, { align: 'right', maxWidth: CONTENT_W - 12 });
+    y += smallH;
+  };
 
-  const tableData = items.map((item, idx) => [
-    String(idx + 1),
-    item.lot_no,
-    item.shade_number,
-    item.color_name,
-    PACKAGING_LABEL[item.packaging_type] || item.packaging_type,
-    String(item.num_of_units),
-    item.gross_weight.toFixed(3),
-    item.net_weight.toFixed(3),
-    item.rate.toFixed(2),
-    item.amount.toFixed(2),
-  ]);
+  items.forEach((item, idx) => {
+    // item number banner
+    doc.setFillColor(240, 240, 240);
+    doc.rect(MARGIN, y - 2.2, CONTENT_W, 3.2, 'F');
+    doc.setFontSize(6.8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0);
+    doc.text(`#${idx + 1}  ${item.lot_no}`, MARGIN + 0.6, y);
+    y += smallH + 0.6;
 
-  autoTable(doc, {
-    startY: y,
-    margin: { left: margin, right: margin },
-    head: [['#', 'Lot No', 'Shade #', 'Color', 'Packaging', 'Units', 'Gross Wt (kg)', 'Net Wt (kg)', 'Rate/kg (Rs.)', 'Amount (Rs.)']],
-    body: tableData,
-    foot: [['', '', '', '', '', '', 'TOTAL', totalNetWeight.toFixed(3), '', totalAmount.toFixed(2)]],
-    theme: 'grid',
-    headStyles: {
-      fillColor: [50, 50, 50],
-      textColor: 255,
-      fontSize: 7,
-      fontStyle: 'bold',
-      halign: 'left',
-      cellPadding: 1.5,
-    },
-    bodyStyles: {
-      fontSize: 7.5,
-      textColor: 30,
-    },
-    footStyles: {
-      fillColor: [240, 240, 240],
-      textColor: 30,
-      fontStyle: 'bold',
-      fontSize: 8,
-    },
-    columnStyles: {
-      0: { halign: 'center', cellWidth: 8 },
-      5: { halign: 'right' },
-      6: { halign: 'right' },
-      7: { halign: 'right' },
-      8: { halign: 'right' },
-      9: { halign: 'right' },
-    },
-    alternateRowStyles: { fillColor: [250, 250, 250] },
+    if (isEdy) {
+      if (item.color_name) itemField('Dyer', item.color_name);
+      if (item.shade_number) itemField('Shade', item.shade_number);
+      itemField('Gross Wt', `${item.gross_weight.toFixed(3)} kg`);
+      itemField('Cones', String(item.num_of_units));
+    } else {
+      if (item.ref_no) itemField('Ref', item.ref_no);
+      itemField('Shade', item.shade_number);
+      if (item.color_name) itemField('Color', item.color_name);
+      if (item.denier) itemField('Denier', item.denier);
+      if (item.lot_type) itemField('Type', item.lot_type);
+      itemField('Pack', PACKAGING_LABEL[item.packaging_type] || item.packaging_type);
+      itemField('Units', String(item.num_of_units));
+      itemField('Gross', `${item.gross_weight.toFixed(3)} kg`);
+      itemField('Net', `${item.net_weight.toFixed(3)} kg`);
+      itemField('Rate', `Rs. ${item.rate.toFixed(2)}`);
+      itemField('Amount', `Rs. ${item.amount.toFixed(2)}`);
+    }
+    y += 1;
   });
 
-  y = (doc as any).lastAutoTable.finalY + 8;
+  divider(true);
+
+  // ── Totals ──
+  const totalNet = items.reduce((s, i) => s + (isEdy ? i.gross_weight : i.net_weight), 0);
+  const totalCones = items.reduce((s, i) => s + i.num_of_units, 0);
+  const totalAmount = items.reduce((s, i) => s + i.amount, 0);
+
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text('TOTAL CONES', MARGIN, y);
+  doc.text(String(totalCones), PAGE_W - MARGIN, y, { align: 'right' });
+  y += lineH;
+
+  doc.text(isEdy ? 'TOTAL GROSS' : 'TOTAL NET', MARGIN, y);
+  doc.text(`${totalNet.toFixed(3)} kg`, PAGE_W - MARGIN, y, { align: 'right' });
+  y += lineH;
+
+  if (!isEdy && totalAmount > 0) {
+    doc.setFontSize(8.5);
+    doc.text('TOTAL AMT', MARGIN, y);
+    doc.text(`Rs. ${totalAmount.toFixed(2)}`, PAGE_W - MARGIN, y, { align: 'right' });
+    y += lineH;
+  }
 
   // ── Notes ──
   if (challan.notes) {
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Notes:', margin, y);
+    y += 1;
+    divider();
+    doc.setFontSize(6.5);
+    doc.setTextColor(110);
     doc.setFont('helvetica', 'normal');
-    doc.text(challan.notes, margin + 14, y);
-    y += 8;
+    doc.text('NOTES', MARGIN, y);
+    y += smallH;
+    doc.setTextColor(0);
+    const wrapped = doc.splitTextToSize(challan.notes, CONTENT_W);
+    doc.text(wrapped, MARGIN, y);
+    y += wrapped.length * smallH;
   }
 
-  // ── Footer (clean, no signature lines) ──
-  y += 6;
-  doc.setDrawColor(180);
-  doc.setLineWidth(0.3);
-  doc.line(margin, y, pw - margin, y);
-  y += 8;
+  y += 1;
+  divider();
 
-  const colW = (pw - 2 * margin) / 3;
-
-  const drawFooterCol = (label: string, value: string, x: number) => {
+  // ── Footer ──
+  const footerRow = (label: string, value: string) => {
     if (!value) return;
-    doc.setFontSize(7.5);
-    doc.setTextColor(120);
+    doc.setFontSize(6.3);
+    doc.setTextColor(110);
     doc.setFont('helvetica', 'normal');
-    doc.text(label, x, y);
-    doc.setFontSize(10);
+    doc.text(label, MARGIN, y);
     doc.setTextColor(0);
     doc.setFont('helvetica', 'bold');
-    doc.text(value, x, y + 5);
+    doc.setFontSize(7);
+    doc.text(value, PAGE_W - MARGIN, y, { align: 'right', maxWidth: CONTENT_W - 15 });
+    y += lineH;
   };
 
-  drawFooterCol('PREPARED BY', challan.prepared_by_name || '', margin);
-  drawFooterCol('RECEIVED BY', challan.receiver_name || '', margin + colW);
-  if (challan.receiver_contact_number) {
-    drawFooterCol('CONTACT', challan.receiver_contact_number, margin + colW * 2);
-  }
+  footerRow('PREPARED BY', challan.prepared_by_name);
+  footerRow('RECEIVED BY', challan.receiver_name);
+  footerRow('CONTACT', challan.receiver_contact_number);
+
+  y += 2;
+  doc.setFontSize(6);
+  doc.setTextColor(130);
+  doc.setFont('helvetica', 'italic');
+  doc.text('— Thank you —', PAGE_W / 2, y, { align: 'center' });
 
   return doc.output('blob');
 }
@@ -171,7 +242,6 @@ export async function shareChallanPdf(challan: Challan, items: ChallanItem[]) {
       files: [file],
     });
   } else {
-    // Fallback: just download
     downloadChallanPdf(challan, items);
   }
 }
