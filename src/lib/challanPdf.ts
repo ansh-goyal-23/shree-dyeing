@@ -221,10 +221,11 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   footerRow('CONTACT', challan.receiver_contact_number);
 
   y += 2;
-  doc.setFontSize(6);
+  doc.setFontSize(7);
   doc.setTextColor(130);
   doc.setFont('helvetica', 'italic');
   doc.text('— Thank you —', PAGE_W / 2, y, { align: 'center' });
+
 
   return doc.output('blob');
 }
