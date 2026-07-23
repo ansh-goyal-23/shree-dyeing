@@ -65,7 +65,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   };
 
   const kvRow = (label: string, value: string) => {
-    doc.setFontSize(7);
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(110);
     doc.text(label, MARGIN, y);
@@ -74,6 +74,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
     doc.text(value, PAGE_W - MARGIN, y, { align: 'right', maxWidth: CONTENT_W - 15 });
     y += lineH;
   };
+
 
   const divider = (solid = false) => {
     doc.setDrawColor(solid ? 50 : 160);
