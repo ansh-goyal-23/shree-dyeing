@@ -17,14 +17,16 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
 
   // Estimate page height — we'll grow as needed with addPage-less approach:
   // jsPDF requires a fixed page size, so precompute total height.
-  const lineH = 3.2;
-  const smallH = 2.8;
+  const lineH = 4.0;
+  const smallH = 3.3;
+
 
   // Rough height calculator
   let estH = 0;
   estH += 6; // top pad
-  estH += 5; // company name
-  estH += 3.5; // address
+  estH += 5.5; // company name
+  estH += 4.5; // address
+  estH += 4.5; // phone
   estH += 3; // divider
   estH += 4 * lineH; // challan no / date / client / kind
   estH += 3; // divider
@@ -38,6 +40,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   estH += 3; // divider
   estH += 4 * lineH; // footer
   estH += 8; // bottom pad
+
 
   const pageH = Math.max(estH, 80);
 
@@ -56,6 +59,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
     doc.text(txt, x, y);
   };
 
+
   const rightText = (txt: string, size: number, bold = false) => {
     doc.setFontSize(size);
     doc.setFont('helvetica', bold ? 'bold' : 'normal');
@@ -63,7 +67,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   };
 
   const kvRow = (label: string, value: string) => {
-    doc.setFontSize(7);
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(110);
     doc.text(label, MARGIN, y);
@@ -72,6 +76,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
     doc.text(value, PAGE_W - MARGIN, y, { align: 'right', maxWidth: CONTENT_W - 15 });
     y += lineH;
   };
+
 
   const divider = (solid = false) => {
     doc.setDrawColor(solid ? 50 : 160);
@@ -86,11 +91,12 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   centerText('SHREE MAHAVEER IMPEX', 9, true);
   y += 3.5;
   doc.setTextColor(90);
-  centerText('B-150 Phase-2 Noida UP 201301', 6.5);
+  centerText('B-150 Phase-2 Noida UP 201301', 7.5);
   y += 2.5;
-  centerText('+91 9667184789', 6.5);
+  centerText('+91 9667184789', 7.5);
   y += 3;
   doc.setTextColor(0);
+
 
   divider(true);
 
@@ -103,13 +109,14 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   divider();
 
   // ── Items ──
-  doc.setFontSize(7.5);
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
   doc.text('ITEMS', MARGIN, y);
   y += lineH;
 
+
   const itemField = (label: string, value: string) => {
-    doc.setFontSize(6.5);
+    doc.setFontSize(7.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(110);
     doc.text(label, MARGIN, y);
@@ -119,15 +126,17 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
     y += smallH;
   };
 
+
   items.forEach((item, idx) => {
     // item number banner
     doc.setFillColor(240, 240, 240);
-    doc.rect(MARGIN, y - 2.2, CONTENT_W, 3.2, 'F');
-    doc.setFontSize(6.8);
+    doc.rect(MARGIN, y - 2.4, CONTENT_W, 3.8, 'F');
+    doc.setFontSize(7.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0);
     doc.text(`#${idx + 1}  ${item.lot_no}`, MARGIN + 0.6, y);
     y += smallH + 0.6;
+
 
     if (isEdy) {
       if (item.color_name) itemField('Dyer', item.color_name);
@@ -157,7 +166,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   const totalCones = items.reduce((s, i) => s + i.num_of_units, 0);
   const totalAmount = items.reduce((s, i) => s + i.amount, 0);
 
-  doc.setFontSize(7.5);
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
   doc.text('TOTAL CONES', MARGIN, y);
   doc.text(String(totalCones), PAGE_W - MARGIN, y, { align: 'right' });
@@ -168,17 +177,18 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   y += lineH;
 
   if (!isEdy && totalAmount > 0) {
-    doc.setFontSize(8.5);
+    doc.setFontSize(9.5);
     doc.text('TOTAL AMT', MARGIN, y);
     doc.text(`Rs. ${totalAmount.toFixed(2)}`, PAGE_W - MARGIN, y, { align: 'right' });
     y += lineH;
   }
 
+
   // ── Notes ──
   if (challan.notes) {
     y += 1;
     divider();
-    doc.setFontSize(6.5);
+    doc.setFontSize(7.5);
     doc.setTextColor(110);
     doc.setFont('helvetica', 'normal');
     doc.text('NOTES', MARGIN, y);
@@ -189,32 +199,35 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
     y += wrapped.length * smallH;
   }
 
+
   y += 1;
   divider();
 
   // ── Footer ──
   const footerRow = (label: string, value: string) => {
     if (!value) return;
-    doc.setFontSize(6.3);
+    doc.setFontSize(7.5);
     doc.setTextColor(110);
     doc.setFont('helvetica', 'normal');
     doc.text(label, MARGIN, y);
     doc.setTextColor(0);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7);
+    doc.setFontSize(8.5);
     doc.text(value, PAGE_W - MARGIN, y, { align: 'right', maxWidth: CONTENT_W - 15 });
     y += lineH;
   };
+
 
   footerRow('PREPARED BY', challan.prepared_by_name);
   footerRow('RECEIVED BY', challan.receiver_name);
   footerRow('CONTACT', challan.receiver_contact_number);
 
   y += 2;
-  doc.setFontSize(6);
+  doc.setFontSize(7);
   doc.setTextColor(130);
   doc.setFont('helvetica', 'italic');
   doc.text('— Thank you —', PAGE_W / 2, y, { align: 'center' });
+
 
   return doc.output('blob');
 }
