@@ -128,12 +128,13 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   items.forEach((item, idx) => {
     // item number banner
     doc.setFillColor(240, 240, 240);
-    doc.rect(MARGIN, y - 2.2, CONTENT_W, 3.2, 'F');
-    doc.setFontSize(6.8);
+    doc.rect(MARGIN, y - 2.4, CONTENT_W, 3.8, 'F');
+    doc.setFontSize(7.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0);
     doc.text(`#${idx + 1}  ${item.lot_no}`, MARGIN + 0.6, y);
     y += smallH + 0.6;
+
 
     if (isEdy) {
       if (item.color_name) itemField('Dyer', item.color_name);
