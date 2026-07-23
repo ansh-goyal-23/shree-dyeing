@@ -204,16 +204,17 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   // ── Footer ──
   const footerRow = (label: string, value: string) => {
     if (!value) return;
-    doc.setFontSize(6.3);
+    doc.setFontSize(7.5);
     doc.setTextColor(110);
     doc.setFont('helvetica', 'normal');
     doc.text(label, MARGIN, y);
     doc.setTextColor(0);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7);
+    doc.setFontSize(8.5);
     doc.text(value, PAGE_W - MARGIN, y, { align: 'right', maxWidth: CONTENT_W - 15 });
     y += lineH;
   };
+
 
   footerRow('PREPARED BY', challan.prepared_by_name);
   footerRow('RECEIVED BY', challan.receiver_name);
