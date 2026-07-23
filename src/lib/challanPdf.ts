@@ -164,7 +164,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   const totalCones = items.reduce((s, i) => s + i.num_of_units, 0);
   const totalAmount = items.reduce((s, i) => s + i.amount, 0);
 
-  doc.setFontSize(7.5);
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
   doc.text('TOTAL CONES', MARGIN, y);
   doc.text(String(totalCones), PAGE_W - MARGIN, y, { align: 'right' });
@@ -175,11 +175,12 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   y += lineH;
 
   if (!isEdy && totalAmount > 0) {
-    doc.setFontSize(8.5);
+    doc.setFontSize(9.5);
     doc.text('TOTAL AMT', MARGIN, y);
     doc.text(`Rs. ${totalAmount.toFixed(2)}`, PAGE_W - MARGIN, y, { align: 'right' });
     y += lineH;
   }
+
 
   // ── Notes ──
   if (challan.notes) {
