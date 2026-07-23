@@ -107,10 +107,11 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   divider();
 
   // ── Items ──
-  doc.setFontSize(7.5);
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
   doc.text('ITEMS', MARGIN, y);
   y += lineH;
+
 
   const itemField = (label: string, value: string) => {
     doc.setFontSize(6.5);
