@@ -88,11 +88,12 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   centerText('SHREE MAHAVEER IMPEX', 9, true);
   y += 3.5;
   doc.setTextColor(90);
-  centerText('B-150 Phase-2 Noida UP 201301', 6.5);
+  centerText('B-150 Phase-2 Noida UP 201301', 7.5);
   y += 2.5;
-  centerText('+91 9667184789', 6.5);
+  centerText('+91 9667184789', 7.5);
   y += 3;
   doc.setTextColor(0);
+
 
   divider(true);
 
