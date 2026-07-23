@@ -57,6 +57,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
     doc.text(txt, x, y);
   };
 
+
   const rightText = (txt: string, size: number, bold = false) => {
     doc.setFontSize(size);
     doc.setFont('helvetica', bold ? 'bold' : 'normal');
