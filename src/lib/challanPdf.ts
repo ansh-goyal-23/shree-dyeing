@@ -186,7 +186,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   if (challan.notes) {
     y += 1;
     divider();
-    doc.setFontSize(6.5);
+    doc.setFontSize(7.5);
     doc.setTextColor(110);
     doc.setFont('helvetica', 'normal');
     doc.text('NOTES', MARGIN, y);
@@ -196,6 +196,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
     doc.text(wrapped, MARGIN, y);
     y += wrapped.length * smallH;
   }
+
 
   y += 1;
   divider();
