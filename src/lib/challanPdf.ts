@@ -24,8 +24,9 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   // Rough height calculator
   let estH = 0;
   estH += 6; // top pad
-  estH += 5; // company name
-  estH += 3.5; // address
+  estH += 5.5; // company name
+  estH += 4.5; // address
+  estH += 4.5; // phone
   estH += 3; // divider
   estH += 4 * lineH; // challan no / date / client / kind
   estH += 3; // divider
@@ -39,6 +40,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   estH += 3; // divider
   estH += 4 * lineH; // footer
   estH += 8; // bottom pad
+
 
   const pageH = Math.max(estH, 80);
 
