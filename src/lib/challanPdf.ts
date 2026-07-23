@@ -17,8 +17,9 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
 
   // Estimate page height — we'll grow as needed with addPage-less approach:
   // jsPDF requires a fixed page size, so precompute total height.
-  const lineH = 3.2;
-  const smallH = 2.8;
+  const lineH = 4.0;
+  const smallH = 3.3;
+
 
   // Rough height calculator
   let estH = 0;
