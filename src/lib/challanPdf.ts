@@ -101,6 +101,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
 
 
   divider(true);
+  y += 2;
 
   // ── Challan Meta ──
   kvRow('CHALLAN #', challan.challan_number);
