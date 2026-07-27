@@ -129,6 +129,12 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
     y += smallH;
   };
 
+  const formatShade = (shade: string | null | undefined) => {
+    if (!shade) return shade;
+    const s = String(shade).trim();
+    return /^N/i.test(s) ? s : `N${s}`;
+  };
+
 
   items.forEach((item, idx) => {
     // item number banner
