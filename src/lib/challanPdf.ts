@@ -28,6 +28,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   estH += 4.5; // address
   estH += 4.5; // phone
   estH += 3; // divider
+  estH += 2; // spacing below header
   estH += 4 * lineH; // challan no / date / client / kind
   estH += 3; // divider
   estH += 4; // items header
@@ -35,6 +36,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
     estH += isEdy ? 6 * smallH + 2 : 9 * smallH + 2;
   });
   estH += 3; // divider
+  estH += 2; // spacing above totals
   estH += 3 * lineH; // totals
   if (challan.notes) estH += 2 * lineH + 2;
   estH += 3; // divider
@@ -99,6 +101,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
 
 
   divider(true);
+  y += 2;
 
   // ── Challan Meta ──
   kvRow('CHALLAN #', challan.challan_number);
@@ -126,6 +129,12 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
     y += smallH;
   };
 
+  const formatShade = (shade: string | null | undefined) => {
+    if (!shade) return shade;
+    const s = String(shade).trim();
+    return /^N/i.test(s) ? s : `N${s}`;
+  };
+
 
   items.forEach((item, idx) => {
     // item number banner
@@ -145,7 +154,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
       itemField('Cones', String(item.num_of_units));
     } else {
       if (item.ref_no) itemField('Ref', item.ref_no);
-      itemField('Shade', item.shade_number);
+      itemField('Shade', formatShade(item.shade_number));
       if (item.color_name) itemField('Color', item.color_name);
       if (item.denier) itemField('Denier', item.denier);
       if (item.lot_type) itemField('Type', item.lot_type);
@@ -160,6 +169,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   });
 
   divider(true);
+  y += 2;
 
   // ── Totals ──
   const totalNet = items.reduce((s, i) => s + (isEdy ? i.gross_weight : i.net_weight), 0);
