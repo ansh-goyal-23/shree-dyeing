@@ -154,7 +154,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
       itemField('Cones', String(item.num_of_units));
     } else {
       if (item.ref_no) itemField('Ref', item.ref_no);
-      itemField('Shade', item.shade_number);
+      itemField('Shade', formatShade(item.shade_number));
       if (item.color_name) itemField('Color', item.color_name);
       if (item.denier) itemField('Denier', item.denier);
       if (item.lot_type) itemField('Type', item.lot_type);
@@ -169,6 +169,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   });
 
   divider(true);
+  y += 2;
 
   // ── Totals ──
   const totalNet = items.reduce((s, i) => s + (isEdy ? i.gross_weight : i.net_weight), 0);
