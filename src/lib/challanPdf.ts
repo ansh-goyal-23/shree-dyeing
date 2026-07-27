@@ -28,6 +28,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   estH += 4.5; // address
   estH += 4.5; // phone
   estH += 3; // divider
+  estH += 2; // spacing below header
   estH += 4 * lineH; // challan no / date / client / kind
   estH += 3; // divider
   estH += 4; // items header
@@ -35,6 +36,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
     estH += isEdy ? 6 * smallH + 2 : 9 * smallH + 2;
   });
   estH += 3; // divider
+  estH += 2; // spacing above totals
   estH += 3 * lineH; // totals
   if (challan.notes) estH += 2 * lineH + 2;
   estH += 3; // divider
