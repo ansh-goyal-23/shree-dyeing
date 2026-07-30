@@ -732,6 +732,7 @@ export const useCreateStoreIssue = () => {
     },
     onSuccess: (header, vars) => {
       qc.invalidateQueries({ queryKey: ['store_issue_list'] });
+      qc.invalidateQueries({ queryKey: ['store_issue_line_details'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
       logBusinessEvent({
@@ -826,6 +827,7 @@ export const useUpdateStoreIssue = () => {
       qc.invalidateQueries({ queryKey: ['store_issue_list'] });
       qc.invalidateQueries({ queryKey: ['store_issue'] });
       qc.invalidateQueries({ queryKey: ['store_issue_lines'] });
+      qc.invalidateQueries({ queryKey: ['store_issue_line_details'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
     },
