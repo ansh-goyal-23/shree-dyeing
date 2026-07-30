@@ -6,18 +6,16 @@ import {
   useCreateStoreInward,
   useStoreCurrentStock,
   useUploadInwardBill,
-  STORE_CATEGORY_LABEL,
-  STORE_CATEGORIES,
-  RAW_MATERIAL_SUBCATEGORIES,
+  useStoreInwardList,
+  STORE_UNITS,
   type UpsertCatalogueInput,
 } from '@/hooks/useStore';
-import type { StoreItem, StoreItemCategory } from '@/types/store';
+import type { StoreItem } from '@/types/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -29,44 +27,46 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from '@/components/ui/command';
+import AddRackDialog from '@/components/store/AddRackDialog';
 import {
-  Plus, Trash2, Save, ArrowDownToLine, ChevronsUpDown, Check, Upload, FileText, X, PackagePlus,
+  Plus, Trash2, Save, ArrowDownToLine, ChevronsUpDown, Check, FileText, X, PackagePlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const NO_RACK = '__no_rack__';
 
-// Inward can create items in any non-system category. We let the user pick.
-const INWARD_CATEGORIES = STORE_CATEGORIES.filter(c =>
-  ['raw_material', 'office_utility', 'tool_equipment', 'packaging', 'consumable'].includes(c.value as string)
-);
+/** Raw-material types handled by Stock Inward. */
+export const INWARD_ITEM_TYPES: { value: string; label: string }[] = [
+  { value: 'grey_yarn', label: 'Grey Yarn' },
+  { value: 'chemical', label: 'Chemicals' },
+  { value: 'dye', label: 'Colors' },
+  { value: 'oil', label: 'Oil' },
+];
+
+const typeLabel = (v?: string | null) =>
+  INWARD_ITEM_TYPES.find(t => t.value === v)?.label || v || '—';
 
 interface LineRow {
   key: string;
+  item_type: string;
   // Either an existing item is picked...
   item_id: string;
   // ...or a new item is staged for creation on save.
-  new_item: null | {
-    item_name: string;
-    category: StoreItemCategory;
-    sub_category: string;
-    is_asset: boolean;
-  };
+  new_item_name: string;
   unit: string;
   quantity: string;
-  rate: string;
   rack_id: string;
   remarks: string;
 }
 
 const newLine = (): LineRow => ({
   key: Math.random().toString(36).slice(2),
+  item_type: '',
   item_id: '',
-  new_item: null,
+  new_item_name: '',
   unit: '',
   quantity: '',
-  rate: '',
   rack_id: '',
   remarks: '',
 });
@@ -76,6 +76,7 @@ const StoreInwardCreate: React.FC = () => {
   const { data: items = [] } = useStoreItems({ activeOnly: true });
   const { data: racks = [] } = useStoreRacks();
   const { data: stock = [] } = useStoreCurrentStock();
+  const { data: inwards = [] } = useStoreInwardList();
   const createInward = useCreateStoreInward();
   const uploadBill = useUploadInwardBill();
 
@@ -98,41 +99,22 @@ const StoreInwardCreate: React.FC = () => {
   };
 
   const pickExisting = (key: string, item: StoreItem) => {
-    updateLine(key, {
-      item_id: item.id,
-      new_item: null,
-      unit: item.unit,
-    });
+    updateLine(key, { item_id: item.id, new_item_name: '', unit: item.unit });
     setPickerOpenKey(null);
   };
 
   const stageNewItem = (key: string, name: string) => {
-    updateLine(key, {
-      item_id: '',
-      new_item: {
-        item_name: name.trim(),
-        category: 'raw_material',
-        sub_category: '',
-        is_asset: false,
-      },
-      unit: '',
-    });
+    updateLine(key, { item_id: '', new_item_name: name.trim(), unit: '' });
     setPickerOpenKey(null);
   };
 
   const clearLineItem = (key: string) => {
-    updateLine(key, { item_id: '', new_item: null, unit: '' });
+    updateLine(key, { item_id: '', new_item_name: '', unit: '' });
   };
 
   const removeLine = (key: string) => {
     setLines(prev => (prev.length === 1 ? [newLine()] : prev.filter(l => l.key !== key)));
   };
-
-  const totalAmount = lines.reduce((s, l) => {
-    const q = parseFloat(l.quantity) || 0;
-    const r = parseFloat(l.rate) || 0;
-    return s + q * r;
-  }, 0);
 
   const handleUploadBill = async (file: File) => {
     try {
@@ -145,37 +127,52 @@ const StoreInwardCreate: React.FC = () => {
   };
 
   const handleSave = async () => {
-    // Validate each line
-    const valid = lines.filter(l => (l.item_id || l.new_item) && parseFloat(l.quantity) > 0);
-    if (!valid.length) {
-      toast.error('Add at least one item with quantity');
+    const filled = lines.filter(l => l.item_id || l.new_item_name || l.quantity || l.item_type);
+    if (!filled.length) {
+      toast.error('Add at least one item');
       return;
     }
-    for (const l of valid) {
-      if (l.new_item) {
-        if (!l.new_item.item_name) { toast.error('New item name is required'); return; }
-        if (!l.unit) { toast.error(`Unit is required for "${l.new_item.item_name}"`); return; }
+
+    for (const l of filled) {
+      const name = l.item_id
+        ? items.find(i => i.id === l.item_id)?.item_name || 'item'
+        : l.new_item_name || 'item';
+      if (!l.item_type) { toast.error('Item Type is required for every row'); return; }
+      if (!l.item_id && !l.new_item_name) { toast.error('Select or type an item for every row'); return; }
+      const qty = parseFloat(l.quantity);
+      if (!qty || qty <= 0) { toast.error(`Quantity must be greater than 0 for "${name}"`); return; }
+      if (!l.unit) { toast.error(`Unit is required for "${name}"`); return; }
+    }
+
+    const invoice = header.invoice_number.trim();
+    if (invoice) {
+      const dup = inwards.find(i => (i.invoice_number || '').trim().toLowerCase() === invoice.toLowerCase());
+      if (dup) {
+        const ok = window.confirm(
+          `Invoice "${invoice}" is already used in inward ${dup.inward_number} (${dup.inward_date}). Save anyway?`,
+        );
+        if (!ok) return;
       }
     }
 
     try {
-      const payloadLines = valid.map(l => {
+      const payloadLines = filled.map(l => {
         const base = {
           item_id: l.item_id,
           quantity: parseFloat(l.quantity),
           unit: l.unit,
-          rate: l.rate ? parseFloat(l.rate) : null,
-          amount: l.rate ? parseFloat(l.rate) * parseFloat(l.quantity) : null,
+          rate: null,
+          amount: null,
           rack_id: l.rack_id || null,
           remarks: l.remarks || null,
         };
-        if (l.new_item) {
+        if (!l.item_id) {
           const ni: UpsertCatalogueInput = {
-            item_name: l.new_item.item_name,
-            category: l.new_item.category,
-            sub_category: l.new_item.sub_category || null,
+            item_name: l.new_item_name,
+            category: 'raw_material',
+            sub_category: l.item_type,
             unit: l.unit,
-            is_asset: l.new_item.category === 'tool_equipment' ? l.new_item.is_asset : false,
+            is_asset: false,
           };
           return { ...base, new_item: ni };
         }
@@ -277,12 +274,11 @@ const StoreInwardCreate: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[280px]">Item</TableHead>
+                <TableHead className="min-w-[150px]">Item Type</TableHead>
+                <TableHead className="min-w-[260px]">Item</TableHead>
                 <TableHead className="min-w-[110px]">Qty</TableHead>
-                <TableHead className="min-w-[90px]">Unit</TableHead>
-                <TableHead className="min-w-[110px]">Rate</TableHead>
-                <TableHead className="min-w-[120px] text-right">Amount</TableHead>
-                <TableHead className="min-w-[160px]">Rack</TableHead>
+                <TableHead className="min-w-[110px]">Unit</TableHead>
+                <TableHead className="min-w-[200px]">Rack</TableHead>
                 <TableHead className="min-w-[160px]">Remarks</TableHead>
                 <TableHead></TableHead>
               </TableRow>
@@ -290,147 +286,98 @@ const StoreInwardCreate: React.FC = () => {
             <TableBody>
               {lines.map(line => {
                 const existing = items.find(i => i.id === line.item_id);
-                const q = parseFloat(line.quantity) || 0;
-                const r = parseFloat(line.rate) || 0;
-                const amount = q * r;
-                const isNew = !!line.new_item;
-                const subOptions =
-                  line.new_item?.category === 'raw_material'
-                    ? RAW_MATERIAL_SUBCATEGORIES
-                    : [];
+                const isNew = !line.item_id && !!line.new_item_name;
+                const typeItems = line.item_type
+                  ? items.filter(i => i.category === 'raw_material' && i.sub_category === line.item_type)
+                  : [];
 
                 return (
-                  <React.Fragment key={line.key}>
-                    <TableRow className={isNew ? 'bg-amber-50/40 dark:bg-amber-950/20' : ''}>
-                      <TableCell>
+                  <TableRow key={line.key} className={isNew ? 'bg-amber-50/40 dark:bg-amber-950/20' : ''}>
+                    <TableCell>
+                      <Select
+                        value={line.item_type || undefined}
+                        onValueChange={(v) => updateLine(line.key, {
+                          item_type: v, item_id: '', new_item_name: '', unit: '',
+                        })}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                        <SelectContent>
+                          {INWARD_ITEM_TYPES.map(t => (
+                            <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
                         <ItemPicker
                           open={pickerOpenKey === line.key}
                           onOpenChange={(o) => setPickerOpenKey(o ? line.key : null)}
-                          items={items}
-                          value={existing ? existing.item_name : (line.new_item?.item_name || '')}
+                          items={typeItems}
+                          disabled={!line.item_type}
+                          value={existing ? existing.item_name : line.new_item_name}
                           isNew={isNew}
                           onPickExisting={(it) => pickExisting(line.key, it)}
                           onCreateNew={(name) => stageNewItem(line.key, name)}
                           onClear={() => clearLineItem(line.key)}
                         />
-                      </TableCell>
-                      <TableCell>
-                        <Input type="number" step="any" value={line.quantity}
-                          onChange={(e) => updateLine(line.key, { quantity: e.target.value })} />
-                      </TableCell>
-                      <TableCell>
-                        {isNew ? (
-                          <Input value={line.unit}
-                            placeholder="kg / pcs"
-                            onChange={(e) => updateLine(line.key, { unit: e.target.value })} />
-                        ) : (
-                          <span className="text-sm text-muted-foreground">{line.unit || existing?.unit || '—'}</span>
+                        {isNew && (
+                          <Badge variant="outline" className="bg-amber-100 dark:bg-amber-900/40 text-xs">
+                            <PackagePlus className="h-3 w-3 mr-1" />
+                            New {typeLabel(line.item_type)} item
+                          </Badge>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <Input type="number" step="any" value={line.rate}
-                          onChange={(e) => updateLine(line.key, { rate: e.target.value })} />
-                      </TableCell>
-                      <TableCell className="text-right">{amount ? amount.toFixed(2) : '—'}</TableCell>
-                      <TableCell>
-                        <Select
-                          value={line.rack_id || NO_RACK}
-                          onValueChange={(v) => updateLine(line.key, { rack_id: v === NO_RACK ? '' : v })}
-                        >
-                          <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Input type="number" step="any" min="0" value={line.quantity}
+                        onChange={(e) => updateLine(line.key, { quantity: e.target.value })} />
+                    </TableCell>
+                    <TableCell>
+                      {isNew ? (
+                        <Select value={line.unit || undefined} onValueChange={(v) => updateLine(line.key, { unit: v })}>
+                          <SelectTrigger><SelectValue placeholder="Unit" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value={NO_RACK}>None</SelectItem>
-                            {racks.filter(r => r.is_active).map(r => (
-                              <SelectItem key={r.id} value={r.id}>{r.rack_code} — {r.rack_name}</SelectItem>
-                            ))}
+                            {STORE_UNITS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
                           </SelectContent>
                         </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Input value={line.remarks}
-                          onChange={(e) => updateLine(line.key, { remarks: e.target.value })} />
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => removeLine(line.key)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-
-                    {/* New-item meta editor row */}
-                    {isNew && line.new_item && (
-                      <TableRow className="bg-amber-50/30 dark:bg-amber-950/10">
-                        <TableCell colSpan={8}>
-                          <div className="flex flex-wrap items-end gap-3 p-2">
-                            <Badge variant="outline" className="bg-amber-100 dark:bg-amber-900/40">
-                              <PackagePlus className="h-3 w-3 mr-1" /> New item will be created
-                            </Badge>
-                            <div className="min-w-[180px]">
-                              <Label className="text-xs">Category *</Label>
-                              <Select
-                                value={line.new_item.category}
-                                onValueChange={(v) => updateLine(line.key, {
-                                  new_item: { ...line.new_item!, category: v as StoreItemCategory, sub_category: '' },
-                                })}
-                              >
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                  {INWARD_CATEGORIES.map(c => (
-                                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="min-w-[180px]">
-                              <Label className="text-xs">Sub Category</Label>
-                              {subOptions.length ? (
-                                <Select
-                                  value={line.new_item.sub_category || ''}
-                                  onValueChange={(v) => updateLine(line.key, {
-                                    new_item: { ...line.new_item!, sub_category: v },
-                                  })}
-                                >
-                                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                                  <SelectContent>
-                                    {subOptions.map(s => (
-                                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <Input
-                                  value={line.new_item.sub_category}
-                                  placeholder="Optional"
-                                  onChange={(e) => updateLine(line.key, {
-                                    new_item: { ...line.new_item!, sub_category: e.target.value },
-                                  })}
-                                />
-                              )}
-                            </div>
-                            {line.new_item.category === 'tool_equipment' && (
-                              <div className="flex items-center gap-2">
-                                <Switch
-                                  checked={line.new_item.is_asset}
-                                  onCheckedChange={(v) => updateLine(line.key, {
-                                    new_item: { ...line.new_item!, is_asset: v },
-                                  })}
-                                />
-                                <Label className="text-xs">Register as Asset</Label>
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </React.Fragment>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">{line.unit || existing?.unit || '—'}</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <div className="flex-1">
+                          <Select
+                            value={line.rack_id || NO_RACK}
+                            onValueChange={(v) => updateLine(line.key, { rack_id: v === NO_RACK ? '' : v })}
+                          >
+                            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={NO_RACK}>None</SelectItem>
+                              {racks.filter(r => r.is_active).map(r => (
+                                <SelectItem key={r.id} value={r.id}>{r.rack_code} — {r.rack_name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <AddRackDialog onCreated={(rackId) => updateLine(line.key, { rack_id: rackId })} />
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Input value={line.remarks}
+                        onChange={(e) => updateLine(line.key, { remarks: e.target.value })} />
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" onClick={() => removeLine(line.key)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
             </TableBody>
           </Table>
-
-          <div className="flex justify-end mt-3 text-sm">
-            <div className="font-medium">Total: ₹ {totalAmount.toFixed(2)}</div>
-          </div>
         </CardContent>
       </Card>
 
@@ -485,13 +432,14 @@ interface ItemPickerProps {
   items: StoreItem[];
   value: string;
   isNew: boolean;
+  disabled?: boolean;
   onPickExisting: (item: StoreItem) => void;
   onCreateNew: (name: string) => void;
   onClear: () => void;
 }
 
 const ItemPicker: React.FC<ItemPickerProps> = ({
-  open, onOpenChange, items, value, isNew, onPickExisting, onCreateNew, onClear,
+  open, onOpenChange, items, value, isNew, disabled, onPickExisting, onCreateNew, onClear,
 }) => {
   const [search, setSearch] = useState('');
   const needle = search.trim().toLowerCase();
@@ -525,13 +473,16 @@ const ItemPicker: React.FC<ItemPickerProps> = ({
         <Button
           variant="outline"
           role="combobox"
+          disabled={disabled}
           className={cn(
             'w-full justify-between font-normal',
             !value && 'text-muted-foreground',
             isNew && 'border-amber-400'
           )}
         >
-          <span className="truncate">{value || 'Select or create item…'}</span>
+          <span className="truncate">
+            {value || (disabled ? 'Select item type first' : 'Select or type item…')}
+          </span>
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -544,7 +495,7 @@ const ItemPicker: React.FC<ItemPickerProps> = ({
           />
           <CommandList>
             {matches.length === 0 && !needle && (
-              <CommandEmpty>Start typing to search items.</CommandEmpty>
+              <CommandEmpty>No items of this type yet — start typing to create one.</CommandEmpty>
             )}
             {matches.length > 0 && (
               <CommandGroup heading={needle ? 'Suggestions (possible duplicates)' : 'Existing items'}>
@@ -554,7 +505,7 @@ const ItemPicker: React.FC<ItemPickerProps> = ({
                     <div className="flex flex-col">
                       <span>{it.item_name}</span>
                       <span className="text-xs text-muted-foreground">
-                        {STORE_CATEGORY_LABEL[it.category]}{it.sub_category ? ` · ${it.sub_category}` : ''} · {it.unit}
+                        {typeLabel(it.sub_category)} · {it.unit}
                       </span>
                     </div>
                   </CommandItem>
