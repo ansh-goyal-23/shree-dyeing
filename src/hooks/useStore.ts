@@ -568,6 +568,94 @@ export const useStoreIssueLines = (issueNumber: string | undefined) =>
     },
   });
 
+export interface StoreIssueLineDetail {
+  id: string;
+  item_id: string;
+  item_name: string;
+  item_code: string;
+  item_type: string | null;
+  quantity: number;
+  unit: string;
+  rack_id: string | null;
+  rack_code: string | null;
+  rack_name: string | null;
+  purpose: string | null;
+}
+
+/**
+ * Issue lines enriched with item + rack names, for the expandable list rows.
+ * Reversal pairs are netted out so only the current effective lines show.
+ */
+export const useStoreIssueLineDetails = (issueNumber: string | undefined) =>
+  useQuery({
+    queryKey: ['store_issue_line_details', issueNumber],
+    enabled: !!issueNumber,
+    queryFn: async (): Promise<StoreIssueLineDetail[]> => {
+      const { data, error } = await sb
+        .from('store_stock_transactions')
+        .select('*')
+        .eq('reference_type', 'internal_issue')
+        .eq('reference_number', issueNumber)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      const rows = (data ?? []) as StoreStockTransaction[];
+      if (!rows.length) return [];
+
+      // Net out per (item, rack): outflows are negative, reversals positive.
+      const net = new Map<string, {
+        id: string; item_id: string; unit: string; rack_id: string | null;
+        purpose: string | null; qty: number;
+      }>();
+      for (const t of rows) {
+        const key = `${t.item_id}::${t.rack_id ?? ''}`;
+        const cur = net.get(key) || {
+          id: t.id, item_id: t.item_id, unit: t.unit,
+          rack_id: t.rack_id, purpose: t.purpose, qty: 0,
+        };
+        cur.qty += Number(t.quantity);
+        if (t.purpose) cur.purpose = t.purpose;
+        net.set(key, cur);
+      }
+      const effective = Array.from(net.values()).filter(l => Number(l.qty) < 0);
+      if (!effective.length) return [];
+
+      const itemIds = [...new Set(effective.map(l => l.item_id).filter(Boolean))];
+      const rackIds = [...new Set(effective.map(l => l.rack_id).filter(Boolean))] as string[];
+
+      const [itemsRes, racksRes] = await Promise.all([
+        itemIds.length
+          ? sb.from('store_items').select('id,item_code,item_name,category,sub_category').in('id', itemIds)
+          : Promise.resolve({ data: [], error: null } as any),
+        rackIds.length
+          ? sb.from('store_racks').select('id,rack_code,rack_name').in('id', rackIds)
+          : Promise.resolve({ data: [], error: null } as any),
+      ]);
+      if (itemsRes.error) throw itemsRes.error;
+      if (racksRes.error) throw racksRes.error;
+
+      const itemMap = new Map((itemsRes.data ?? []).map((i: any) => [i.id, i]));
+      const rackMap = new Map((racksRes.data ?? []).map((r: any) => [r.id, r]));
+
+      return effective.map(l => {
+        const it: any = itemMap.get(l.item_id);
+        const rk: any = l.rack_id ? rackMap.get(l.rack_id) : null;
+        return {
+          id: l.id,
+          item_id: l.item_id,
+          item_name: it?.item_name ?? '—',
+          item_code: it?.item_code ?? '',
+          item_type: it?.category === 'raw_material' ? (it?.sub_category ?? null) : (it?.category ?? null),
+          quantity: Math.abs(Number(l.qty)),
+          unit: l.unit,
+          rack_id: l.rack_id,
+          rack_code: rk?.rack_code ?? null,
+          rack_name: rk?.rack_name ?? null,
+          purpose: l.purpose,
+        };
+      });
+    },
+  });
+
 interface CreateIssuePayload {
   issue_date: string;
   department?: string | null;
@@ -644,6 +732,7 @@ export const useCreateStoreIssue = () => {
     },
     onSuccess: (header, vars) => {
       qc.invalidateQueries({ queryKey: ['store_issue_list'] });
+      qc.invalidateQueries({ queryKey: ['store_issue_line_details'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
       logBusinessEvent({
@@ -738,6 +827,7 @@ export const useUpdateStoreIssue = () => {
       qc.invalidateQueries({ queryKey: ['store_issue_list'] });
       qc.invalidateQueries({ queryKey: ['store_issue'] });
       qc.invalidateQueries({ queryKey: ['store_issue_lines'] });
+      qc.invalidateQueries({ queryKey: ['store_issue_line_details'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
     },

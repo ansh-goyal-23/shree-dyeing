@@ -1,26 +1,29 @@
 ## Goal
-Rework Stock Inward (raw materials only) so line entry is Item Type → Item → Qty → Unit → Rack → Remarks, remove pricing, and show line items in the list.
+Bring Internal Issue (form + list) in line with the reworked Stock Inward: type-filtered searchable item picker, rack quick-add, stricter validation, and a list whose rows expand to show line items.
 
-## Line item changes (`src/pages/store/StoreInwardCreate.tsx`)
-- New first column **Item Type**: dropdown with Grey Yarn, Chemicals, Colors (dye), Oil — mapped to the existing raw-material sub-categories.
-- **Item**: searchable combobox filtered to items of the selected type; typing a new name stages it for creation with that type (category `raw_material`, sub-category from Item Type). Item Type must be picked before the Item dropdown is enabled.
-- **Qty** and **Unit** kept (unit auto-fills from the picked item, editable for new items).
-- **Rack**: dropdown of active racks plus a "+" button opening the existing `AddRackDialog`, with the new rack auto-selected (same pattern as FG/EDY forms).
-- **Remarks**: unchanged free text.
-- **Remove Rate, Amount, and the Total Amount summary** from the form; save writes `total_amount = 0` and no rate/amount on transactions.
+## Form changes (`src/pages/store/StoreIssueForm.tsx`)
+Line row fields become: **Item Type → Item → Qty → Unit → Rack (+ Add Rack) → Available → Purpose**.
 
-## Header
-Unchanged (Date, Supplier, Invoice #, GRN #, Bill upload, Remarks).
+- **Item Type**: dropdown reusing `INWARD_ITEM_TYPES` (Grey Yarn, Chemicals, Colors, Oil) exported from `StoreInwardCreate`, plus the non-raw types already usable for issues (Office Utility, Tools & Equipment) so consumables of any kind can be issued. Selecting a type filters the item list.
+- **Item**: replace the plain `<Select>` with the same Popover + Command searchable combobox used in Stock Inward, filtered by the chosen type. Unlike Inward, **no create-on-type** — you can only issue items that already exist in the catalogue (you can't issue stock you never received).
+- **Unit**: auto-filled from the item; shown read-only as today.
+- **Rack**: keep the rack dropdown, add the `+` button wired to `AddRackDialog` (same as Inward/FG/EDY forms). Default to the item's `default_rack`.
+- **Available**: keep the live available-qty column from `useStoreCurrentStock`.
+- **Purpose**: unchanged free-text.
 
-## Validation
-- Block save when quantity is ≤ 0 or blank, or when Item Type / Item / Unit are missing.
-- Warn (non-blocking confirm) when the invoice number already exists for another inward entry.
+## Validation (matching Inward's strictness)
+- Item Type required on every filled row.
+- Item required on every filled row.
+- Quantity must be > 0 (blocks zero/negative).
+- Unit required.
+- New: block save when requested qty exceeds available stock for that item+rack on **create** (currently only shown as a red hint). On **edit**, keep it a warning only, since previous lines get reversed.
+- Duplicate-row warning: if the same item+rack appears twice, confirm before saving.
 
-## List page (`src/pages/store/StoreInwardList.tsx`)
-- Each row becomes expandable: clicking a row reveals its line items (Item Type, Item, Qty, Unit, Rack, Remarks), read from the linked stock transactions.
-- Drop the Total Amount column since pricing is removed.
+## List changes (`src/pages/store/StoreIssueList.tsx`)
+- Rows become expandable (chevron), same as `StoreInwardList`, showing a sub-table of line items: Item Type, Item, Qty, Unit, Rack, Purpose.
+- Keep existing columns and the edit action.
 
 ## Technical notes
-- Lines are stored in `store_stock_transactions` with `reference_type='stock_inward'`; no schema change is required — Rate/Amount columns simply stop being populated.
-- Item Type is derived from `store_items.sub_category`, so no new column is needed.
-- Add a hook in `src/hooks/useStore.ts` to fetch inward lines (with item + rack names) for the expandable list rows.
+- Add `useStoreIssueLineDetails(issueNumber)` in `src/hooks/useStore.ts`, mirroring `useStoreInwardLineDetails`: fetch `store_stock_transactions` where `reference_type = 'internal_issue'` and `reference_number = issueNumber`, then map item (name, sub_category, unit) and rack (code, name) via separate queries per the project's data-mapping pattern. Net out reversal pairs so an edited issue shows only current effective lines.
+- Move `INWARD_ITEM_TYPES` usage by import; no schema change needed — `purpose` and rack already exist on `store_stock_transactions`.
+- No stock is ever written directly; issue save/edit continues to post signed transactions and reversals through the existing `useCreateStoreIssue` / `useUpdateStoreIssue` hooks.
