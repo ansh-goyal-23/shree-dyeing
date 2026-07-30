@@ -8,8 +8,9 @@ import {
   useStoreIssue,
   useStoreIssueLines,
   useStoreCurrentStock,
-  STORE_CATEGORY_LABEL,
 } from '@/hooks/useStore';
+import { INWARD_ITEM_TYPES } from '@/pages/store/StoreInwardCreate';
+import type { StoreItem } from '@/types/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,14 +22,33 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Plus, Trash2, Save, ArrowUpFromLine } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from '@/components/ui/command';
+import AddRackDialog from '@/components/store/AddRackDialog';
+import { Plus, Trash2, Save, ArrowUpFromLine, ChevronsUpDown, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 const NO_RACK = '__no_rack__';
-const NO_ITEM = '__no_item__';
+
+/** Item types issuable from store to a department. */
+export const ISSUE_ITEM_TYPES: { value: string; label: string }[] = [
+  ...INWARD_ITEM_TYPES,
+  { value: 'office_utility', label: 'Office Utility' },
+  { value: 'tool_equipment', label: 'Tools & Equipment' },
+];
+
+export const issueTypeLabel = (v?: string | null) =>
+  ISSUE_ITEM_TYPES.find(t => t.value === v)?.label || v || '—';
+
+const itemTypeOf = (it: StoreItem) =>
+  it.category === 'raw_material' ? (it.sub_category || '') : it.category;
 
 interface LineRow {
   key: string;
+  item_type: string;
   item_id: string;
   unit: string;
   quantity: string;
@@ -38,6 +58,7 @@ interface LineRow {
 
 const newLine = (): LineRow => ({
   key: Math.random().toString(36).slice(2),
+  item_type: '',
   item_id: '',
   unit: '',
   quantity: '',
@@ -70,10 +91,11 @@ const StoreIssueForm: React.FC<Props> = ({ mode = 'create' }) => {
   });
   const [lines, setLines] = useState<LineRow[]>([newLine()]);
   const [hydrated, setHydrated] = useState(false);
+  const [pickerOpenKey, setPickerOpenKey] = useState<string | null>(null);
 
   // Hydrate on edit
   useEffect(() => {
-    if (!isEdit || hydrated || !issue) return;
+    if (!isEdit || hydrated || !issue || !items.length) return;
     setHeader({
       issue_date: issue.issue_date,
       department: issue.department || '',
@@ -84,8 +106,10 @@ const StoreIssueForm: React.FC<Props> = ({ mode = 'create' }) => {
     const map = new Map<string, LineRow>();
     for (const t of existingLines) {
       const key = `${t.item_id}::${t.rack_id ?? ''}`;
+      const it = items.find(i => i.id === t.item_id);
       const cur = map.get(key) || {
         ...newLine(),
+        item_type: it ? itemTypeOf(it) : '',
         item_id: t.item_id,
         unit: t.unit,
         rack_id: t.rack_id || '',
@@ -102,19 +126,23 @@ const StoreIssueForm: React.FC<Props> = ({ mode = 'create' }) => {
       .map(r => ({ ...r, quantity: String(Math.abs(Number(r.quantity))) }));
     if (rows.length) setLines(rows); else setLines([newLine()]);
     setHydrated(true);
-  }, [isEdit, issue, existingLines, hydrated]);
+  }, [isEdit, issue, existingLines, hydrated, items]);
 
   const updateLine = (key: string, patch: Partial<LineRow>) => {
     setLines(prev => prev.map(l => l.key === key ? { ...l, ...patch } : l));
   };
 
-  const onItemChange = (key: string, itemId: string) => {
-    const it = items.find(i => i.id === itemId);
+  const pickExisting = (key: string, item: StoreItem) => {
     updateLine(key, {
-      item_id: itemId,
-      unit: it?.unit || '',
-      rack_id: it?.default_rack || '',
+      item_id: item.id,
+      unit: item.unit,
+      rack_id: item.default_rack || '',
     });
+    setPickerOpenKey(null);
+  };
+
+  const clearLineItem = (key: string) => {
+    updateLine(key, { item_id: '', unit: '' });
   };
 
   const removeLine = (key: string) => {
@@ -131,12 +159,42 @@ const StoreIssueForm: React.FC<Props> = ({ mode = 'create' }) => {
   }, [stock]);
 
   const handleSave = async () => {
-    const valid = lines.filter(l => l.item_id && parseFloat(l.quantity) > 0);
-    if (!valid.length) {
+    const filled = lines.filter(l => l.item_type || l.item_id || l.quantity);
+    if (!filled.length) {
       toast.error('Add at least one item with quantity');
       return;
     }
-    const payloadLines = valid.map(l => ({
+
+    for (const l of filled) {
+      const name = items.find(i => i.id === l.item_id)?.item_name || 'item';
+      if (!l.item_type) { toast.error('Item Type is required for every row'); return; }
+      if (!l.item_id) { toast.error('Select an item for every row'); return; }
+      const qty = parseFloat(l.quantity);
+      if (!qty || qty <= 0) { toast.error(`Quantity must be greater than 0 for "${name}"`); return; }
+      if (!l.unit) { toast.error(`Unit is required for "${name}"`); return; }
+      const available = stockMap.get(`${l.item_id}::${l.rack_id || ''}`) ?? 0;
+      if (qty > available) {
+        if (!isEdit) {
+          toast.error(`Only ${available.toFixed(3)} ${l.unit} available for "${name}" in the selected rack`);
+          return;
+        }
+      }
+    }
+
+    // Duplicate item + rack warning
+    const seen = new Set<string>();
+    let dup = false;
+    for (const l of filled) {
+      const key = `${l.item_id}::${l.rack_id || ''}`;
+      if (seen.has(key)) dup = true;
+      seen.add(key);
+    }
+    if (dup) {
+      const ok = window.confirm('The same item and rack appears in more than one row. Save anyway?');
+      if (!ok) return;
+    }
+
+    const payloadLines = filled.map(l => ({
       item_id: l.item_id,
       quantity: parseFloat(l.quantity),
       unit: l.unit,
@@ -234,10 +292,11 @@ const StoreIssueForm: React.FC<Props> = ({ mode = 'create' }) => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[220px]">Item</TableHead>
+                <TableHead className="min-w-[150px]">Item Type</TableHead>
+                <TableHead className="min-w-[260px]">Item</TableHead>
                 <TableHead className="min-w-[110px]">Qty</TableHead>
                 <TableHead>Unit</TableHead>
-                <TableHead className="min-w-[160px]">Rack</TableHead>
+                <TableHead className="min-w-[200px]">Rack</TableHead>
                 <TableHead className="min-w-[110px] text-right">Available</TableHead>
                 <TableHead className="min-w-[200px]">Purpose</TableHead>
                 <TableHead></TableHead>
@@ -245,51 +304,70 @@ const StoreIssueForm: React.FC<Props> = ({ mode = 'create' }) => {
             </TableHeader>
             <TableBody>
               {lines.map(line => {
-                const it = items.find(i => i.id === line.item_id);
+                const existing = items.find(i => i.id === line.item_id);
+                const typeItems = line.item_type
+                  ? items.filter(i => itemTypeOf(i) === line.item_type)
+                  : [];
                 const available = stockMap.get(`${line.item_id}::${line.rack_id || ''}`) ?? 0;
                 const requested = parseFloat(line.quantity) || 0;
-                const insufficient = line.item_id && requested > available && !isEdit;
+                const insufficient = !!line.item_id && requested > available;
                 return (
                   <TableRow key={line.key}>
                     <TableCell>
                       <Select
-                        value={line.item_id || NO_ITEM}
-                        onValueChange={(v) => onItemChange(line.key, v === NO_ITEM ? '' : v)}
+                        value={line.item_type || undefined}
+                        onValueChange={(v) => updateLine(line.key, {
+                          item_type: v, item_id: '', unit: '',
+                        })}
                       >
-                        <SelectTrigger><SelectValue placeholder="Select item" /></SelectTrigger>
-                        <SelectContent className="max-h-72">
-                          <SelectItem value={NO_ITEM}>Select item</SelectItem>
-                          {items.map(i => (
-                            <SelectItem key={i.id} value={i.id}>
-                              {i.item_name} <span className="text-muted-foreground text-xs">({STORE_CATEGORY_LABEL[i.category]})</span>
-                            </SelectItem>
+                        <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                        <SelectContent>
+                          {ISSUE_ITEM_TYPES.map(t => (
+                            <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                    </TableCell>
+                    <TableCell>
+                      <ItemPicker
+                        open={pickerOpenKey === line.key}
+                        onOpenChange={(o) => setPickerOpenKey(o ? line.key : null)}
+                        items={typeItems}
+                        disabled={!line.item_type}
+                        value={existing ? existing.item_name : ''}
+                        onPickExisting={(it) => pickExisting(line.key, it)}
+                        onClear={() => clearLineItem(line.key)}
+                      />
                     </TableCell>
                     <TableCell>
                       <Input
                         type="number"
                         step="any"
+                        min="0"
                         value={line.quantity}
                         onChange={(e) => updateLine(line.key, { quantity: e.target.value })}
                         className={insufficient ? 'border-destructive' : ''}
                       />
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{line.unit || it?.unit || '—'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{line.unit || existing?.unit || '—'}</TableCell>
                     <TableCell>
-                      <Select
-                        value={line.rack_id || NO_RACK}
-                        onValueChange={(v) => updateLine(line.key, { rack_id: v === NO_RACK ? '' : v })}
-                      >
-                        <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={NO_RACK}>None</SelectItem>
-                          {racks.filter(r => r.is_active).map(r => (
-                            <SelectItem key={r.id} value={r.id}>{r.rack_code} — {r.rack_name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center gap-1">
+                        <div className="flex-1">
+                          <Select
+                            value={line.rack_id || NO_RACK}
+                            onValueChange={(v) => updateLine(line.key, { rack_id: v === NO_RACK ? '' : v })}
+                          >
+                            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={NO_RACK}>None</SelectItem>
+                              {racks.filter(r => r.is_active).map(r => (
+                                <SelectItem key={r.id} value={r.id}>{r.rack_code} — {r.rack_name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <AddRackDialog onCreated={(rackId) => updateLine(line.key, { rack_id: rackId })} />
+                      </div>
                     </TableCell>
                     <TableCell className={`text-right text-xs ${insufficient ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
                       {line.item_id ? available.toFixed(3) : '—'}
@@ -322,6 +400,95 @@ const StoreIssueForm: React.FC<Props> = ({ mode = 'create' }) => {
         </Button>
       </div>
     </div>
+  );
+};
+
+// -------- Item Picker (searchable, existing items only) --------
+interface ItemPickerProps {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  items: StoreItem[];
+  value: string;
+  disabled?: boolean;
+  onPickExisting: (item: StoreItem) => void;
+  onClear: () => void;
+}
+
+const ItemPicker: React.FC<ItemPickerProps> = ({
+  open, onOpenChange, items, value, disabled, onPickExisting, onClear,
+}) => {
+  const [search, setSearch] = useState('');
+  const needle = search.trim().toLowerCase();
+
+  const matches = useMemo(() => {
+    if (!needle) return items.slice(0, 20);
+    const tokens = needle.split(/\s+/);
+    return items
+      .map(it => {
+        const lc = it.item_name.toLowerCase();
+        const cc = it.item_code.toLowerCase();
+        let score = 0;
+        for (const t of tokens) {
+          if (lc.includes(t)) score += 2;
+          if (cc.includes(t)) score += 1;
+        }
+        if (lc === needle) score += 10;
+        return { it, score };
+      })
+      .filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 15)
+      .map(x => x.it);
+  }, [items, needle]);
+
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          disabled={disabled}
+          className={cn('w-full justify-between font-normal', !value && 'text-muted-foreground')}
+        >
+          <span className="truncate">
+            {value || (disabled ? 'Select item type first' : 'Search item…')}
+          </span>
+          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 w-[360px]" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput placeholder="Type item name…" value={search} onValueChange={setSearch} />
+          <CommandList>
+            {matches.length === 0 && (
+              <CommandEmpty>No items of this type in the catalogue.</CommandEmpty>
+            )}
+            {matches.length > 0 && (
+              <CommandGroup heading="Catalogue items">
+                {matches.map(it => (
+                  <CommandItem key={it.id} value={it.id} onSelect={() => onPickExisting(it)}>
+                    <Check className={cn('mr-2 h-4 w-4', value === it.item_name ? 'opacity-100' : 'opacity-0')} />
+                    <div className="flex flex-col">
+                      <span>{it.item_name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {issueTypeLabel(itemTypeOf(it))} · {it.unit}
+                      </span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+            {value && (
+              <CommandGroup>
+                <CommandItem value="__clear__" onSelect={() => { onClear(); onOpenChange(false); }}>
+                  <X className="mr-2 h-4 w-4" /> Clear selection
+                </CommandItem>
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 };
 
