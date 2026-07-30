@@ -355,6 +355,62 @@ export const useStoreInwardLines = (inwardNumber: string | undefined) =>
     },
   });
 
+export interface StoreInwardLineDetail extends StoreStockTransaction {
+  item_name: string;
+  item_code: string;
+  item_type: string | null;
+  rack_code: string | null;
+  rack_name: string | null;
+}
+
+/** Inward lines enriched with item + rack names, for the expandable list rows. */
+export const useStoreInwardLineDetails = (inwardNumber: string | undefined) =>
+  useQuery({
+    queryKey: ['store_inward_line_details', inwardNumber],
+    enabled: !!inwardNumber,
+    queryFn: async (): Promise<StoreInwardLineDetail[]> => {
+      const { data, error } = await sb
+        .from('store_stock_transactions')
+        .select('*')
+        .eq('reference_type', 'stock_inward')
+        .eq('reference_number', inwardNumber)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      const rows = (data ?? []) as StoreStockTransaction[];
+      if (!rows.length) return [];
+
+      const itemIds = [...new Set(rows.map(r => r.item_id).filter(Boolean))];
+      const rackIds = [...new Set(rows.map(r => r.rack_id).filter(Boolean))] as string[];
+
+      const [itemsRes, racksRes] = await Promise.all([
+        itemIds.length
+          ? sb.from('store_items').select('id,item_code,item_name,sub_category').in('id', itemIds)
+          : Promise.resolve({ data: [], error: null } as any),
+        rackIds.length
+          ? sb.from('store_racks').select('id,rack_code,rack_name').in('id', rackIds)
+          : Promise.resolve({ data: [], error: null } as any),
+      ]);
+      if (itemsRes.error) throw itemsRes.error;
+      if (racksRes.error) throw racksRes.error;
+
+      const itemMap = new Map((itemsRes.data ?? []).map((i: any) => [i.id, i]));
+      const rackMap = new Map((racksRes.data ?? []).map((r: any) => [r.id, r]));
+
+      return rows.map(r => {
+        const it: any = itemMap.get(r.item_id);
+        const rk: any = r.rack_id ? rackMap.get(r.rack_id) : null;
+        return {
+          ...r,
+          item_name: it?.item_name ?? '—',
+          item_code: it?.item_code ?? '',
+          item_type: it?.sub_category ?? null,
+          rack_code: rk?.rack_code ?? null,
+          rack_name: rk?.rack_name ?? null,
+        };
+      });
+    },
+  });
+
 interface CreateInwardPayload {
   inward_date: string;
   supplier?: string | null;
