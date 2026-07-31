@@ -351,24 +351,20 @@ const StoreIssueForm: React.FC<Props> = ({ mode = 'create' }) => {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{line.unit || existing?.unit || '—'}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
-                        <div className="flex-1">
-                          <Select
-                            value={line.rack_id || NO_RACK}
-                            onValueChange={(v) => updateLine(line.key, { rack_id: v === NO_RACK ? '' : v })}
-                          >
-                            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value={NO_RACK}>None</SelectItem>
-                              {racks.filter(r => r.is_active).map(r => (
-                                <SelectItem key={r.id} value={r.id}>{r.rack_code} — {r.rack_name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <AddRackDialog onCreated={(rackId) => updateLine(line.key, { rack_id: rackId })} />
-                      </div>
+                      <Select
+                        value={line.rack_id || NO_RACK}
+                        onValueChange={(v) => updateLine(line.key, { rack_id: v === NO_RACK ? '' : v })}
+                      >
+                        <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NO_RACK}>None</SelectItem>
+                          {rackOptions.map(r => (
+                            <SelectItem key={r.id} value={r.id}>{r.rack_code} — {r.rack_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </TableCell>
+
                     <TableCell className={`text-right text-xs ${insufficient ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
                       {line.item_id ? available.toFixed(3) : '—'}
                     </TableCell>
