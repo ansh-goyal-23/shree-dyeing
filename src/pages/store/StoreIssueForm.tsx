@@ -26,7 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from '@/components/ui/command';
-import AddRackDialog from '@/components/store/AddRackDialog';
+
 import { Plus, Trash2, Save, ArrowUpFromLine, ChevronsUpDown, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -311,6 +311,17 @@ const StoreIssueForm: React.FC<Props> = ({ mode = 'create' }) => {
                 const available = stockMap.get(`${line.item_id}::${line.rack_id || ''}`) ?? 0;
                 const requested = parseFloat(line.quantity) || 0;
                 const insufficient = !!line.item_id && requested > available;
+                // Only racks that actually hold stock for this item can be issued from.
+                const stockedRackIds = new Set(
+                  stock
+                    .filter(s => s.item_id === line.item_id && Number(s.current_quantity) > 0 && s.rack_id)
+                    .map(s => s.rack_id as string),
+                );
+                const activeRacks = racks.filter(r => r.is_active);
+                const rackOptions = stockedRackIds.size
+                  ? activeRacks.filter(r => stockedRackIds.has(r.id) || r.id === line.rack_id)
+                  : activeRacks;
+
                 return (
                   <TableRow key={line.key}>
                     <TableCell>
@@ -351,24 +362,20 @@ const StoreIssueForm: React.FC<Props> = ({ mode = 'create' }) => {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{line.unit || existing?.unit || '—'}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
-                        <div className="flex-1">
-                          <Select
-                            value={line.rack_id || NO_RACK}
-                            onValueChange={(v) => updateLine(line.key, { rack_id: v === NO_RACK ? '' : v })}
-                          >
-                            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value={NO_RACK}>None</SelectItem>
-                              {racks.filter(r => r.is_active).map(r => (
-                                <SelectItem key={r.id} value={r.id}>{r.rack_code} — {r.rack_name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <AddRackDialog onCreated={(rackId) => updateLine(line.key, { rack_id: rackId })} />
-                      </div>
+                      <Select
+                        value={line.rack_id || NO_RACK}
+                        onValueChange={(v) => updateLine(line.key, { rack_id: v === NO_RACK ? '' : v })}
+                      >
+                        <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NO_RACK}>None</SelectItem>
+                          {rackOptions.map(r => (
+                            <SelectItem key={r.id} value={r.id}>{r.rack_code} — {r.rack_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </TableCell>
+
                     <TableCell className={`text-right text-xs ${insufficient ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
                       {line.item_id ? available.toFixed(3) : '—'}
                     </TableCell>
