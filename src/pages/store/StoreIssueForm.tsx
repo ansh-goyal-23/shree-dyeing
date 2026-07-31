@@ -311,6 +311,17 @@ const StoreIssueForm: React.FC<Props> = ({ mode = 'create' }) => {
                 const available = stockMap.get(`${line.item_id}::${line.rack_id || ''}`) ?? 0;
                 const requested = parseFloat(line.quantity) || 0;
                 const insufficient = !!line.item_id && requested > available;
+                // Only racks that actually hold stock for this item can be issued from.
+                const stockedRackIds = new Set(
+                  stock
+                    .filter(s => s.item_id === line.item_id && Number(s.current_quantity) > 0 && s.rack_id)
+                    .map(s => s.rack_id as string),
+                );
+                const activeRacks = racks.filter(r => r.is_active);
+                const rackOptions = stockedRackIds.size
+                  ? activeRacks.filter(r => stockedRackIds.has(r.id) || r.id === line.rack_id)
+                  : activeRacks;
+
                 return (
                   <TableRow key={line.key}>
                     <TableCell>
