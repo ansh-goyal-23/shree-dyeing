@@ -42,7 +42,9 @@ export const INWARD_ITEM_TYPES: { value: string; label: string }[] = [
   { value: 'chemical', label: 'Chemicals' },
   { value: 'dye', label: 'Colors' },
   { value: 'oil', label: 'Oil' },
+  { value: 'packaging_material', label: 'Packing Polythene' },
 ];
+
 
 const typeLabel = (v?: string | null) =>
   INWARD_ITEM_TYPES.find(t => t.value === v)?.label || v || '—';
