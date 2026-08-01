@@ -49,20 +49,19 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   const doc = new jsPDF({ unit: 'mm', format: [PAGE_W, pageH] });
   let y = MARGIN + 2;
 
-  const centerText = (txt: string, size: number, bold = false) => {
+  const centerText = (txt: string, size: number, bold = true) => {
     doc.setFontSize(size);
     doc.setFont('helvetica', bold ? 'bold' : 'normal');
     doc.text(txt, PAGE_W / 2, y, { align: 'center' });
   };
 
-  const leftText = (txt: string, size: number, bold = false, x = MARGIN) => {
+  const leftText = (txt: string, size: number, bold = true, x = MARGIN) => {
     doc.setFontSize(size);
     doc.setFont('helvetica', bold ? 'bold' : 'normal');
     doc.text(txt, x, y);
   };
 
-
-  const rightText = (txt: string, size: number, bold = false) => {
+  const rightText = (txt: string, size: number, bold = true) => {
     doc.setFontSize(size);
     doc.setFont('helvetica', bold ? 'bold' : 'normal');
     doc.text(txt, PAGE_W - MARGIN, y, { align: 'right' });
