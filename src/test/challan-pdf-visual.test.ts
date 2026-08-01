@@ -54,7 +54,7 @@ test('generate challan pdf for visual qa', async () => {
   ];
 
   const blob = generateChallanPdfBlob(challan, items);
-  const buffer = Buffer.from(await blob.arrayBuffer());
+  const buffer = Buffer.isBuffer(blob) ? blob : Buffer.from(await blob.arrayBuffer());
   await writeFile('/tmp/browser/challan.pdf', buffer);
 
   expect(buffer.length).toBeGreaterThan(0);
