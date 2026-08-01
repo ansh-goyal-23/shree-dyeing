@@ -69,7 +69,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
 
   const kvRow = (label: string, value: string) => {
     doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(110);
     doc.text(label, MARGIN, y);
     doc.setTextColor(0);
@@ -119,7 +119,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
 
   const itemField = (label: string, value: string) => {
     doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(110);
     doc.text(label, MARGIN, y);
     doc.setTextColor(0);
@@ -217,7 +217,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
     if (!value) return;
     doc.setFontSize(7.5);
     doc.setTextColor(110);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('helvetica', 'bold');
     doc.text(label, MARGIN, y);
     doc.setTextColor(0);
     doc.setFont('helvetica', 'bold');
@@ -234,7 +234,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   y += 2;
   doc.setFontSize(7);
   doc.setTextColor(130);
-  doc.setFont('helvetica', 'italic');
+  doc.setFont('helvetica', 'bold');
   doc.text('— Thank you —', PAGE_W / 2, y, { align: 'center' });
 
 
