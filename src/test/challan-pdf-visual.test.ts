@@ -54,6 +54,13 @@ test('generate challan pdf for visual qa', async () => {
   ];
 
   const blob = generateChallanPdfBlob(challan, items);
+  console.log('blob type:', typeof blob);
+  console.log('blob keys:', Object.keys(blob as any));
+  console.log('blob toString:', (blob as any).toString());
+  console.log('blob has stream:', typeof (blob as any).stream);
+  console.log('blob has arrayBuffer:', typeof (blob as any).arrayBuffer);
+  console.log('blob has text:', typeof (blob as any).text);
+
   const buffer = Buffer.from(await new Response(blob as any).arrayBuffer());
   await writeFile('/tmp/browser/challan.pdf', buffer);
 
