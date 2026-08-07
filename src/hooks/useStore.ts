@@ -23,6 +23,7 @@ import type {
 // Re-use the project's supabase client
 import { supabase } from '@/integrations/supabase/client';
 import { logBusinessEvent } from '@/lib/activityCenter';
+import { toast } from '@/hooks/use-toast';
 
 
 
