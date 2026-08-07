@@ -68,7 +68,8 @@ const LotList: React.FC = () => {
       const matchesSearch = !q || l.lot_no.toLowerCase().includes(q) ||
         l.shade_number.toLowerCase().includes(q) ||
         l.yarn_company_name.toLowerCase().includes(q) ||
-        l.color_name.toLowerCase().includes(q);
+        l.color_name.toLowerCase().includes(q) ||
+        (l.remarks || '').toLowerCase().includes(q);
       if (!matchesSearch) return false;
 
       if (statusFilter && l.status !== statusFilter) return false;
@@ -144,7 +145,7 @@ const LotList: React.FC = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search by Lot No, Company, Shade, or Color..."
+            placeholder="Search by Lot No, Company, Shade, Color, or Remarks..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="input-industrial w-full pl-10"
