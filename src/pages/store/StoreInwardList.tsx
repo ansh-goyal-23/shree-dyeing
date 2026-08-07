@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useStoreInwardList, useStoreInwardLineDetails } from '@/hooks/useStore';
+import { useStoreInwardList, useStoreInwardLineDetails, useDeleteStoreInward } from '@/hooks/useStore';
+import EditInwardDialog from '@/components/store/EditInwardDialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
+import type { StoreStockInward } from '@/types/store';
 import { INWARD_ITEM_TYPES } from '@/pages/store/StoreInwardCreate';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { ArrowDownToLine, Plus, ChevronDown, ChevronRight } from 'lucide-react';
+import { ArrowDownToLine, Plus, ChevronDown, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 
 const typeLabel = (v?: string | null) =>
   INWARD_ITEM_TYPES.find(t => t.value === v)?.label || v || '—';
@@ -55,6 +62,20 @@ const InwardLines: React.FC<{ inwardNumber: string }> = ({ inwardNumber }) => {
 const StoreInwardList: React.FC = () => {
   const { data: rows = [], isLoading } = useStoreInwardList();
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [editRow, setEditRow] = useState<StoreStockInward | null>(null);
+  const [deleteRow, setDeleteRow] = useState<StoreStockInward | null>(null);
+  const del = useDeleteStoreInward();
+
+  const handleDelete = async () => {
+    if (!deleteRow) return;
+    try {
+      await del.mutateAsync({ id: deleteRow.id, inward_number: deleteRow.inward_number });
+      toast.success(`Inward ${deleteRow.inward_number} deleted and stock reversed`);
+      setDeleteRow(null);
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to delete inward');
+    }
+  };
 
   return (
     <div className="p-6 space-y-4">
@@ -82,13 +103,14 @@ const StoreInwardList: React.FC = () => {
               <TableHead>Supplier</TableHead>
               <TableHead>Invoice #</TableHead>
               <TableHead>GRN #</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>
             ) : rows.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">No inward entries yet.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">No inward entries yet.</TableCell></TableRow>
             ) : rows.map(r => (
               <React.Fragment key={r.id}>
                 <TableRow
@@ -105,10 +127,25 @@ const StoreInwardList: React.FC = () => {
                   <TableCell>{r.supplier || '—'}</TableCell>
                   <TableCell>{r.invoice_number || '—'}</TableCell>
                   <TableCell>{r.grn_number || '—'}</TableCell>
+                  <TableCell className="text-right whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                    <Button
+                      variant="ghost" size="icon" title="Edit inward"
+                      onClick={() => setEditRow(r)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost" size="icon" title="Delete inward"
+                      className="text-destructive"
+                      onClick={() => setDeleteRow(r)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
                 {expanded === r.inward_number && (
                   <TableRow>
-                    <TableCell colSpan={6} className="p-2">
+                    <TableCell colSpan={7} className="p-2">
                       <InwardLines inwardNumber={r.inward_number} />
                     </TableCell>
                   </TableRow>
@@ -118,6 +155,30 @@ const StoreInwardList: React.FC = () => {
           </TableBody>
         </Table>
       </Card>
+
+      <EditInwardDialog
+        inward={editRow}
+        open={!!editRow}
+        onOpenChange={(o) => { if (!o) setEditRow(null); }}
+      />
+
+      <AlertDialog open={!!deleteRow} onOpenChange={(o) => { if (!o) setDeleteRow(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Inward {deleteRow?.inward_number}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the entry and all its stock transactions, reversing the received stock.
+              This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={del.isPending}>
+              {del.isPending ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
