@@ -545,6 +545,162 @@ export const useCreateStoreInward = () => {
   });
 };
 
+export interface UpdateInwardPayload {
+  id: string;
+  inward_number: string;
+  inward_date: string;
+  supplier?: string | null;
+  invoice_number?: string | null;
+  grn_number?: string | null;
+  remarks?: string | null;
+  lines: {
+    /** transaction id of the existing line */
+    id: string;
+    quantity: number;
+    unit: string;
+    rate?: number | null;
+    rack_id?: string | null;
+    remarks?: string | null;
+    /** true => remove this line (and its stock) */
+    deleted?: boolean;
+  }[];
+}
+
+/** Edit an inward header and its line transactions (stock recalculates from txns). */
+export const useUpdateStoreInward = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: UpdateInwardPayload) => {
+      const kept = payload.lines.filter(l => !l.deleted);
+      if (!kept.length) throw new Error('An inward must keep at least one line item');
+      for (const l of kept) {
+        if (!(Number(l.quantity) > 0)) throw new Error('Quantity must be greater than zero');
+      }
+
+      const totalAmount = kept.reduce(
+        (s, l) => s + Number(l.rate || 0) * Number(l.quantity || 0), 0,
+      );
+
+      const { error: hdrErr } = await sb
+        .from('store_stock_inward')
+        .update({
+          inward_date: payload.inward_date,
+          supplier: payload.supplier || null,
+          invoice_number: payload.invoice_number || null,
+          grn_number: payload.grn_number || null,
+          remarks: payload.remarks || null,
+          total_amount: totalAmount,
+        })
+        .eq('id', payload.id);
+      if (hdrErr) throw hdrErr;
+
+      const removed = payload.lines.filter(l => l.deleted).map(l => l.id);
+      if (removed.length) {
+        const { error } = await sb
+          .from('store_stock_transactions')
+          .delete()
+          .in('id', removed);
+        if (error) throw error;
+      }
+
+      for (const l of kept) {
+        const amt = Number(l.rate || 0) * Number(l.quantity || 0);
+        const { error } = await sb
+          .from('store_stock_transactions')
+          .update({
+            transaction_date: payload.inward_date,
+            quantity: Math.abs(Number(l.quantity)),
+            unit: l.unit,
+            rack_id: l.rack_id || null,
+            rate: l.rate ?? null,
+            amount: amt || null,
+            supplier: payload.supplier || null,
+            remarks: l.remarks || null,
+          })
+          .eq('id', l.id);
+        if (error) throw error;
+      }
+      return payload;
+    },
+    onSuccess: (payload) => {
+      qc.invalidateQueries({ queryKey: ['store_inward_list'] });
+      qc.invalidateQueries({ queryKey: ['store_inward_line_details'] });
+      qc.invalidateQueries({ queryKey: ['store_inward_lines'] });
+      qc.invalidateQueries({ queryKey: ['store_transactions'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+      logBusinessEvent({
+        module: 'store', eventType: 'stock.inward_updated', severity: 'info',
+        entityType: 'inward', entityId: payload.id, referenceNumber: payload.inward_number,
+        summary: `Updated Inward ${payload.inward_number}`,
+        details: { lines: payload.lines.length },
+      });
+    },
+  });
+};
+
+/** Delete an inward entry and reverse its stock by removing its transactions. */
+export const useDeleteStoreInward = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { id: string; inward_number: string }) => {
+      const { data: lines, error: linesErr } = await sb
+        .from('store_stock_transactions')
+        .select('id, item_id, quantity')
+        .eq('reference_type', 'stock_inward')
+        .eq('reference_number', payload.inward_number);
+      if (linesErr) throw linesErr;
+
+      // Guard: removing these receipts must not push any item's stock negative.
+      const byItem = new Map<string, number>();
+      for (const l of (lines ?? []) as any[]) {
+        byItem.set(l.item_id, (byItem.get(l.item_id) || 0) + Number(l.quantity || 0));
+      }
+      for (const [itemId, qty] of byItem) {
+        const { data: allTxns, error } = await sb
+          .from('store_stock_transactions')
+          .select('quantity, transaction_type')
+          .eq('item_id', itemId);
+        if (error) throw error;
+        const net = (allTxns ?? []).reduce((s: number, t: any) => {
+          const q = Number(t.quantity || 0);
+          return s + (t.transaction_type === 'stock_in' ? q : -q);
+        }, 0);
+        if (net - qty < -0.000001) {
+          throw new Error(
+            'Cannot delete: this stock has already been issued or dispatched. Reverse those entries first.',
+          );
+        }
+      }
+
+      const { error: dTxErr } = await sb
+        .from('store_stock_transactions')
+        .delete()
+        .eq('reference_type', 'stock_inward')
+        .eq('reference_number', payload.inward_number);
+      if (dTxErr) throw dTxErr;
+
+      const { error: dHdrErr } = await sb
+        .from('store_stock_inward')
+        .delete()
+        .eq('id', payload.id);
+      if (dHdrErr) throw dHdrErr;
+      return payload;
+    },
+    onSuccess: (payload) => {
+      qc.invalidateQueries({ queryKey: ['store_inward_list'] });
+      qc.invalidateQueries({ queryKey: ['store_inward_line_details'] });
+      qc.invalidateQueries({ queryKey: ['store_inward_lines'] });
+      qc.invalidateQueries({ queryKey: ['store_transactions'] });
+      qc.invalidateQueries({ queryKey: ['store_current_stock'] });
+      logBusinessEvent({
+        module: 'store', eventType: 'stock.inward_deleted', severity: 'warning',
+        entityType: 'inward', entityId: payload.id, referenceNumber: payload.inward_number,
+        summary: `Deleted Inward ${payload.inward_number} and reversed its stock`,
+      });
+    },
+  });
+};
+
 // ---------- Internal Issues ----------
 
 export const useStoreIssueList = () =>
