@@ -23,6 +23,7 @@ import type {
 // Re-use the project's supabase client
 import { supabase } from '@/integrations/supabase/client';
 import { logBusinessEvent } from '@/lib/activityCenter';
+import { toast } from '@/hooks/use-toast';
 
 
 
@@ -454,21 +455,44 @@ export const useCreateStoreInward = () => {
       );
 
       // 2. Insert header
-      const { data: header, error: headerErr } = await sb
+      const baseHeader = {
+        inward_number: inwardNumber,
+        inward_date: payload.inward_date,
+        supplier: payload.supplier || null,
+        invoice_number: payload.invoice_number || null,
+        grn_number: payload.grn_number || null,
+        remarks: payload.remarks || null,
+        total_amount: totalAmount,
+      };
+
+      let { data: header, error: headerErr } = await sb
         .from('store_stock_inward')
         .insert({
-          inward_number: inwardNumber,
-          inward_date: payload.inward_date,
-          supplier: payload.supplier || null,
-          invoice_number: payload.invoice_number || null,
-          grn_number: payload.grn_number || null,
-          remarks: payload.remarks || null,
+          ...baseHeader,
           bill_url: payload.bill_url || null,
           bill_path: payload.bill_path || null,
-          total_amount: totalAmount,
         })
         .select()
         .single();
+
+      // Fallback: older databases may not have the bill columns yet.
+      const msg = String(headerErr?.message || '').toLowerCase();
+      if (headerErr && (msg.includes('bill_url') || msg.includes('bill_path'))) {
+        const retry = await sb
+          .from('store_stock_inward')
+          .insert(baseHeader)
+          .select()
+          .single();
+        header = retry.data;
+        headerErr = retry.error;
+        if (!headerErr) {
+          toast({
+            title: 'Bill attachment not saved',
+            description:
+              'Run sql_migrations/20260807_inward_bill_columns.sql to enable bill uploads. The inward entry itself was saved.',
+          });
+        }
+      }
       if (headerErr) throw headerErr;
 
       // 3. Build transaction rows (positive quantities; stock_in type)
