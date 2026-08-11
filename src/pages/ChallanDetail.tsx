@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useChallan, useChallanItems, useUpdateChallan, useDeleteChallan } from '@/hooks/useChallan';
+import { useChallan, useChallanItems, useUpdateChallan, useDeleteChallan, useUpdateChallanPayment } from '@/hooks/useChallan';
+import { paymentState } from '@/types/challan';
+import { useRole } from '@/context/RoleContext';
 import { useApp } from '@/context/AppContext';
 import ClientSelect from '@/components/ClientSelect';
 import ChallanItemRow from '@/components/ChallanItemRow';
@@ -10,6 +12,7 @@ import { formatYmdLocal } from '@/lib/formatDate';
 import { useClientRates } from '@/hooks/useClientRates';
 import { toast } from 'sonner';
 import { PlusCircle, Loader2, Pencil, Trash2, ArrowLeft, Download, Share2 } from 'lucide-react';
+
 
 const emptyItem = (): ItemData => ({
   lot_no: '', shade_number: '', color_name: '', denier: '', packaging_type: 'paper_tube',
