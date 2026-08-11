@@ -57,6 +57,11 @@ const ChallanList: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [sortField, setSortField] = useState<SortField>('challan');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [paymentFilter, setPaymentFilter] = useState<'' | PaymentState>('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const { isAdmin } = useRole();
+  const bulkPay = useBulkMarkChallansPaid();
 
   const { data: allItems = [] } = useQuery({
     queryKey: ['all_challan_items'],
@@ -71,13 +76,15 @@ const ChallanList: React.FC = () => {
     return [...new Set(challans.map(c => c.client_name))].filter(Boolean).sort();
   }, [challans]);
 
-  const hasActiveFilters = !!(clientFilter || dateFrom || dateTo);
+  const hasActiveFilters = !!(clientFilter || dateFrom || dateTo || paymentFilter);
 
   const clearFilters = () => {
     setClientFilter('');
     setDateFrom(undefined);
     setDateTo(undefined);
+    setPaymentFilter('');
   };
+
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
