@@ -1,7 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useChallans } from '@/hooks/useChallan';
-import { PlusCircle, FileText, Loader2, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, X } from 'lucide-react';
+import { useChallans, useBulkMarkChallansPaid } from '@/hooks/useChallan';
+import { paymentState } from '@/types/challan';
+import type { PaymentState } from '@/types/challan';
+import { useRole } from '@/context/RoleContext';
+import { toast } from 'sonner';
+import { PlusCircle, FileText, Loader2, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, X, IndianRupee } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -10,6 +14,13 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { formatYmdLocal } from '@/lib/formatDate';
+
+const PAY_BADGE: Record<PaymentState, string> = {
+  Paid: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
+  'Partially Paid': 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
+  Unpaid: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
+};
+
 
 type SortField = 'challan' | 'date' | 'client' | 'net_weight' | 'amount';
 type SortDir = 'asc' | 'desc';
