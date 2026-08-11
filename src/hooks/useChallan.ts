@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Challan, ChallanItem } from '@/types/challan';
 import { logBusinessEvent } from '@/lib/activityCenter';
+import { logActivity } from '@/lib/activityLog';
 
 // -------------------------------------------------------------------
 // Store integration: dispatching a challan must reduce store stock
@@ -136,6 +137,8 @@ const mapChallan = (r: any): Challan => ({
   receiver_contact_number: r.receiver_contact_number || '',
   created_at: r.created_at,
   created_by: r.created_by || null,
+  amount_received: Number(r.amount_received) || 0,
+  paid_at: r.paid_at || null,
 });
 
 const mapItem = (r: any): ChallanItem => ({
@@ -502,6 +505,82 @@ export function useCreateEDYChallan() {
         entityType: 'challan', entityId: challan.id, referenceNumber: vars.challan_number,
         summary: `Created EDY Challan ${vars.challan_number} — ${vars.items.length} lot(s), ${totalKg.toFixed(2)} kg`,
         details: { items: vars.items.length, total_kg: totalKg, date: vars.date, kind: 'edy' },
+      });
+    },
+  });
+}
+
+// ------------------------------------------------------------------
+// Payment tracking (admin only, enforced in the UI).
+// `amount_received` on public.challans drives Paid / Partially Paid /
+// Unpaid. `paid_at` is stamped when a challan becomes fully paid.
+// Tolerates a DB where the migration hasn't been applied yet.
+// ------------------------------------------------------------------
+type PaymentUpdate = {
+  id: string;
+  challan_number: string;
+  amount_received: number;
+  total: number;
+  prev_received?: number;
+};
+
+async function writePayment(u: PaymentUpdate) {
+  const fullyPaid = u.total > 0 && u.amount_received >= u.total - 0.005;
+  const payload: any = {
+    amount_received: Number(u.amount_received.toFixed(2)),
+    paid_at: fullyPaid ? new Date().toISOString() : null,
+  };
+  let { error } = await sb.from('challans').update(payload).eq('id', u.id);
+  if (error) {
+    const msg = (error.message || '').toLowerCase();
+    if (msg.includes('paid_at')) {
+      delete payload.paid_at;
+      const retry = await sb.from('challans').update(payload).eq('id', u.id);
+      error = retry.error;
+    }
+  }
+  if (error) throw error;
+  await logActivity({
+    action: 'Payment Update',
+    referenceType: 'challan',
+    referenceId: u.id,
+    section: 'Payment',
+    itemLabel: `Challan ${u.challan_number}`,
+    prev: u.prev_received != null ? u.prev_received.toFixed(2) : null,
+    next: payload.amount_received.toFixed(2),
+    unit: 'Rs.',
+  });
+}
+
+export function useUpdateChallanPayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (u: PaymentUpdate) => { await writePayment(u); },
+    onSuccess: (_d, u) => {
+      qc.invalidateQueries({ queryKey: ['challans'] });
+      logBusinessEvent({
+        module: 'dispatch', eventType: 'challan.payment_updated', severity: 'info',
+        entityType: 'challan', entityId: u.id, referenceNumber: u.challan_number,
+        summary: `Challan ${u.challan_number} payment set to Rs. ${u.amount_received.toFixed(2)} of Rs. ${u.total.toFixed(2)}`,
+        details: { amount_received: u.amount_received, total: u.total },
+      });
+    },
+  });
+}
+
+export function useBulkMarkChallansPaid() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (rows: PaymentUpdate[]) => {
+      for (const r of rows) await writePayment(r);
+      return rows.length;
+    },
+    onSuccess: (count, rows) => {
+      qc.invalidateQueries({ queryKey: ['challans'] });
+      logBusinessEvent({
+        module: 'dispatch', eventType: 'challan.payment_updated', severity: 'success',
+        entityType: 'challan', summary: `Marked ${count} challan(s) as Paid`,
+        details: { challans: rows.map(r => r.challan_number) },
       });
     },
   });

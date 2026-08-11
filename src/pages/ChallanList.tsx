@@ -1,7 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useChallans } from '@/hooks/useChallan';
-import { PlusCircle, FileText, Loader2, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, X } from 'lucide-react';
+import { useChallans, useBulkMarkChallansPaid } from '@/hooks/useChallan';
+import { paymentState } from '@/types/challan';
+import type { PaymentState } from '@/types/challan';
+import { useRole } from '@/context/RoleContext';
+import { toast } from 'sonner';
+import { PlusCircle, FileText, Loader2, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, X, IndianRupee } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -10,6 +14,13 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { formatYmdLocal } from '@/lib/formatDate';
+
+const PAY_BADGE: Record<PaymentState, string> = {
+  Paid: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
+  'Partially Paid': 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
+  Unpaid: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
+};
+
 
 type SortField = 'challan' | 'date' | 'client' | 'net_weight' | 'amount';
 type SortDir = 'asc' | 'desc';
@@ -46,6 +57,11 @@ const ChallanList: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [sortField, setSortField] = useState<SortField>('challan');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [paymentFilter, setPaymentFilter] = useState<'' | PaymentState>('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const { isAdmin } = useRole();
+  const bulkPay = useBulkMarkChallansPaid();
 
   const { data: allItems = [] } = useQuery({
     queryKey: ['all_challan_items'],
@@ -60,13 +76,15 @@ const ChallanList: React.FC = () => {
     return [...new Set(challans.map(c => c.client_name))].filter(Boolean).sort();
   }, [challans]);
 
-  const hasActiveFilters = !!(clientFilter || dateFrom || dateTo);
+  const hasActiveFilters = !!(clientFilter || dateFrom || dateTo || paymentFilter);
 
   const clearFilters = () => {
     setClientFilter('');
     setDateFrom(undefined);
     setDateTo(undefined);
+    setPaymentFilter('');
   };
+
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -134,6 +152,13 @@ const ChallanList: React.FC = () => {
       list = list.filter(c => toLocalDay(c.date) <= to);
     }
 
+    if (paymentFilter) {
+      list = list.filter(c => {
+        const total = itemSummaryMap[c.id]?.totalAmount || 0;
+        return paymentState(total, c.amount_received) === paymentFilter;
+      });
+    }
+
     // Sort
     list = [...list].sort((a, b) => {
       let cmp = 0;
@@ -160,20 +185,61 @@ const ChallanList: React.FC = () => {
     });
 
     return list;
-  }, [challans, search, clientFilter, dateFrom, dateTo, sortField, sortDir, allItems, itemSummaryMap]);
+  }, [challans, search, clientFilter, dateFrom, dateTo, paymentFilter, sortField, sortDir, allItems, itemSummaryMap]);
 
   const totals = useMemo(() => {
     let totalNetWeight = 0;
     let totalAmount = 0;
+    let totalReceived = 0;
     filtered.forEach(c => {
       const s = itemSummaryMap[c.id];
       if (s) {
         totalNetWeight += s.totalNetWeight;
         totalAmount += s.totalAmount;
       }
+      totalReceived += Math.min(c.amount_received, s?.totalAmount ?? c.amount_received);
     });
-    return { totalNetWeight, totalAmount };
+    return { totalNetWeight, totalAmount, totalReceived, outstanding: totalAmount - totalReceived };
   }, [filtered, itemSummaryMap]);
+
+  const selectableIds = useMemo(
+    () => filtered.filter(c => {
+      const total = itemSummaryMap[c.id]?.totalAmount || 0;
+      return total > 0 && paymentState(total, c.amount_received) !== 'Paid';
+    }).map(c => c.id),
+    [filtered, itemSummaryMap],
+  );
+
+  const toggleOne = (id: string) => setSelected(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  const allSelected = selectableIds.length > 0 && selectableIds.every(id => selected.has(id));
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(selectableIds));
+
+  const handleBulkPaid = async () => {
+    const rows = filtered
+      .filter(c => selected.has(c.id))
+      .map(c => ({
+        id: c.id,
+        challan_number: c.challan_number,
+        total: itemSummaryMap[c.id]?.totalAmount || 0,
+        amount_received: itemSummaryMap[c.id]?.totalAmount || 0,
+        prev_received: c.amount_received,
+      }))
+      .filter(r => r.total > 0);
+    if (rows.length === 0) { toast.error('No payable challans selected.'); return; }
+    try {
+      await bulkPay.mutateAsync(rows);
+      toast.success(`${rows.length} challan(s) marked Paid.`);
+      setSelected(new Set());
+    } catch {
+      toast.error('Failed to update payments.');
+    }
+  };
+
 
   return (
     <div className="space-y-6">
@@ -242,6 +308,15 @@ const ChallanList: React.FC = () => {
               </PopoverContent>
             </Popover>
           </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Payment</label>
+            <select value={paymentFilter} onChange={e => setPaymentFilter(e.target.value as any)} className="input-industrial w-40">
+              <option value="">All</option>
+              <option value="Paid">Paid</option>
+              <option value="Partially Paid">Partially Paid</option>
+              <option value="Unpaid">Unpaid</option>
+            </select>
+          </div>
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground">
               <X className="w-3 h-3 mr-1" /> Clear all
@@ -253,6 +328,18 @@ const ChallanList: React.FC = () => {
       {/* Results count */}
       {(search || hasActiveFilters) && !isLoading && (
         <p className="text-sm text-muted-foreground">{filtered.length} challan{filtered.length !== 1 ? 's' : ''} found</p>
+      )}
+
+      {/* Bulk payment bar */}
+      {isAdmin && selected.size > 0 && (
+        <div className="sticky top-2 z-20 card-industrial p-3 flex flex-wrap items-center gap-3 border-primary/60">
+          <span className="text-sm font-medium">{selected.size} challan(s) selected</span>
+          <Button size="sm" onClick={handleBulkPaid} disabled={bulkPay.isPending}>
+            {bulkPay.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <IndianRupee className="w-4 h-4 mr-1" />}
+            Mark as Paid
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear selection</Button>
+        </div>
       )}
 
       {isLoading ? (
@@ -267,6 +354,12 @@ const ChallanList: React.FC = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-muted-foreground">
+                {isAdmin && (
+                  <th className="p-3 w-8">
+                    <input type="checkbox" checked={allSelected} onChange={toggleAll}
+                      disabled={selectableIds.length === 0} className="accent-primary w-4 h-4" aria-label="Select all unpaid challans" />
+                  </th>
+                )}
                 <SortHeader label="Challan #" field="challan" current={sortField} dir={sortDir} onSort={handleSort} />
                 <th className="p-3 font-medium">Type</th>
                 <SortHeader label="Date" field="date" current={sortField} dir={sortDir} onSort={handleSort} />
@@ -274,6 +367,7 @@ const ChallanList: React.FC = () => {
                 <th className="p-3 font-medium text-right">Items</th>
                 <SortHeader label="Net Weight (kg)" field="net_weight" current={sortField} dir={sortDir} onSort={handleSort} className="text-right" />
                 <SortHeader label="Amount" field="amount" current={sortField} dir={sortDir} onSort={handleSort} className="text-right" />
+                <th className="p-3 font-medium">Payment</th>
               </tr>
             </thead>
             <tbody>
@@ -284,8 +378,17 @@ const ChallanList: React.FC = () => {
                 const edyGross = isEDY
                   ? allItems.filter((i: any) => i.challan_id === c.id).reduce((sum: number, i: any) => sum + (Number(i.gross_weight) || 0), 0)
                   : 0;
+                const state = paymentState(s.totalAmount, c.amount_received);
+                const balance = Math.max(s.totalAmount - c.amount_received, 0);
                 return (
                   <tr key={c.id} className="border-b border-border hover:bg-secondary/30 btn-transition">
+                    {isAdmin && (
+                      <td className="p-3">
+                        <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleOne(c.id)}
+                          disabled={s.totalAmount <= 0 || state === 'Paid'} className="accent-primary w-4 h-4"
+                          aria-label={`Select challan ${c.challan_number}`} />
+                      </td>
+                    )}
                     <td className="p-3">
                       <Link to={`/dispatch/${c.id}`} className="text-primary font-medium hover:underline">{c.challan_number}</Link>
                     </td>
@@ -309,14 +412,31 @@ const ChallanList: React.FC = () => {
                     <td className="p-3 text-right font-medium">
                       {isEDY ? '—' : `₹${s.totalAmount.toFixed(2)}`}
                     </td>
+                    <td className="p-3">
+                      {s.totalAmount <= 0 ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        <>
+                          <span className={cn('text-xs px-2 py-0.5 rounded', PAY_BADGE[state])}>{state}</span>
+                          {state !== 'Paid' && (
+                            <p className="text-xs text-muted-foreground mt-0.5">Bal ₹{balance.toFixed(2)}</p>
+                          )}
+                        </>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
               <tr className="bg-muted/50 font-semibold">
-                <td className="p-3" colSpan={5}>Total ({filtered.length} challans)</td>
+                <td className="p-3" colSpan={isAdmin ? 6 : 5}>Total ({filtered.length} challans)</td>
                 <td className="p-3 text-right">{totals.totalNetWeight.toFixed(3)} kg</td>
                 <td className="p-3 text-right">₹{totals.totalAmount.toFixed(2)}</td>
+                <td className="p-3 text-xs">
+                  <p>Received ₹{totals.totalReceived.toFixed(2)}</p>
+                  <p className="text-muted-foreground">Outstanding ₹{Math.max(totals.outstanding, 0).toFixed(2)}</p>
+                </td>
               </tr>
+
             </tbody>
           </table>
         </div>

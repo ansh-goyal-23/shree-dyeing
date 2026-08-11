@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useChallan, useChallanItems, useUpdateChallan, useDeleteChallan } from '@/hooks/useChallan';
+import { useChallan, useChallanItems, useUpdateChallan, useDeleteChallan, useUpdateChallanPayment } from '@/hooks/useChallan';
+import { paymentState } from '@/types/challan';
+import { useRole } from '@/context/RoleContext';
 import { useApp } from '@/context/AppContext';
 import ClientSelect from '@/components/ClientSelect';
 import ChallanItemRow from '@/components/ChallanItemRow';
@@ -10,6 +12,7 @@ import { formatYmdLocal } from '@/lib/formatDate';
 import { useClientRates } from '@/hooks/useClientRates';
 import { toast } from 'sonner';
 import { PlusCircle, Loader2, Pencil, Trash2, ArrowLeft, Download, Share2 } from 'lucide-react';
+
 
 const emptyItem = (): ItemData => ({
   lot_no: '', shade_number: '', color_name: '', denier: '', packaging_type: 'paper_tube',
@@ -28,10 +31,12 @@ const ChallanDetail: React.FC = () => {
   const { data: challanItems = [], isLoading: itemsLoading } = useChallanItems(id || '');
   const updateChallan = useUpdateChallan();
   const deleteChallan = useDeleteChallan();
+  const updatePayment = useUpdateChallanPayment();
+  const { isAdmin } = useRole();
   const { lots } = useApp();
   const clientId = challan?.client_id || '';
   const { data: clientRates = [] } = useClientRates(clientId || undefined);
-  
+  const [payInput, setPayInput] = useState('');
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -39,6 +44,7 @@ const ChallanDetail: React.FC = () => {
     prepared_by_name: '', receiver_name: '', receiver_contact_number: '',
   });
   const [items, setItems] = useState<ItemData[]>([]);
+
 
   useEffect(() => {
     if (challan) {
@@ -70,9 +76,33 @@ const ChallanDetail: React.FC = () => {
   const totalNetWeight = items.reduce((s, i) => s + (i.net_weight || 0), 0);
   const totalAmount = items.reduce((s, i) => s + (i.amount || 0), 0);
 
+  // Payment maths always use the SAVED items, never the edit draft.
+  const savedTotal = challanItems.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const received = challan?.amount_received || 0;
+  const payState = paymentState(savedTotal, received);
+  const balance = Math.max(savedTotal - received, 0);
+
+  const savePayment = async (amount: number) => {
+    if (!challan) return;
+    try {
+      await updatePayment.mutateAsync({
+        id: challan.id,
+        challan_number: challan.challan_number,
+        amount_received: amount,
+        total: savedTotal,
+        prev_received: received,
+      });
+      setPayInput('');
+      toast.success('Payment updated.');
+    } catch {
+      toast.error('Failed to update payment.');
+    }
+  };
+
   const updateItem = (index: number, updated: ItemData) => setItems(prev => prev.map((it, i) => i === index ? updated : it));
   const removeItem = (index: number) => { if (items.length > 1) setItems(prev => prev.filter((_, i) => i !== index)); };
   const addItem = () => setItems(prev => [...prev, emptyItem()]);
+
 
   const handleSave = async () => {
     if (!form.challan_number.trim()) { toast.error('Challan number required.'); return; }
@@ -302,6 +332,55 @@ const ChallanDetail: React.FC = () => {
           </table>
         )}
       </div>
+
+      {/* Payment */}
+      {savedTotal > 0 && (
+        <div className="card-industrial p-5 space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <h2 className="text-sm font-semibold">Payment</h2>
+            <span className={
+              payState === 'Paid'
+                ? 'text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                : payState === 'Partially Paid'
+                  ? 'text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200'
+                  : 'text-xs px-2 py-0.5 rounded bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200'
+            }>{payState}</span>
+          </div>
+          <div className="grid grid-cols-3 gap-4 text-sm">
+            <div><span className="text-muted-foreground">Total</span><p className="font-medium mt-0.5">₹{savedTotal.toFixed(2)}</p></div>
+            <div><span className="text-muted-foreground">Received</span><p className="font-medium mt-0.5">₹{received.toFixed(2)}</p></div>
+            <div><span className="text-muted-foreground">Balance</span><p className="font-medium mt-0.5">₹{balance.toFixed(2)}</p></div>
+          </div>
+          {isAdmin && (
+            <div className="flex flex-wrap items-end gap-3 pt-2 border-t border-border">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Amount Received (Rs.)</label>
+                <input type="number" step="0.01" min="0" value={payInput} onChange={e => setPayInput(e.target.value)}
+                  placeholder={received.toFixed(2)} className="input-industrial w-40 mt-1" />
+              </div>
+              <button onClick={() => {
+                const v = parseFloat(payInput);
+                if (isNaN(v) || v < 0) { toast.error('Enter a valid amount.'); return; }
+                if (v > savedTotal + 0.005) { toast.error('Amount exceeds challan total.'); return; }
+                savePayment(v);
+              }} disabled={updatePayment.isPending}
+                className="px-3 h-9 border border-input rounded-md text-sm font-medium hover:bg-secondary btn-transition disabled:opacity-50">
+                Save Amount
+              </button>
+              <button onClick={() => savePayment(savedTotal)} disabled={updatePayment.isPending || payState === 'Paid'}
+                className="inline-flex items-center gap-2 px-4 h-9 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90 btn-transition disabled:opacity-50">
+                {updatePayment.isPending && <Loader2 className="w-4 h-4 animate-spin" />} Mark as Paid
+              </button>
+              <button onClick={() => savePayment(0)} disabled={updatePayment.isPending || received === 0}
+                className="px-3 h-9 border border-input rounded-md text-sm font-medium hover:bg-secondary btn-transition disabled:opacity-50">
+                Mark as Unpaid
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+
 
 
       {/* Footer details */}

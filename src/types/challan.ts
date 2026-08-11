@@ -15,6 +15,16 @@ export interface Challan {
   receiver_contact_number: string;
   created_at: string;
   created_by?: string | null;
+  amount_received: number;
+  paid_at?: string | null;
+}
+
+export type PaymentState = 'Paid' | 'Partially Paid' | 'Unpaid';
+
+export function paymentState(total: number, received: number): PaymentState {
+  if (total > 0 && received >= total - 0.005) return 'Paid';
+  if (received > 0.005) return 'Partially Paid';
+  return 'Unpaid';
 }
 
 export interface ChallanItem {
