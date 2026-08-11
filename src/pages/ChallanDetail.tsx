@@ -76,9 +76,33 @@ const ChallanDetail: React.FC = () => {
   const totalNetWeight = items.reduce((s, i) => s + (i.net_weight || 0), 0);
   const totalAmount = items.reduce((s, i) => s + (i.amount || 0), 0);
 
+  // Payment maths always use the SAVED items, never the edit draft.
+  const savedTotal = challanItems.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const received = challan?.amount_received || 0;
+  const payState = paymentState(savedTotal, received);
+  const balance = Math.max(savedTotal - received, 0);
+
+  const savePayment = async (amount: number) => {
+    if (!challan) return;
+    try {
+      await updatePayment.mutateAsync({
+        id: challan.id,
+        challan_number: challan.challan_number,
+        amount_received: amount,
+        total: savedTotal,
+        prev_received: received,
+      });
+      setPayInput('');
+      toast.success('Payment updated.');
+    } catch {
+      toast.error('Failed to update payment.');
+    }
+  };
+
   const updateItem = (index: number, updated: ItemData) => setItems(prev => prev.map((it, i) => i === index ? updated : it));
   const removeItem = (index: number) => { if (items.length > 1) setItems(prev => prev.filter((_, i) => i !== index)); };
   const addItem = () => setItems(prev => [...prev, emptyItem()]);
+
 
   const handleSave = async () => {
     if (!form.challan_number.trim()) { toast.error('Challan number required.'); return; }
