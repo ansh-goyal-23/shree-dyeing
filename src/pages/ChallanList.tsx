@@ -308,6 +308,15 @@ const ChallanList: React.FC = () => {
               </PopoverContent>
             </Popover>
           </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Payment</label>
+            <select value={paymentFilter} onChange={e => setPaymentFilter(e.target.value as any)} className="input-industrial w-40">
+              <option value="">All</option>
+              <option value="Paid">Paid</option>
+              <option value="Partially Paid">Partially Paid</option>
+              <option value="Unpaid">Unpaid</option>
+            </select>
+          </div>
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground">
               <X className="w-3 h-3 mr-1" /> Clear all
@@ -319,6 +328,18 @@ const ChallanList: React.FC = () => {
       {/* Results count */}
       {(search || hasActiveFilters) && !isLoading && (
         <p className="text-sm text-muted-foreground">{filtered.length} challan{filtered.length !== 1 ? 's' : ''} found</p>
+      )}
+
+      {/* Bulk payment bar */}
+      {isAdmin && selected.size > 0 && (
+        <div className="sticky top-2 z-20 card-industrial p-3 flex flex-wrap items-center gap-3 border-primary/60">
+          <span className="text-sm font-medium">{selected.size} challan(s) selected</span>
+          <Button size="sm" onClick={handleBulkPaid} disabled={bulkPay.isPending}>
+            {bulkPay.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <IndianRupee className="w-4 h-4 mr-1" />}
+            Mark as Paid
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear selection</Button>
+        </div>
       )}
 
       {isLoading ? (
@@ -333,6 +354,12 @@ const ChallanList: React.FC = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-muted-foreground">
+                {isAdmin && (
+                  <th className="p-3 w-8">
+                    <input type="checkbox" checked={allSelected} onChange={toggleAll}
+                      disabled={selectableIds.length === 0} className="accent-primary w-4 h-4" aria-label="Select all unpaid challans" />
+                  </th>
+                )}
                 <SortHeader label="Challan #" field="challan" current={sortField} dir={sortDir} onSort={handleSort} />
                 <th className="p-3 font-medium">Type</th>
                 <SortHeader label="Date" field="date" current={sortField} dir={sortDir} onSort={handleSort} />
@@ -340,6 +367,7 @@ const ChallanList: React.FC = () => {
                 <th className="p-3 font-medium text-right">Items</th>
                 <SortHeader label="Net Weight (kg)" field="net_weight" current={sortField} dir={sortDir} onSort={handleSort} className="text-right" />
                 <SortHeader label="Amount" field="amount" current={sortField} dir={sortDir} onSort={handleSort} className="text-right" />
+                <th className="p-3 font-medium">Payment</th>
               </tr>
             </thead>
             <tbody>
@@ -350,8 +378,17 @@ const ChallanList: React.FC = () => {
                 const edyGross = isEDY
                   ? allItems.filter((i: any) => i.challan_id === c.id).reduce((sum: number, i: any) => sum + (Number(i.gross_weight) || 0), 0)
                   : 0;
+                const state = paymentState(s.totalAmount, c.amount_received);
+                const balance = Math.max(s.totalAmount - c.amount_received, 0);
                 return (
                   <tr key={c.id} className="border-b border-border hover:bg-secondary/30 btn-transition">
+                    {isAdmin && (
+                      <td className="p-3">
+                        <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleOne(c.id)}
+                          disabled={s.totalAmount <= 0 || state === 'Paid'} className="accent-primary w-4 h-4"
+                          aria-label={`Select challan ${c.challan_number}`} />
+                      </td>
+                    )}
                     <td className="p-3">
                       <Link to={`/dispatch/${c.id}`} className="text-primary font-medium hover:underline">{c.challan_number}</Link>
                     </td>
@@ -375,14 +412,31 @@ const ChallanList: React.FC = () => {
                     <td className="p-3 text-right font-medium">
                       {isEDY ? '—' : `₹${s.totalAmount.toFixed(2)}`}
                     </td>
+                    <td className="p-3">
+                      {s.totalAmount <= 0 ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        <>
+                          <span className={cn('text-xs px-2 py-0.5 rounded', PAY_BADGE[state])}>{state}</span>
+                          {state !== 'Paid' && (
+                            <p className="text-xs text-muted-foreground mt-0.5">Bal ₹{balance.toFixed(2)}</p>
+                          )}
+                        </>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
               <tr className="bg-muted/50 font-semibold">
-                <td className="p-3" colSpan={5}>Total ({filtered.length} challans)</td>
+                <td className="p-3" colSpan={isAdmin ? 6 : 5}>Total ({filtered.length} challans)</td>
                 <td className="p-3 text-right">{totals.totalNetWeight.toFixed(3)} kg</td>
                 <td className="p-3 text-right">₹{totals.totalAmount.toFixed(2)}</td>
+                <td className="p-3 text-xs">
+                  <p>Received ₹{totals.totalReceived.toFixed(2)}</p>
+                  <p className="text-muted-foreground">Outstanding ₹{Math.max(totals.outstanding, 0).toFixed(2)}</p>
+                </td>
               </tr>
+
             </tbody>
           </table>
         </div>
