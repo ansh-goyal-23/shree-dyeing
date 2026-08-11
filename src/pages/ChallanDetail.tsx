@@ -31,10 +31,12 @@ const ChallanDetail: React.FC = () => {
   const { data: challanItems = [], isLoading: itemsLoading } = useChallanItems(id || '');
   const updateChallan = useUpdateChallan();
   const deleteChallan = useDeleteChallan();
+  const updatePayment = useUpdateChallanPayment();
+  const { isAdmin } = useRole();
   const { lots } = useApp();
   const clientId = challan?.client_id || '';
   const { data: clientRates = [] } = useClientRates(clientId || undefined);
-  
+  const [payInput, setPayInput] = useState('');
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -42,6 +44,7 @@ const ChallanDetail: React.FC = () => {
     prepared_by_name: '', receiver_name: '', receiver_contact_number: '',
   });
   const [items, setItems] = useState<ItemData[]>([]);
+
 
   useEffect(() => {
     if (challan) {
