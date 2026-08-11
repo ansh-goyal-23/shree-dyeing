@@ -152,6 +152,13 @@ const ChallanList: React.FC = () => {
       list = list.filter(c => toLocalDay(c.date) <= to);
     }
 
+    if (paymentFilter) {
+      list = list.filter(c => {
+        const total = itemSummaryMap[c.id]?.totalAmount || 0;
+        return paymentState(total, c.amount_received) === paymentFilter;
+      });
+    }
+
     // Sort
     list = [...list].sort((a, b) => {
       let cmp = 0;
@@ -178,20 +185,61 @@ const ChallanList: React.FC = () => {
     });
 
     return list;
-  }, [challans, search, clientFilter, dateFrom, dateTo, sortField, sortDir, allItems, itemSummaryMap]);
+  }, [challans, search, clientFilter, dateFrom, dateTo, paymentFilter, sortField, sortDir, allItems, itemSummaryMap]);
 
   const totals = useMemo(() => {
     let totalNetWeight = 0;
     let totalAmount = 0;
+    let totalReceived = 0;
     filtered.forEach(c => {
       const s = itemSummaryMap[c.id];
       if (s) {
         totalNetWeight += s.totalNetWeight;
         totalAmount += s.totalAmount;
       }
+      totalReceived += Math.min(c.amount_received, s?.totalAmount ?? c.amount_received);
     });
-    return { totalNetWeight, totalAmount };
+    return { totalNetWeight, totalAmount, totalReceived, outstanding: totalAmount - totalReceived };
   }, [filtered, itemSummaryMap]);
+
+  const selectableIds = useMemo(
+    () => filtered.filter(c => {
+      const total = itemSummaryMap[c.id]?.totalAmount || 0;
+      return total > 0 && paymentState(total, c.amount_received) !== 'Paid';
+    }).map(c => c.id),
+    [filtered, itemSummaryMap],
+  );
+
+  const toggleOne = (id: string) => setSelected(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  const allSelected = selectableIds.length > 0 && selectableIds.every(id => selected.has(id));
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(selectableIds));
+
+  const handleBulkPaid = async () => {
+    const rows = filtered
+      .filter(c => selected.has(c.id))
+      .map(c => ({
+        id: c.id,
+        challan_number: c.challan_number,
+        total: itemSummaryMap[c.id]?.totalAmount || 0,
+        amount_received: itemSummaryMap[c.id]?.totalAmount || 0,
+        prev_received: c.amount_received,
+      }))
+      .filter(r => r.total > 0);
+    if (rows.length === 0) { toast.error('No payable challans selected.'); return; }
+    try {
+      await bulkPay.mutateAsync(rows);
+      toast.success(`${rows.length} challan(s) marked Paid.`);
+      setSelected(new Set());
+    } catch {
+      toast.error('Failed to update payments.');
+    }
+  };
+
 
   return (
     <div className="space-y-6">
