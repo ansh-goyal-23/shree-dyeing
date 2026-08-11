@@ -333,6 +333,55 @@ const ChallanDetail: React.FC = () => {
         )}
       </div>
 
+      {/* Payment */}
+      {savedTotal > 0 && (
+        <div className="card-industrial p-5 space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <h2 className="text-sm font-semibold">Payment</h2>
+            <span className={
+              payState === 'Paid'
+                ? 'text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                : payState === 'Partially Paid'
+                  ? 'text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200'
+                  : 'text-xs px-2 py-0.5 rounded bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200'
+            }>{payState}</span>
+          </div>
+          <div className="grid grid-cols-3 gap-4 text-sm">
+            <div><span className="text-muted-foreground">Total</span><p className="font-medium mt-0.5">₹{savedTotal.toFixed(2)}</p></div>
+            <div><span className="text-muted-foreground">Received</span><p className="font-medium mt-0.5">₹{received.toFixed(2)}</p></div>
+            <div><span className="text-muted-foreground">Balance</span><p className="font-medium mt-0.5">₹{balance.toFixed(2)}</p></div>
+          </div>
+          {isAdmin && (
+            <div className="flex flex-wrap items-end gap-3 pt-2 border-t border-border">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Amount Received (Rs.)</label>
+                <input type="number" step="0.01" min="0" value={payInput} onChange={e => setPayInput(e.target.value)}
+                  placeholder={received.toFixed(2)} className="input-industrial w-40 mt-1" />
+              </div>
+              <button onClick={() => {
+                const v = parseFloat(payInput);
+                if (isNaN(v) || v < 0) { toast.error('Enter a valid amount.'); return; }
+                if (v > savedTotal + 0.005) { toast.error('Amount exceeds challan total.'); return; }
+                savePayment(v);
+              }} disabled={updatePayment.isPending}
+                className="px-3 h-9 border border-input rounded-md text-sm font-medium hover:bg-secondary btn-transition disabled:opacity-50">
+                Save Amount
+              </button>
+              <button onClick={() => savePayment(savedTotal)} disabled={updatePayment.isPending || payState === 'Paid'}
+                className="inline-flex items-center gap-2 px-4 h-9 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90 btn-transition disabled:opacity-50">
+                {updatePayment.isPending && <Loader2 className="w-4 h-4 animate-spin" />} Mark as Paid
+              </button>
+              <button onClick={() => savePayment(0)} disabled={updatePayment.isPending || received === 0}
+                className="px-3 h-9 border border-input rounded-md text-sm font-medium hover:bg-secondary btn-transition disabled:opacity-50">
+                Mark as Unpaid
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+
+
 
       {/* Footer details */}
       {editing ? (
