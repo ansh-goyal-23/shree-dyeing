@@ -136,6 +136,8 @@ const mapChallan = (r: any): Challan => ({
   receiver_contact_number: r.receiver_contact_number || '',
   created_at: r.created_at,
   created_by: r.created_by || null,
+  amount_received: Number(r.amount_received) || 0,
+  paid_at: r.paid_at || null,
 });
 
 const mapItem = (r: any): ChallanItem => ({
