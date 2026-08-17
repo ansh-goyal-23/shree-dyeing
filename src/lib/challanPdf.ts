@@ -195,6 +195,7 @@ function renderChallan(doc: jsPDF, challan: Challan, items: ChallanItem[]): numb
 
   y += 1;
   divider();
+  y += 1.5;
 
   // ── Footer ──
   const footerRow = (label: string, value: string) => {
