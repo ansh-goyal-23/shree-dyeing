@@ -220,7 +220,7 @@ function renderChallan(doc: jsPDF, challan: Challan, items: ChallanItem[]): numb
   doc.text('— Thank you —', PAGE_W / 2, y, { align: 'center' });
 
 
-  return doc.output('blob');
+  return y;
 }
 
 export function downloadChallanPdf(challan: Challan, items: ChallanItem[]) {
