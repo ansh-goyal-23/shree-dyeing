@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useChallan, useChallanItems, useUpdateChallan, useDeleteChallan, useUpdateChallanPayment } from '@/hooks/useChallan';
 import { paymentState } from '@/types/challan';
@@ -60,9 +60,15 @@ const ChallanDetail: React.FC = () => {
     }
   }, [challan]);
 
+  // Fall back to the lot's denier when the saved item has none (older challans).
+  const viewItems = useMemo(() => challanItems.map(i => ({
+    ...i,
+    denier: i.denier || lots.find(l => l.lot_no === i.lot_no)?.denier || '',
+  })), [challanItems, lots]);
+
   useEffect(() => {
-    if (challanItems.length > 0) {
-      setItems(challanItems.map(i => ({
+    if (viewItems.length > 0) {
+      setItems(viewItems.map(i => ({
         lot_no: i.lot_no, shade_number: i.shade_number, color_name: i.color_name,
         denier: i.denier || '',
         packaging_type: i.packaging_type, gross_weight: i.gross_weight,
@@ -71,7 +77,7 @@ const ChallanDetail: React.FC = () => {
         ref_no: i.ref_no || '',
       })));
     }
-  }, [challanItems]);
+  }, [viewItems]);
 
   const totalNetWeight = items.reduce((s, i) => s + (i.net_weight || 0), 0);
   const totalAmount = items.reduce((s, i) => s + (i.amount || 0), 0);
@@ -132,13 +138,13 @@ const ChallanDetail: React.FC = () => {
   };
 
   const handleDownloadPdf = () => {
-    if (challan) downloadChallanPdf(challan, challanItems);
+    if (challan) downloadChallanPdf(challan, viewItems);
   };
 
   const handleShare = async () => {
     if (challan) {
       try {
-        await shareChallanPdf(challan, challanItems);
+        await shareChallanPdf(challan, viewItems);
       } catch {
         toast.error('Sharing failed.');
       }
@@ -300,7 +306,7 @@ const ChallanDetail: React.FC = () => {
               ) : (
                 (challanItems.length === 0 ? (
                   <tr><td colSpan={12} className="p-6 text-center text-muted-foreground">No items.</td></tr>
-                ) : challanItems.map(item => (
+                ) : viewItems.map(item => (
                   <tr key={item.id} className="border-b border-border">
                     <td className="p-2 font-medium">
                       <Link to={`/shade-management/lots/${item.lot_no}`} className="text-primary hover:underline">{item.lot_no}</Link>
@@ -308,7 +314,7 @@ const ChallanDetail: React.FC = () => {
                     <td className="p-2">{item.ref_no || '—'}</td>
                     <td className="p-2">{item.shade_number}</td>
                     <td className="p-2">{item.color_name}</td>
-                    <td className="p-2">{item.denier}</td>
+                    <td className="p-2">{item.denier || '—'}</td>
                     <td className="p-2">{item.lot_type || 'Production'}</td>
                     <td className="p-2">{PACKAGING_LABEL[item.packaging_type] || item.packaging_type}</td>
                     <td className="p-2">{item.gross_weight.toFixed(3)}</td>
