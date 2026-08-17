@@ -13,40 +13,22 @@ const MARGIN = 3;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 
 export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): Blob {
-  const isEdy = challan.challan_kind === 'edy';
+  // Pass 1: draw onto a throw-away tall page just to measure the real content height.
+  const measureDoc = new jsPDF({ unit: 'mm', format: [PAGE_W, 4000] });
+  const contentH = renderChallan(measureDoc, challan, items);
+  const pageH = Math.max(contentH + MARGIN + 4, 80);
 
-  // Estimate page height — we'll grow as needed with addPage-less approach:
-  // jsPDF requires a fixed page size, so precompute total height.
+  // Pass 2: draw for real on an exactly-sized page.
+  const doc = new jsPDF({ unit: 'mm', format: [PAGE_W, pageH] });
+  renderChallan(doc, challan, items);
+  return doc.output('blob');
+}
+
+/** Draws the whole receipt and returns the final y offset (mm). */
+function renderChallan(doc: jsPDF, challan: Challan, items: ChallanItem[]): number {
+  const isEdy = challan.challan_kind === 'edy';
   const lineH = 4.0;
   const smallH = 3.3;
-
-
-  // Rough height calculator
-  let estH = 0;
-  estH += 6; // top pad
-  estH += 5.5; // company name
-  estH += 4.5; // address
-  estH += 4.5; // phone
-  estH += 3; // divider
-  estH += 2; // spacing below header
-  estH += 4 * lineH; // challan no / date / client / kind
-  estH += 3; // divider
-  estH += 4; // items header
-  items.forEach(() => {
-    estH += isEdy ? 6 * smallH + 2 : 9 * smallH + 2;
-  });
-  estH += 3; // divider
-  estH += 2; // spacing above totals
-  estH += 3 * lineH; // totals
-  if (challan.notes) estH += 2 * lineH + 2;
-  estH += 3; // divider
-  estH += 4 * lineH; // footer
-  estH += 8; // bottom pad
-
-
-  const pageH = Math.max(estH, 80);
-
-  const doc = new jsPDF({ unit: 'mm', format: [PAGE_W, pageH] });
   let y = MARGIN + 2;
 
   const centerText = (txt: string, size: number, bold = true) => {
@@ -74,8 +56,9 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
     doc.text(label, MARGIN, y);
     doc.setTextColor(0);
     doc.setFont('helvetica', 'bold');
-    doc.text(value, PAGE_W - MARGIN, y, { align: 'right', maxWidth: CONTENT_W - 15 });
-    y += lineH;
+    const lines = doc.splitTextToSize(String(value ?? ''), CONTENT_W - 15) as string[];
+    doc.text(lines, PAGE_W - MARGIN, y, { align: 'right' });
+    y += lineH + Math.max(lines.length - 1, 0) * (lineH - 0.7);
   };
 
 
@@ -124,8 +107,9 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
     doc.text(label, MARGIN, y);
     doc.setTextColor(0);
     doc.setFont('helvetica', 'bold');
-    doc.text(value, PAGE_W - MARGIN, y, { align: 'right', maxWidth: CONTENT_W - 12 });
-    y += smallH;
+    const lines = doc.splitTextToSize(String(value ?? ''), CONTENT_W - 12) as string[];
+    doc.text(lines, PAGE_W - MARGIN, y, { align: 'right' });
+    y += smallH + Math.max(lines.length - 1, 0) * (smallH - 0.4);
   };
 
   const formatShade = (shade: string | null | undefined) => {
@@ -211,6 +195,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
 
   y += 1;
   divider();
+  y += 1.5;
 
   // ── Footer ──
   const footerRow = (label: string, value: string) => {
@@ -222,8 +207,9 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
     doc.setTextColor(0);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
-    doc.text(value, PAGE_W - MARGIN, y, { align: 'right', maxWidth: CONTENT_W - 15 });
-    y += lineH;
+    const lines = doc.splitTextToSize(String(value ?? ''), CONTENT_W - 15) as string[];
+    doc.text(lines, PAGE_W - MARGIN, y, { align: 'right' });
+    y += lineH + Math.max(lines.length - 1, 0) * (lineH - 0.7);
   };
 
 
@@ -238,7 +224,7 @@ export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): 
   doc.text('— Thank you —', PAGE_W / 2, y, { align: 'center' });
 
 
-  return doc.output('blob');
+  return y;
 }
 
 export function downloadChallanPdf(challan: Challan, items: ChallanItem[]) {
