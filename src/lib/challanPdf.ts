@@ -13,40 +13,22 @@ const MARGIN = 3;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 
 export function generateChallanPdfBlob(challan: Challan, items: ChallanItem[]): Blob {
-  const isEdy = challan.challan_kind === 'edy';
+  // Pass 1: draw onto a throw-away tall page just to measure the real content height.
+  const measureDoc = new jsPDF({ unit: 'mm', format: [PAGE_W, 4000] });
+  const contentH = renderChallan(measureDoc, challan, items);
+  const pageH = Math.max(contentH + MARGIN + 4, 80);
 
-  // Estimate page height — we'll grow as needed with addPage-less approach:
-  // jsPDF requires a fixed page size, so precompute total height.
+  // Pass 2: draw for real on an exactly-sized page.
+  const doc = new jsPDF({ unit: 'mm', format: [PAGE_W, pageH] });
+  renderChallan(doc, challan, items);
+  return doc.output('blob');
+}
+
+/** Draws the whole receipt and returns the final y offset (mm). */
+function renderChallan(doc: jsPDF, challan: Challan, items: ChallanItem[]): number {
+  const isEdy = challan.challan_kind === 'edy';
   const lineH = 4.0;
   const smallH = 3.3;
-
-
-  // Rough height calculator
-  let estH = 0;
-  estH += 6; // top pad
-  estH += 5.5; // company name
-  estH += 4.5; // address
-  estH += 4.5; // phone
-  estH += 3; // divider
-  estH += 2; // spacing below header
-  estH += 4 * lineH; // challan no / date / client / kind
-  estH += 3; // divider
-  estH += 4; // items header
-  items.forEach(() => {
-    estH += isEdy ? 6 * smallH + 2 : 9 * smallH + 2;
-  });
-  estH += 3; // divider
-  estH += 2; // spacing above totals
-  estH += 3 * lineH; // totals
-  if (challan.notes) estH += 2 * lineH + 2;
-  estH += 3; // divider
-  estH += 4 * lineH; // footer
-  estH += 8; // bottom pad
-
-
-  const pageH = Math.max(estH, 80);
-
-  const doc = new jsPDF({ unit: 'mm', format: [PAGE_W, pageH] });
   let y = MARGIN + 2;
 
   const centerText = (txt: string, size: number, bold = true) => {
