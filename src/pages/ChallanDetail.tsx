@@ -306,7 +306,7 @@ const ChallanDetail: React.FC = () => {
               ) : (
                 (challanItems.length === 0 ? (
                   <tr><td colSpan={12} className="p-6 text-center text-muted-foreground">No items.</td></tr>
-                ) : challanItems.map(item => (
+                ) : viewItems.map(item => (
                   <tr key={item.id} className="border-b border-border">
                     <td className="p-2 font-medium">
                       <Link to={`/shade-management/lots/${item.lot_no}`} className="text-primary hover:underline">{item.lot_no}</Link>
@@ -314,7 +314,7 @@ const ChallanDetail: React.FC = () => {
                     <td className="p-2">{item.ref_no || '—'}</td>
                     <td className="p-2">{item.shade_number}</td>
                     <td className="p-2">{item.color_name}</td>
-                    <td className="p-2">{item.denier}</td>
+                    <td className="p-2">{item.denier || '—'}</td>
                     <td className="p-2">{item.lot_type || 'Production'}</td>
                     <td className="p-2">{PACKAGING_LABEL[item.packaging_type] || item.packaging_type}</td>
                     <td className="p-2">{item.gross_weight.toFixed(3)}</td>
