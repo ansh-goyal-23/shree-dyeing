@@ -206,8 +206,9 @@ function renderChallan(doc: jsPDF, challan: Challan, items: ChallanItem[]): numb
     doc.setTextColor(0);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
-    doc.text(value, PAGE_W - MARGIN, y, { align: 'right', maxWidth: CONTENT_W - 15 });
-    y += lineH;
+    const lines = doc.splitTextToSize(String(value ?? ''), CONTENT_W - 15) as string[];
+    doc.text(lines, PAGE_W - MARGIN, y, { align: 'right' });
+    y += lineH + Math.max(lines.length - 1, 0) * (lineH - 0.7);
   };
 
 
