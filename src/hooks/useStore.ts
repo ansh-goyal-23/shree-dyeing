@@ -127,8 +127,8 @@ export const useStoreCurrentStock = () =>
       if (itemRes.error) throw itemRes.error;
       if (rackRes.error) throw rackRes.error;
 
-      const items = new Map((itemRes.data ?? []).map((i: any) => [i.id, i]));
-      const racks = new Map((rackRes.data ?? []).map((r: any) => [r.id, r]));
+      const items = new Map<string, any>((itemRes.data ?? []).map((i: any) => [i.id, i]));
+      const racks = new Map<string, any>((rackRes.data ?? []).map((r: any) => [r.id, r]));
       const agg = new Map<string, StoreCurrentStockRow>();
 
       for (const t of (txRes.data ?? []) as any[]) {
