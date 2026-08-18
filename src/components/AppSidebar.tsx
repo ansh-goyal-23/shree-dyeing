@@ -24,6 +24,7 @@ import {
   ClipboardCheck,
   BookOpenCheck,
   Activity,
+  FlaskConical,
 } from 'lucide-react';
 
 import { useRole } from '@/context/RoleContext';
@@ -60,6 +61,7 @@ const dispatchItems = [
   { title: 'New Challan', url: '/dispatch/create', icon: PlusCircle },
   { title: 'Client Rates', url: '/dispatch/client-rates', icon: IndianRupee },
   { title: 'Oil Consumption', url: '/dispatch/oil-consumption', icon: Droplet },
+  { title: 'Dye & Chemical Usage', url: '/dispatch/consumption', icon: FlaskConical },
 ];
 
 const expenseItems = [
