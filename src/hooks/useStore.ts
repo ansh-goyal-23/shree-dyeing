@@ -117,11 +117,46 @@ export const useStoreCurrentStock = () =>
   useQuery({
     queryKey: ['store_current_stock'],
     queryFn: async () => {
-      const { data, error } = await sb.from('store_current_stock').select('*');
-      if (error) throw error;
-      return (data ?? []) as StoreCurrentStockRow[];
+      // Aggregated client-side from the ledger (the legacy per-rack view was dropped).
+      const [txRes, itemRes, rackRes] = await Promise.all([
+        sb.from('store_stock_transactions').select('item_id, rack_id, quantity, unit'),
+        sb.from('store_items').select('*').eq('is_active', true),
+        sb.from('store_racks').select('id, rack_code, rack_name'),
+      ]);
+      if (txRes.error) throw txRes.error;
+      if (itemRes.error) throw itemRes.error;
+      if (rackRes.error) throw rackRes.error;
+
+      const items = new Map((itemRes.data ?? []).map((i: any) => [i.id, i]));
+      const racks = new Map((rackRes.data ?? []).map((r: any) => [r.id, r]));
+      const agg = new Map<string, StoreCurrentStockRow>();
+
+      for (const t of (txRes.data ?? []) as any[]) {
+        const item = items.get(t.item_id);
+        if (!item) continue;
+        const rackId = t.rack_id ?? null;
+        const key = `${t.item_id}::${rackId ?? ''}`;
+        const rack = rackId ? racks.get(rackId) : null;
+        const row = agg.get(key) ?? {
+          item_id: t.item_id,
+          item_code: item.item_code,
+          item_name: item.item_name,
+          category: item.category,
+          sub_category: item.sub_category,
+          unit: item.unit,
+          is_asset: item.is_asset,
+          rack_id: rackId,
+          rack_code: rack?.rack_code ?? null,
+          rack_name: rack?.rack_name ?? null,
+          current_quantity: 0,
+        } as StoreCurrentStockRow;
+        row.current_quantity = Number(row.current_quantity) + Number(t.quantity || 0);
+        agg.set(key, row);
+      }
+      return Array.from(agg.values()) as StoreCurrentStockRow[];
     },
   });
+
 
 export interface StoreCurrentStockByItemRow {
   item_id: string;
