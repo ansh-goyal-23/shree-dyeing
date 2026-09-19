@@ -116,3 +116,35 @@ alter default privileges in schema staging grant all on tables to anon, authenti
 
 -- Done. Verify with:
 --   select table_name from information_schema.tables where table_schema = 'staging';
+
+-- 2026-09-19 follow-up: user_roles and master_items were originally scoped
+-- out of this migration, but both are needed for the app to function
+-- correctly on staging:
+--   - user_roles: without it, RoleContext.tsx finds no matching role for
+--     any logged-in user and silently falls back to 'viewer' for everyone,
+--     even real admins/editors -- discovered when admin@admin.com showed
+--     "View only" on staging despite being an admin in production.
+--   - master_items: without it, the dye/chemical dropdowns in RecipeEditor
+--     are empty, making lot/recipe creation untestable.
+-- Both are catalogue/permissions data, not sensitive business records, so
+-- they were copied in full from public (auth.users / user_id values are
+-- already shared across schemas, since Auth itself is project-wide).
+
+create table if not exists staging.user_roles (like public.user_roles including all);
+
+alter table staging.user_roles enable row level security;
+drop policy if exists staging_auth_full_access on staging.user_roles;
+create policy staging_auth_full_access on staging.user_roles for all to authenticated using (true) with check (true);
+grant all on staging.user_roles to anon, authenticated;
+
+insert into staging.user_roles (id, user_id, role, created_at)
+select id, user_id, role, created_at from public.user_roles
+on conflict (id) do nothing;
+
+insert into staging.master_items (id, user_id, name, type, shade_family, company, unit, is_active, short_name)
+select id, user_id, name, type, shade_family, company, unit, is_active, short_name from public.master_items
+on conflict (id) do nothing;
+
+-- Note: this is a one-time seed, not a sync. If production adds new team
+-- members/roles or new master items later, re-run the two INSERTs above
+-- (they're idempotent via ON CONFLICT DO NOTHING) to pick up the new rows.
