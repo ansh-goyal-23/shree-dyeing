@@ -18,7 +18,7 @@ interface AppState {
 }
 
 interface AppContextType extends AppState {
-  addLot: (lot: Omit<Lot, 'net_weight' | 'is_approved' | 'status'>) => Promise<boolean>;
+  addLot: (lot: Omit<Lot, 'net_weight' | 'is_approved' | 'status' | 'yarn_type'> & { yarn_type?: Lot['yarn_type'] }) => Promise<boolean>;
   updateLot: (lotNo: string, data: Partial<Omit<Lot, 'lot_no' | 'net_weight' | 'is_approved' | 'status'>>) => Promise<boolean>;
   deleteLot: (lotNo: string) => Promise<boolean>;
   updateLotStatus: (lotNo: string, status: LotStatus) => Promise<void>;
@@ -125,7 +125,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const addLot = useCallback(async (lotData: Omit<Lot, 'net_weight' | 'is_approved' | 'status'>): Promise<boolean> => {
+  const addLot = useCallback(async (lotData: Omit<Lot, 'net_weight' | 'is_approved' | 'status' | 'yarn_type'> & { yarn_type?: Lot['yarn_type'] }): Promise<boolean> => {
     const net_weight = calculateNetWeight(lotData.gross_weight, lotData.number_of_chesses);
     const shade_number = lotData.shade_number?.trim() || lotData.lot_no;
     const isProduction = shade_number !== lotData.lot_no;
@@ -136,6 +136,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       gross_weight: lotData.gross_weight, net_weight, is_approved: false,
       shade_number, source_lot_no: lotData.source_lot_no || null, status,
       ref_no: lotData.ref_no?.trim() || null,
+      yarn_type: lotData.yarn_type || 'Polyester',
     });
     if (lotErr) return false;
     logBusinessEvent({
@@ -264,12 +265,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [fetchAll]);
 
   const addMasterItem = useCallback(async (item: Omit<MasterItem, 'id'>) => {
-    await supabase.from('master_items').insert({ name: item.name, short_name: item.short_name || '', type: item.type, shade_family: item.shade_family, company: item.company, unit: item.unit, is_active: item.is_active });
+    await supabase.from('master_items').insert({ name: item.name, short_name: item.short_name || '', type: item.type, shade_family: item.shade_family, company: item.company, unit: item.unit, is_active: item.is_active, yarn_scope: item.yarn_scope && item.yarn_scope.length > 0 ? item.yarn_scope : ['Polyester'] });
     await fetchAll();
   }, [fetchAll]);
 
   const updateMasterItem = useCallback(async (item: MasterItem) => {
-    await supabase.from('master_items').update({ name: item.name, short_name: item.short_name || '', type: item.type, shade_family: item.shade_family, company: item.company, unit: item.unit, is_active: item.is_active }).eq('id', item.id);
+    await supabase.from('master_items').update({ name: item.name, short_name: item.short_name || '', type: item.type, shade_family: item.shade_family, company: item.company, unit: item.unit, is_active: item.is_active, yarn_scope: item.yarn_scope && item.yarn_scope.length > 0 ? item.yarn_scope : ['Polyester'] }).eq('id', item.id);
     await fetchAll();
   }, [fetchAll]);
 
@@ -376,6 +377,7 @@ const mapLot = (row: any): Lot => ({
   remarks: row.remarks || '',
   ref_no: row.ref_no || null,
   created_by: row.created_by || null,
+  yarn_type: row.yarn_type || 'Polyester',
 });
 
 const mapDye = (row: any): RecipeDye => ({
@@ -392,6 +394,7 @@ const mapChemical = (row: any): RecipeChemical => ({
 const mapMasterItem = (row: any): MasterItem => ({
   id: row.id, name: row.name, short_name: row.short_name || '', type: row.type, shade_family: row.shade_family || '',
   company: row.company || '', unit: row.unit || '', is_active: row.is_active ?? true,
+  yarn_scope: Array.isArray(row.yarn_scope) && row.yarn_scope.length > 0 ? row.yarn_scope : ['Polyester'],
 });
 
 const mapProcessStep = (row: any): ProcessStep => ({

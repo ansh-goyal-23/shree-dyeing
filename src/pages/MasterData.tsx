@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Plus, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
-import type { MasterItem } from '@/types';
+import type { MasterItem, YarnType } from '@/types';
+import { YARN_TYPES } from '@/types';
 import CompanyAutocomplete from '@/components/CompanyAutocomplete';
 
 const MasterData: React.FC = () => {
@@ -19,7 +20,16 @@ const MasterData: React.FC = () => {
     company: '',
     unit: 'gm',
     is_active: true,
+    yarn_scope: ['Polyester'] as YarnType[],
   });
+
+  const toggleYarnScope = (yt: YarnType) => {
+    setForm(f => {
+      const has = f.yarn_scope.includes(yt);
+      const next = has ? f.yarn_scope.filter(x => x !== yt) : [...f.yarn_scope, yt];
+      return { ...f, yarn_scope: next.length > 0 ? next : f.yarn_scope };
+    });
+  };
 
   const filtered = masterItems.filter(m => filter === 'all' || m.type === filter).sort((a, b) => {
     // Sort dyes by short_name, others by name
@@ -29,7 +39,7 @@ const MasterData: React.FC = () => {
   });
 
   const resetForm = () => {
-    setForm({ name: '', short_name: '', type: 'dye', shade_family: '', company: '', unit: 'gm', is_active: true });
+    setForm({ name: '', short_name: '', type: 'dye', shade_family: '', company: '', unit: 'gm', is_active: true, yarn_scope: ['Polyester'] });
     setEditItem(null);
     setShowForm(false);
   };
@@ -56,7 +66,7 @@ const MasterData: React.FC = () => {
   };
 
   const startEdit = (item: MasterItem) => {
-    setForm({ name: item.name, short_name: item.short_name, type: item.type, shade_family: item.shade_family, company: item.company, unit: item.unit, is_active: item.is_active });
+    setForm({ name: item.name, short_name: item.short_name, type: item.type, shade_family: item.shade_family, company: item.company, unit: item.unit, is_active: item.is_active, yarn_scope: item.yarn_scope && item.yarn_scope.length > 0 ? item.yarn_scope : ['Polyester'] });
     setEditItem(item);
     setShowForm(true);
   };
@@ -108,6 +118,8 @@ const MasterData: React.FC = () => {
                 <option value="kg">kg</option>
                 <option value="ml">ml</option>
                 <option value="litre">litre</option>
+                <option value="gpl">gpl</option>
+                <option value="%">%</option>
               </select>
             </div>
             <div className="flex items-end gap-2 pb-1">
@@ -115,6 +127,18 @@ const MasterData: React.FC = () => {
                 <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} className="w-4 h-4" />
                 Active
               </label>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Yarn Type(s) *</label>
+            <p className="text-xs text-muted-foreground">Which yarn type(s) this item shows up for when creating a lot.</p>
+            <div className="flex gap-4 pt-1">
+              {YARN_TYPES.map(yt => (
+                <label key={yt} className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={form.yarn_scope.includes(yt)} onChange={() => toggleYarnScope(yt)} className="w-4 h-4" />
+                  {yt}
+                </label>
+              ))}
             </div>
           </div>
           <div className="flex gap-2">
@@ -150,13 +174,14 @@ const MasterData: React.FC = () => {
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Unit</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Shade Family</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">Company</th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground">Yarn Type(s)</th>
               <th className="text-center px-4 py-3 font-medium text-muted-foreground">Active</th>
               <th className="text-center px-4 py-3 font-medium text-muted-foreground">Edit</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">No items found.</td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">No items found.</td></tr>
             ) : (
               filtered.map(item => (
                 <tr key={item.id} className="row-separator hover:bg-secondary/30 btn-transition">
@@ -166,6 +191,7 @@ const MasterData: React.FC = () => {
                   <td className="px-4 py-3">{item.unit}</td>
                   <td className="px-4 py-3">{item.shade_family || '—'}</td>
                   <td className="px-4 py-3">{item.company || '—'}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{(item.yarn_scope || []).join(', ') || '—'}</td>
                   <td className="px-4 py-3 text-center">{item.is_active ? '✓' : '—'}</td>
                   <td className="px-4 py-3 text-center">
                     <button onClick={() => startEdit(item)} className="p-1 hover:bg-secondary rounded btn-transition">

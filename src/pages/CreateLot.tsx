@@ -7,9 +7,14 @@ import { supabase } from '@/integrations/supabase/client';
 import LotFieldAutocomplete from '@/components/LotFieldAutocomplete';
 import DecimalInput from '@/components/DecimalInput';
 import { getDraft, setDraft, clearDraft } from '@/lib/draftCache';
+import type { YarnType } from '@/types';
+import CreateCottonLot from '@/pages/CreateCottonLot';
+import { FlaskConical, Shirt, Layers } from 'lucide-react';
 
-
-const CreateLot: React.FC = () => {
+// ── Existing Polyester lot-creation form. Unchanged from before the
+// multi-yarn-type work below -- kept as its own component so the working,
+// production-proven flow is not touched by the new yarn-type picker. ──
+const PolyesterLotForm: React.FC = () => {
   const { addLot, lots, getDyesForLot, getChemicalsForLot, updateRecipeDyes, updateRecipeChemicals, masterItems, processSteps, stepDyes, stepChemicals, recipeDyes, recipeChemicals, refreshData } = useApp();
   const companyNames = useMemo(() => [...lots.map(l => l.yarn_company_name)].sort((a, b) => a.localeCompare(b)), [lots]);
   const colorNames = useMemo(() => ([...lots.map(l => l.color_name).filter(Boolean)] as string[]).sort((a, b) => a.localeCompare(b)), [lots]);
@@ -367,6 +372,67 @@ const ShadeDropdown: React.FC<ShadeDropdownProps> = ({ value, onChange, onSelect
           ))}
         </div>
       )}
+    </div>
+  );
+};
+
+
+
+/* ─── Top-level entry point: pick a yarn type, then route to the flow
+   built for it. Arriving from an Intake link (the only existing
+   integration that prefills yarn company / color) skips the picker and
+   goes straight to the Polyester form, since that's the only tested path
+   for that link today. ─── */
+
+const YARN_TYPE_OPTIONS: { type: YarnType; label: string; description: string; icon: React.ElementType; available: boolean }[] = [
+  { type: 'Polyester', label: 'Polyester', description: 'Disperse dyes · BUF / DFT / CWS · existing recipe flow', icon: Layers, available: true },
+  { type: 'Cotton', label: 'Cotton', description: 'Reactive dyes · scour, dye, alkali, soaping, fixing stages', icon: Shirt, available: true },
+  { type: 'Nylon', label: 'Nylon', description: 'Acid dyes · coming soon', icon: FlaskConical, available: false },
+];
+
+const CreateLot: React.FC = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const fromIntake = Boolean(searchParams.get('intake_item'));
+  const [yarnType, setYarnType] = useState<YarnType | null>(fromIntake ? 'Polyester' : null);
+
+  if (yarnType === 'Polyester') return <PolyesterLotForm />;
+  if (yarnType === 'Cotton') return <CreateCottonLot onBack={() => setYarnType(null)} />;
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      <h1 className="text-2xl font-semibold tracking-tight">Create Lot</h1>
+      <p className="text-sm text-muted-foreground -mt-4">Which yarn type is this lot?</p>
+      <div className="grid gap-4 sm:grid-cols-3">
+        {YARN_TYPE_OPTIONS.map(opt => {
+          const Icon = opt.icon;
+          return (
+            <button
+              key={opt.type}
+              type="button"
+              disabled={!opt.available}
+              onClick={() => opt.available && setYarnType(opt.type)}
+              className={`card-industrial p-5 text-left space-y-2 btn-transition ${
+                opt.available ? 'hover:border-primary hover:shadow-sm cursor-pointer' : 'opacity-50 cursor-not-allowed'
+              }`}
+            >
+              <Icon className="w-6 h-6 text-primary" />
+              <div className="font-semibold">{opt.label}</div>
+              <p className="text-xs text-muted-foreground">{opt.description}</p>
+              {!opt.available && <span className="text-xs font-medium text-amber-600">Coming soon</span>}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex justify-end pt-2">
+        <button
+          type="button"
+          onClick={() => navigate('/shade-management/lots')}
+          className="px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 };

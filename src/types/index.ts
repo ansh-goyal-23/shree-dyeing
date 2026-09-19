@@ -1,3 +1,10 @@
+// Which fiber/dyeing process a lot follows. Polyester uses the existing
+// recipe_dyes/recipe_chemicals/process_steps tables; Nylon and Cotton use
+// their own dedicated *_lot_stages tables (see src/lib/cottonStages.ts).
+export type YarnType = 'Polyester' | 'Nylon' | 'Cotton';
+
+export const YARN_TYPES: YarnType[] = ['Polyester', 'Nylon', 'Cotton'];
+
 export interface MasterItem {
   id: string;
   name: string;
@@ -7,6 +14,7 @@ export interface MasterItem {
   company: string;
   unit: string;
   is_active: boolean;
+  yarn_scope: YarnType[];
 }
 
 export interface Lot {
@@ -25,6 +33,7 @@ export interface Lot {
   remarks: string;
   ref_no?: string | null;
   created_by?: string | null;
+  yarn_type: YarnType;
 }
 
 export interface RecipeDye {
@@ -80,4 +89,43 @@ export interface LotPhoto {
   label: string;
   category: 'base' | 'step' | 'general';
   created_at: string;
+}
+
+// ── Cotton lot flow (dedicated data model, separate from the polyester
+// recipe_dyes/recipe_chemicals/process_steps tables) ────────────────────
+
+export type CottonStageType =
+  | 'Scour + Bleach'
+  | 'Neutralize'
+  | 'Dye Bath'
+  | 'Alkali - Soda'
+  | 'Alkali - Caustic'
+  | 'Soaping'
+  | 'Fixing';
+
+export interface CottonLotStage {
+  id: string;
+  lot_no: string;
+  stage_type: CottonStageType;
+  stage_order: number;
+  target_ph: number | null;
+  target_temp_c: number | null;
+  ramp_rate_c_per_min: number | null;
+  hold_minutes: number | null;
+  notes: string;
+}
+
+export interface CottonStageChemical {
+  id: string;
+  stage_id: string;
+  chemical_id: string;
+  qty: number;
+}
+
+export interface CottonStageDye {
+  id: string;
+  stage_id: string;
+  dye_id: string;
+  percentage: number;
+  qty_grams: number;
 }
