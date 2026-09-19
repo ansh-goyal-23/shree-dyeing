@@ -6,6 +6,7 @@ import { useRole } from '@/context/RoleContext';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { heartbeatSession, setActivityUserContext, endUserSession } from '@/lib/activityCenter';
+import { isStaging } from '@/integrations/supabase/client';
 
 const moduleFromPath = (p: string): string => {
   if (p.startsWith('/shade-management')) return 'shade';
@@ -41,11 +42,16 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
+          {isStaging && (
+            <div className="h-7 flex items-center justify-center bg-amber-500 text-amber-950 text-xs font-semibold tracking-wide uppercase">
+              Staging / Test Environment — not for daily production use
+            </div>
+          )}
           <header className="h-14 flex items-center justify-between border-b bg-primary text-primary-foreground px-4">
             <div className="flex items-center gap-3">
               <SidebarTrigger className="text-primary-foreground hover:bg-primary-foreground/10" />
               <span className="font-mono text-lg font-semibold tracking-tight hidden sm:inline">
-                SHREE DYEING
+                SHREE DYEING{isStaging && ' (STAGING)'}
               </span>
               {isViewer && (
                 <span className="text-xs px-2 py-0.5 rounded bg-primary-foreground/15 border border-primary-foreground/20">
