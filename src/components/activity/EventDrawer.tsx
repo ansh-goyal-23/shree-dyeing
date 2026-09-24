@@ -16,7 +16,6 @@ function entityToPath(et: string | null | undefined, eid: string | null | undefi
   if (t === 'lot' && ref) return `/shade-management/lots/${encodeURIComponent(ref)}`;
   if (t === 'lot' && eid) return `/shade-management/lots/${eid}`;
   if ((t === 'challan' || t === 'dispatch') && eid) return `/dispatch/${eid}`;
-  if (t === 'intake' && eid) return `/sampling/${eid}`;
   if (t === 'expense') return `/expenses`;
   if (t === 'issue' && eid) return `/store/internal-issues/${eid}/edit`;
   if (t === 'inward') return `/store/stock-inward`;

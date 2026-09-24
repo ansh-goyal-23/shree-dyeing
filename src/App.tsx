@@ -24,10 +24,6 @@ import ClientRateMaster from "@/pages/ClientRateMaster";
 import ChallanDetail from "@/pages/ChallanDetail";
 import OilConsumptionReport from "@/pages/OilConsumptionReport";
 import ConsumptionReport from "@/pages/ConsumptionReport";
-import IntakeList from "@/pages/IntakeList";
-import CreateIntake from "@/pages/CreateIntake";
-import IntakeDetail from "@/pages/IntakeDetail";
-import CreateDirectOrder from "@/pages/CreateDirectOrder";
 import ExpenseList from "@/pages/ExpenseList";
 import ExpenseCreatePage from "@/pages/CreateExpense";
 import ItemMaster from "@/pages/ItemMaster";
@@ -100,10 +96,6 @@ const App = () => (
                         <Route path="/shade-management/compare" element={<CompareLots />} />
                         <Route path="/shade-management/lots/:lotNo" element={<LotDetail />} />
                         <Route path="/shade-management/master" element={<MasterData />} />
-                        <Route path="/sampling" element={<IntakeList />} />
-                        <Route path="/sampling/create" element={<WriteRoute redirectTo="/sampling"><CreateIntake /></WriteRoute>} />
-                        <Route path="/sampling/order/create" element={<WriteRoute redirectTo="/sampling"><CreateDirectOrder /></WriteRoute>} />
-                        <Route path="/sampling/:id" element={<IntakeDetail />} />
                         <Route path="/production" element={<PlaceholderModule />} />
                         <Route path="/expenses" element={<ExpenseList />} />
                         <Route path="/expenses/create" element={<WriteRoute redirectTo="/expenses"><ExpenseCreatePage /></WriteRoute>} />

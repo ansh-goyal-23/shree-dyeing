@@ -3,7 +3,6 @@ import { useApp } from '@/context/AppContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { calculateNetWeight, calculateDyeGrams } from '@/lib/calculations';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 import LotFieldAutocomplete from '@/components/LotFieldAutocomplete';
 import DecimalInput from '@/components/DecimalInput';
 import { getDraft, setDraft, clearDraft } from '@/lib/draftCache';
@@ -24,8 +23,6 @@ const PolyesterLotForm: React.FC = () => {
 
   const prefillYarn = searchParams.get('yarn') || '';
   const prefillColor = searchParams.get('color') || '';
-  const intakeItemId = searchParams.get('intake_item');
-  const intakeId = searchParams.get('intake_id');
 
   const DRAFT_KEY = 'createLot:draft';
   const [form, setForm] = useState(() => {
@@ -148,12 +145,6 @@ const PolyesterLotForm: React.FC = () => {
         }
       }
 
-      if (intakeItemId) {
-        await supabase.from('intake_items').update({
-          linked_lot_no: form.lot_no.trim(),
-          status: 'In Development',
-        }).eq('id', intakeItemId);
-      }
       toast.success(`Lot ${form.lot_no} created successfully.`);
 
       const newLotNo = form.lot_no.trim();
@@ -379,10 +370,7 @@ const ShadeDropdown: React.FC<ShadeDropdownProps> = ({ value, onChange, onSelect
 
 
 /* ─── Top-level entry point: pick a yarn type, then route to the flow
-   built for it. Arriving from an Intake link (the only existing
-   integration that prefills yarn company / color) skips the picker and
-   goes straight to the Polyester form, since that's the only tested path
-   for that link today. ─── */
+   built for it. ─── */
 
 const YARN_TYPE_OPTIONS: { type: YarnType; label: string; description: string; icon: React.ElementType; available: boolean }[] = [
   { type: 'Polyester', label: 'Polyester', description: 'Disperse dyes · BUF / DFT / CWS · existing recipe flow', icon: Layers, available: true },
@@ -392,9 +380,7 @@ const YARN_TYPE_OPTIONS: { type: YarnType; label: string; description: string; i
 
 const CreateLot: React.FC = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const fromIntake = Boolean(searchParams.get('intake_item'));
-  const [yarnType, setYarnType] = useState<YarnType | null>(fromIntake ? 'Polyester' : null);
+  const [yarnType, setYarnType] = useState<YarnType | null>(null);
 
   if (yarnType === 'Polyester') return <PolyesterLotForm />;
   if (yarnType === 'Cotton') return <CreateCottonLot onBack={() => setYarnType(null)} />;

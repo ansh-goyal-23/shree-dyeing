@@ -10,7 +10,6 @@ import { isStaging } from '@/integrations/supabase/client';
 
 const moduleFromPath = (p: string): string => {
   if (p.startsWith('/shade-management')) return 'shade';
-  if (p.startsWith('/sampling')) return 'sampling';
   if (p.startsWith('/dispatch')) return 'dispatch';
   if (p.startsWith('/expenses')) return 'expense';
   if (p.startsWith('/store')) return 'store';

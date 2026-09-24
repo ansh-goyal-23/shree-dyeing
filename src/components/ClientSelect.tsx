@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { useClients, useCreateClient } from '@/hooks/useSampling';
+import { useClients, useCreateClient } from '@/hooks/useClients';
 import { PlusCircle } from 'lucide-react';
-import type { Client } from '@/types/sampling';
+import type { Client } from '@/types/client';
 
 interface ClientSelectProps {
   value: string;

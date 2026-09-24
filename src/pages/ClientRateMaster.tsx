@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useClients } from '@/hooks/useSampling';
+import { useClients } from '@/hooks/useClients';
 import { useAllClientRates, useUpsertClientRate, useDeleteClientRate, type ClientRate } from '@/hooks/useClientRates';
 import { useApp } from '@/context/AppContext';
 import { toast } from 'sonner';

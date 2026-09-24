@@ -8,9 +8,8 @@ import ProcessStepForm from '@/components/ProcessStepForm';
 import ProcessStepList from '@/components/ProcessStepList';
 import LotPhotos from '@/components/LotPhotos';
 import ReferenceRecipePanel from '@/components/ReferenceRecipePanel';
-import { useOrdersForLot } from '@/hooks/useSampling';
 import type { LotStatus } from '@/types';
-import { Search, CheckCircle2, Clock, Plus, ArrowLeft, ShoppingCart, Trash2, Pencil, Save, X, MessageSquarePlus, StickyNote } from 'lucide-react';
+import { Search, CheckCircle2, Clock, Plus, ArrowLeft, Trash2, Pencil, Save, X, MessageSquarePlus, StickyNote } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -336,9 +335,6 @@ const LotDetail: React.FC = () => {
         <LotPhotos lotNo={lot.lot_no} />
       </div>
 
-      {/* Order History */}
-      <OrderHistory lotNo={lot.lot_no} />
-
       {/* Referencing Lots */}
       {referencingLots.length > 0 && (
         <div className="card-industrial p-4">
@@ -356,47 +352,6 @@ const LotDetail: React.FC = () => {
         </div>
       )}
 
-    </div>
-  );
-};
-
-const statusColors: Record<string, string> = {
-  Pending: 'bg-correction/10 text-correction',
-  'In Development': 'bg-primary/10 text-primary',
-  'In Production': 'bg-accent text-accent-foreground',
-  Completed: 'bg-approved/10 text-approved',
-  Cancelled: 'bg-destructive/10 text-destructive',
-};
-
-const OrderHistory: React.FC<{ lotNo: string }> = ({ lotNo }) => {
-  const { data: orders = [] } = useOrdersForLot(lotNo);
-  const activeOrders = orders.filter(o => o.status !== 'Cancelled');
-  const totalQty = activeOrders.reduce((sum, o) => sum + (parseFloat(o.order_quantity) || 0), 0);
-
-  if (orders.length === 0) return null;
-
-  return (
-    <div className="card-industrial p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-          <ShoppingCart className="w-4 h-4" /> Orders ({activeOrders.length})
-        </h2>
-        {totalQty > 0 && <span className="text-sm font-data font-semibold">Total: {totalQty}</span>}
-      </div>
-      <div className="divide-y divide-border">
-        {orders.map(order => (
-          <div key={order.id} className={`flex items-center justify-between py-2 px-2 ${order.status === 'Cancelled' ? 'opacity-50' : ''}`}>
-            <div>
-              <span className="text-sm font-medium">{order.client_name || 'Unknown'}</span>
-              <div className="flex items-center gap-2 mt-0.5">
-                {order.order_quantity && <span className="text-xs text-muted-foreground">Qty: {order.order_quantity}</span>}
-                <span className="text-xs text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</span>
-              </div>
-            </div>
-            <Badge className={`text-[10px] ${statusColors[order.status] || ''}`}>{order.status}</Badge>
-          </div>
-        ))}
-      </div>
     </div>
   );
 };
