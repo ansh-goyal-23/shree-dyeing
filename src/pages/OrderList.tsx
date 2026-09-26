@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,11 +10,17 @@ import { Badge } from '@/components/ui/badge';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
-import { PlusCircle, Trash2, Pencil, AlertTriangle, Ban, RotateCcw } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
+import { PlusCircle, Trash2, Pencil, AlertTriangle, Ban, RotateCcw, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useOrders, useCreateOrder, useUpdateOrder, useDeleteOrder, useSetOrderCancelled, useClientNames,
+  useReplaceAllOrders,
 } from '@/hooks/useOrders';
+import { parseOrderSheetFile, type ParsedOrderRow, type SkippedOrderRow } from '@/lib/orderSheetImport';
 import type { OrderInput, OrderStatus } from '@/types/order';
 
 const emptyForm: OrderInput = {
@@ -36,6 +42,7 @@ const OrderList: React.FC = () => {
   const updateOrder = useUpdateOrder();
   const deleteOrder = useDeleteOrder();
   const setCancelled = useSetOrderCancelled();
+  const replaceAllOrders = useReplaceAllOrders();
 
   const [search, setSearch] = useState('');
   const [filterClient, setFilterClient] = useState('all');
@@ -46,6 +53,10 @@ const OrderList: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<OrderInput>(emptyForm);
   const [saving, setSaving] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importPreview, setImportPreview] = useState<{ fileName: string; rows: ParsedOrderRow[]; skipped: SkippedOrderRow[] } | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const uniqueClients = useMemo(
     () => Array.from(new Set([...clientNames, ...orders.map(o => o.client_name)])).sort(),
@@ -68,6 +79,45 @@ const OrderList: React.FC = () => {
     }
     return result;
   }, [orders, search, filterClient, filterStatus, showCancelled]);
+
+  const handleUploadClick = () => fileInputRef.current?.click();
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file later
+    if (!file) return;
+    try {
+      const { rows, skipped } = await parseOrderSheetFile(file);
+      if (rows.length === 0) {
+        toast.error('No usable rows found in that file (every row was missing a Client or Colour, or had an unrecognized date).');
+        return;
+      }
+      setImportPreview({ fileName: file.name, rows, skipped });
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not read that file. Make sure it\'s a .xlsx, .xls or .csv export of the order sheet.');
+    }
+  };
+
+  const confirmImport = async () => {
+    if (!importPreview) return;
+    setImporting(true);
+    try {
+      const { insertedCount } = await replaceAllOrders.mutateAsync({
+        rows: importPreview.rows,
+        fileName: importPreview.fileName,
+        previousCount: orders.length,
+      });
+      toast.success(
+        `Replaced all orders: ${insertedCount} row(s) imported from ${importPreview.fileName}` +
+        (importPreview.skipped.length ? ` (${importPreview.skipped.length} row(s) skipped)` : '')
+      );
+      setImportPreview(null);
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to replace orders');
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const openCreate = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
   const openEdit = (o: typeof orders[number]) => {
@@ -129,9 +179,21 @@ const OrderList: React.FC = () => {
             Qty Sent and Balance are calculated live from matching dispatch challans — matched automatically by client, colour, yarn type and shade no.
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <PlusCircle className="h-4 w-4 mr-2" /> New Order
-        </Button>
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={handleFileSelected}
+          />
+          <Button variant="outline" onClick={handleUploadClick}>
+            <Upload className="h-4 w-4 mr-2" /> Upload Excel
+          </Button>
+          <Button onClick={openCreate}>
+            <PlusCircle className="h-4 w-4 mr-2" /> New Order
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -317,6 +379,42 @@ const OrderList: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!importPreview} onOpenChange={(o) => !o && !importing && setImportPreview(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace all orders?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  This will permanently delete all <strong>{orders.length}</strong> existing order(s) and
+                  replace them with <strong>{importPreview?.rows.length}</strong> row(s) from{' '}
+                  <strong>{importPreview?.fileName}</strong>. This cannot be undone.
+                </p>
+                {!!importPreview?.skipped.length && (
+                  <div className="text-sm text-amber-600 flex items-start gap-1">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <span>
+                      {importPreview.skipped.length} row(s) will be skipped: {importPreview.skipped.slice(0, 5).map(s => `row ${s.rowNumber} (${s.reason})`).join(', ')}
+                      {importPreview.skipped.length > 5 ? `, and ${importPreview.skipped.length - 5} more` : ''}.
+                    </span>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={importing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); confirmImport(); }}
+              disabled={importing}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {importing ? 'Replacing...' : 'Replace All'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

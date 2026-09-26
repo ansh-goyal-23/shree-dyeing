@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Order, OrderWithStatus, OrderInput } from '@/types/order';
+import type { ParsedOrderRow } from '@/lib/orderSheetImport';
 import { logActivity } from '@/lib/activityLog';
 import { logBusinessEvent } from '@/lib/activityCenter';
 
@@ -185,6 +186,66 @@ export function useDeleteOrder() {
         entityType: 'order', entityId: id,
         summary: prev ? `Deleted order: ${prev.client_name} — ${prev.color_name}` : 'Deleted order',
       });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['orders'] }),
+  });
+}
+
+// Full replace: deletes every existing order and inserts the rows parsed
+// from an uploaded order-sheet file. Used by the "Upload Excel" flow on the
+// Orders page -- Ansh's own working sheet is the source of truth, and this
+// lets him push a refreshed copy of it into the app in one step instead of
+// reconciling row by row.
+export function useReplaceAllOrders() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ rows, fileName, previousCount }: { rows: ParsedOrderRow[]; fileName: string; previousCount: number }) => {
+      // `id is not null` is always true -- Supabase/PostgREST requires an
+      // explicit filter on delete(), it won't allow an unconditional wipe.
+      const { error: delErr } = await supabase.from('orders').delete().not('id', 'is', null);
+      if (delErr) throw delErr;
+
+      const payload = rows.map(r => ({
+        client_name: r.input.client_name.trim(),
+        poc: r.input.poc?.trim() || null,
+        order_date: r.input.order_date,
+        color_name: r.input.color_name.trim(),
+        yarn_type: r.input.yarn_type?.trim() || null,
+        sample_type: r.input.sample_type?.trim() || null,
+        shade_no: r.input.shade_no?.trim() || null,
+        order_qty: r.input.order_qty,
+        uom: r.input.uom || 'KG',
+        notes: r.input.notes?.trim() || null,
+      }));
+
+      let inserted = 0;
+      const CHUNK = 500;
+      for (let i = 0; i < payload.length; i += CHUNK) {
+        const chunk = payload.slice(i, i + CHUNK);
+        if (chunk.length === 0) continue;
+        const { error, data } = await supabase.from('orders').insert(chunk).select('id');
+        if (error) throw error;
+        inserted += data?.length || 0;
+      }
+
+      await logActivity({
+        action: 'Orders Bulk Replace',
+        referenceType: 'order',
+        referenceId: 'bulk',
+        section: 'Orders',
+        itemLabel: `Uploaded ${fileName}`,
+        prev: `${previousCount} orders`,
+        next: `${inserted} orders`,
+        warn: true,
+      });
+      logBusinessEvent({
+        module: 'orders', eventType: 'orders.bulk_replace', severity: 'warning',
+        entityType: 'order', entityId: 'bulk',
+        summary: `Replaced all orders from ${fileName}: ${previousCount} -> ${inserted}`,
+        details: { fileName, previousCount, insertedCount: inserted },
+      });
+
+      return { insertedCount: inserted };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['orders'] }),
   });
