@@ -23,6 +23,7 @@ import {
   BookOpenCheck,
   Activity,
   FlaskConical,
+  ClipboardList,
 } from 'lucide-react';
 
 import { useRole } from '@/context/RoleContext';
@@ -46,6 +47,10 @@ const shadeItems = [
   { title: 'Create Lot', url: '/shade-management/lots/create', icon: PlusCircle },
   { title: 'Compare Lots', url: '/shade-management/compare', icon: GitCompare },
   { title: 'Master Data', url: '/shade-management/master', icon: Database },
+];
+
+const orderItems = [
+  { title: 'All Orders', url: '/orders', icon: ClipboardList },
 ];
 
 const dispatchItems = [
@@ -95,6 +100,7 @@ export function AppSidebar() {
     isViewer ? items.filter(i => !isWriteItem(i.url)) : items;
 
   const shade = filterForViewer(shadeItems);
+  const order = filterForViewer(orderItems);
   const dispatch = filterForViewer(dispatchItems);
   const expense = filterForViewer(expenseItems);
   const store = filterForViewer(storeItems);
@@ -116,6 +122,32 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === '/shade-management'}
+                      className="hover:bg-sidebar-accent/50"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                    >
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>
+            <ClipboardList className="mr-2 h-4 w-4" />
+            {!collapsed && 'Orders'}
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {order.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.url}
+                      end={item.url === '/orders'}
                       className="hover:bg-sidebar-accent/50"
                       activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
                     >

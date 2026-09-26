@@ -11,6 +11,7 @@ import { isStaging } from '@/integrations/supabase/client';
 const moduleFromPath = (p: string): string => {
   if (p.startsWith('/shade-management')) return 'shade';
   if (p.startsWith('/dispatch')) return 'dispatch';
+  if (p.startsWith('/orders')) return 'orders';
   if (p.startsWith('/expenses')) return 'expense';
   if (p.startsWith('/store')) return 'store';
   if (p.startsWith('/users') || p.startsWith('/activity')) return 'admin';

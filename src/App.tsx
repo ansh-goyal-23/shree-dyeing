@@ -18,6 +18,7 @@ import CompareLots from "@/pages/CompareLots";
 import MasterData from "@/pages/MasterData";
 import PlaceholderModule from "@/pages/PlaceholderModule";
 import ChallanList from "@/pages/ChallanList";
+import OrderList from "@/pages/OrderList";
 import CreateChallan from "@/pages/CreateChallan";
 import CreateEDYChallan from "@/pages/CreateEDYChallan";
 import ClientRateMaster from "@/pages/ClientRateMaster";
@@ -105,6 +106,7 @@ const App = () => (
                         <Route path="/dispatch/client-rates" element={<ClientRateMaster />} />
                         <Route path="/dispatch/oil-consumption" element={<OilConsumptionReport />} />
                         <Route path="/dispatch/consumption" element={<ConsumptionReport />} />
+                        <Route path="/orders" element={<OrderList />} />
                         <Route path="/dispatch/:id" element={<ChallanDetail />} />
                         <Route path="/item-master" element={<ItemMaster />} />
                         <Route path="/users" element={<UserManagement />} />
