@@ -43,4 +43,21 @@ export interface ChallanItem {
   ref_no?: string | null;
   lot_type?: 'Production' | 'Sampling';
   created_by?: string | null;
+  // Tiered-rate snapshot (2026-09-28): only set for lines billed against a
+  // tiered client. Snapshotted at save time so later edits to a client's
+  // client_yarn_costs / client_rate_tiers never rewrite a historical
+  // challan's billed amount -- rate = yarn_cost + overhead_rate at the time
+  // the challan maker picked the tier.
+  yarn_cost?: number | null;
+  overhead_rate?: number | null;
+  rate_tier_label?: string | null;
+  // Paper-tube cone surcharge (2026-09-28): a separate additive rupee
+  // amount for the line, never folded into rate/amount. 0 unless the
+  // client has a cone-surcharge configured and packaging is paper_tube.
+  paper_tube_surcharge?: number;
+}
+
+/** Total billed for a line, including any paper-tube cone surcharge. */
+export function lineTotal(item: Pick<ChallanItem, 'amount' | 'paper_tube_surcharge'>): number {
+  return (Number(item.amount) || 0) + (Number(item.paper_tube_surcharge) || 0);
 }

@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import type { Challan, ChallanItem } from '@/types/challan';
+import { lineTotal } from '@/types/challan';
 import { formatYmdLocal } from '@/lib/formatDate';
 
 const PACKAGING_LABEL: Record<string, string> = {
@@ -146,7 +147,9 @@ function renderChallan(doc: jsPDF, challan: Challan, items: ChallanItem[]): numb
       itemField('Gross', `${item.gross_weight.toFixed(3)} kg`);
       itemField('Net', `${item.net_weight.toFixed(3)} kg`);
       itemField('Rate', `Rs. ${item.rate.toFixed(2)}`);
+      if (item.rate_tier_label) itemField('Tier', item.rate_tier_label);
       itemField('Amount', `Rs. ${item.amount.toFixed(2)}`);
+      if (item.paper_tube_surcharge) itemField('Surcharge', `Rs. ${item.paper_tube_surcharge.toFixed(2)}`);
     }
     y += 1;
   });
@@ -157,7 +160,7 @@ function renderChallan(doc: jsPDF, challan: Challan, items: ChallanItem[]): numb
   // ── Totals ──
   const totalNet = items.reduce((s, i) => s + (isEdy ? i.gross_weight : i.net_weight), 0);
   const totalCones = items.reduce((s, i) => s + i.num_of_units, 0);
-  const totalAmount = items.reduce((s, i) => s + i.amount, 0);
+  const totalAmount = items.reduce((s, i) => s + lineTotal(i), 0);
 
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');

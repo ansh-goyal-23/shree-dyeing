@@ -41,6 +41,14 @@ async function insertChallanItems(
     ref_no: items[i].ref_no || null,
     lot_type: items[i].lot_type || 'Production',
     denier: (items[i] as any).denier || null,
+    // Tiered-rate snapshot + paper-tube surcharge (2026-09-28). Optional
+    // columns added by 20260928_client_rates_v2*.sql -- may not exist yet
+    // on whichever schema this insert targets, so they drop out below like
+    // ref_no/lot_type/denier above if the migration hasn't been run there.
+    yarn_cost: (items[i] as any).yarn_cost ?? null,
+    overhead_rate: (items[i] as any).overhead_rate ?? null,
+    rate_tier_label: (items[i] as any).rate_tier_label ?? null,
+    paper_tube_surcharge: (items[i] as any).paper_tube_surcharge || 0,
   }));
 
   // Try full insert; on missing column, drop the offending column and retry.
@@ -48,7 +56,11 @@ async function insertChallanItems(
   let hasRef = true;
   let hasLotType = true;
   let hasDenier = true;
-  for (let i = 0; i < 4; i++) {
+  let hasYarnCost = true;
+  let hasOverheadRate = true;
+  let hasRateTierLabel = true;
+  let hasSurcharge = true;
+  for (let i = 0; i < 8; i++) {
     const { error } = await supabase.from('challan_items').insert(attempt);
     if (!error) return null;
     const msg = (error.message || '').toLowerCase();
@@ -61,6 +73,14 @@ async function insertChallanItems(
       hasLotType = false;
     } else if (msg.includes('ref_no') && hasRef) {
       hasRef = false;
+    } else if (msg.includes('yarn_cost') && hasYarnCost) {
+      hasYarnCost = false;
+    } else if (msg.includes('overhead_rate') && hasOverheadRate) {
+      hasOverheadRate = false;
+    } else if (msg.includes('rate_tier_label') && hasRateTierLabel) {
+      hasRateTierLabel = false;
+    } else if (msg.includes('paper_tube_surcharge') && hasSurcharge) {
+      hasSurcharge = false;
     } else {
       return error;
     }
@@ -69,6 +89,10 @@ async function insertChallanItems(
       if (!hasRef) delete copy.ref_no;
       if (!hasLotType) delete copy.lot_type;
       if (!hasDenier) delete copy.denier;
+      if (!hasYarnCost) delete copy.yarn_cost;
+      if (!hasOverheadRate) delete copy.overhead_rate;
+      if (!hasRateTierLabel) delete copy.rate_tier_label;
+      if (!hasSurcharge) delete copy.paper_tube_surcharge;
       return copy;
     });
   }
@@ -157,6 +181,10 @@ const mapItem = (r: any): ChallanItem => ({
   ref_no: r.ref_no || null,
   lot_type: (r.lot_type === 'Sampling' ? 'Sampling' : 'Production'),
   created_by: r.created_by || null,
+  yarn_cost: r.yarn_cost != null ? Number(r.yarn_cost) : null,
+  overhead_rate: r.overhead_rate != null ? Number(r.overhead_rate) : null,
+  rate_tier_label: r.rate_tier_label || null,
+  paper_tube_surcharge: Number(r.paper_tube_surcharge) || 0,
 });
 
 export function useChallans() {

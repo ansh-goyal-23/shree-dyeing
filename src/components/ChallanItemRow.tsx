@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect, useMemo, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Trash2 } from 'lucide-react';
+import { Trash2, AlertTriangle } from 'lucide-react';
 import DecimalInput from '@/components/DecimalInput';
 import type { Lot } from '@/types';
 import type { PackagingType } from '@/types/challan';
 import type { StoreEDYCurrentStockRow } from '@/types/store';
-import { lookupRate, type ClientRate } from '@/hooks/useClientRates';
+import { lookupRate, lookupYarnCost, type ClientRate, type ClientYarnCost, type ClientRateTier } from '@/hooks/useClientRates';
+import type { ClientRateMode } from '@/types/client';
 
 export type LotType = 'Production' | 'Sampling';
 
@@ -22,6 +23,13 @@ export interface ItemData {
   amount: number;
   lot_type: LotType;
   ref_no?: string;
+  // Tiered-rate snapshot -- only meaningful when the client is rate_mode
+  // 'tiered'. See src/types/challan.ts for the full explanation.
+  yarn_cost?: number | null;
+  overhead_rate?: number | null;
+  rate_tier_label?: string | null;
+  // Paper-tube cone surcharge -- auto-computed, never manually edited.
+  paper_tube_surcharge?: number;
 }
 
 interface ChallanItemRowProps {
@@ -31,6 +39,16 @@ interface ChallanItemRowProps {
   edyStock?: StoreEDYCurrentStockRow[]; // kept for API compatibility; unused
   clientId: string;
   clientRates: ClientRate[];
+  // Tiered-rate system (2026-09-28). rateMode/yarnCosts/rateTiers describe
+  // the SELECTED CLIENT, computed by the parent page from useClients() +
+  // useClientYarnCosts()/useClientRateTiers(). hasSurcharge is true only
+  // when the client has both paper-tube surcharge fields configured.
+  rateMode?: ClientRateMode;
+  yarnCosts?: ClientYarnCost[];
+  rateTiers?: ClientRateTier[];
+  paperTubeBaselineKgPerCone?: number | null;
+  paperTubeExtraConeSurcharge?: number | null;
+  hasSurcharge?: boolean;
   onChange: (index: number, updated: ItemData) => void;
   onRemove: (index: number) => void;
 }
@@ -178,7 +196,13 @@ const DEDUCTION: Record<PackagingType, number> = {
 const calcNet = (gross: number, units: number, type: PackagingType) =>
   parseFloat((gross - DEDUCTION[type] * units).toFixed(3));
 
-const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, clientId, clientRates, onChange, onRemove }) => {
+const ChallanItemRow: React.FC<ChallanItemRowProps> = ({
+  index, item, lots, clientId, clientRates, onChange, onRemove,
+  rateMode = 'flat', yarnCosts = [], rateTiers = [],
+  paperTubeBaselineKgPerCone = null, paperTubeExtraConeSurcharge = null, hasSurcharge = false,
+}) => {
+  const isTiered = rateMode === 'tiered';
+
   const resolveRate = (denier: string, lotType: LotType, currentRate: number) => {
     if (clientId && denier) {
       const found = lookupRate(clientRates, clientId, denier, lotType);
@@ -187,9 +211,40 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, clie
     return currentRate;
   };
 
+  // Paper-tube cone surcharge: baseline_cones = net_weight / baseline_kg_per_cone;
+  // extra_cones = actual cones (num_of_units) above that baseline; surcharge =
+  // extra_cones * per-cone charge. Only applies to paper_tube packaging, and
+  // only when the client has both fields configured. Auto-computed -- never
+  // manually chosen, unlike the tiered rate above (see Clients/Client-List.md).
+  const computeSurcharge = (netWeight: number, numUnits: number, packaging: PackagingType) => {
+    if (packaging !== 'paper_tube') return 0;
+    if (!paperTubeBaselineKgPerCone || paperTubeExtraConeSurcharge == null) return 0;
+    const baselineCones = netWeight / paperTubeBaselineKgPerCone;
+    const extraCones = Math.max(0, numUnits - baselineCones);
+    return parseFloat((extraCones * paperTubeExtraConeSurcharge).toFixed(2));
+  };
+
+  const yarnCostForDenier = clientId && item.denier
+    ? lookupYarnCost(yarnCosts, clientId, item.denier)
+    : null;
+
   const handleSelect = (opt: LotOption) => {
     const lot = lots.find(l => l.lot_no === opt.lot_no);
     const denier = lot?.denier || '';
+    if (isTiered) {
+      // Tiered clients: only the denier/lot fields update automatically.
+      // The rate itself stays whatever tier was already picked (or 0 until
+      // the challan maker picks one) -- never auto-looked-up.
+      onChange(index, {
+        ...item,
+        lot_no: opt.lot_no,
+        shade_number: lot?.shade_number || '',
+        color_name: lot?.color_name || '',
+        denier,
+        ref_no: (lot as any)?.ref_no || '',
+      });
+      return;
+    }
     const autoRate = resolveRate(denier, item.lot_type, item.rate);
     onChange(index, {
       ...item,
@@ -204,6 +259,10 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, clie
   };
 
   const handleLotTypeChange = (lotType: LotType) => {
+    if (isTiered) {
+      onChange(index, { ...item, lot_type: lotType });
+      return;
+    }
     const autoRate = resolveRate(item.denier, lotType, item.rate);
     onChange(index, {
       ...item,
@@ -220,6 +279,7 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, clie
       packaging_type: type,
       net_weight: net,
       amount: parseFloat((net * item.rate).toFixed(2)),
+      paper_tube_surcharge: computeSurcharge(net, item.num_of_units, type),
     });
   };
 
@@ -230,6 +290,7 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, clie
       const units = field === 'num_of_units' ? val : item.num_of_units;
       updated.net_weight = calcNet(gw, units, item.packaging_type);
       updated.amount = parseFloat((updated.net_weight * updated.rate).toFixed(2));
+      updated.paper_tube_surcharge = computeSurcharge(updated.net_weight, units, item.packaging_type);
     }
     if (field === 'rate') {
       updated.amount = parseFloat((item.net_weight * val).toFixed(2));
@@ -237,7 +298,27 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, clie
     onChange(index, updated);
   };
 
+  const handleTierSelect = (tierId: string) => {
+    const tier = rateTiers.find(t => t.id === tierId);
+    if (!tier) {
+      onChange(index, { ...item, rate_tier_label: null, overhead_rate: null, rate: 0, amount: 0 });
+      return;
+    }
+    const yarnCost = yarnCostForDenier ?? 0;
+    const rate = parseFloat((yarnCost + tier.overhead_rate).toFixed(2));
+    onChange(index, {
+      ...item,
+      yarn_cost: yarnCostForDenier,
+      overhead_rate: tier.overhead_rate,
+      rate_tier_label: tier.label,
+      rate,
+      amount: parseFloat((item.net_weight * rate).toFixed(2)),
+    });
+  };
+
   const unitLabel = item.packaging_type === 'chesse' ? 'Chesses' : 'Tubes';
+  const surcharge = item.paper_tube_surcharge || 0;
+  const selectedTier = rateTiers.find(t => t.label === item.rate_tier_label);
 
   return (
     <tr className="border-b border-border hover:bg-secondary/30">
@@ -269,10 +350,32 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({ index, item, lots, clie
           className="input-industrial w-20 text-sm" placeholder={`# ${unitLabel}`} />
       </td>
       <td className="p-2 text-sm font-medium">{item.net_weight.toFixed(3)}</td>
+      {isTiered && (
+        <td className="p-2">
+          <select value={selectedTier?.id || ''} onChange={e => handleTierSelect(e.target.value)} className="input-industrial w-full text-sm">
+            <option value="">Select tier…</option>
+            {[...rateTiers].sort((a, b) => a.sort_order - b.sort_order).map(t => (
+              <option key={t.id} value={t.id}>{t.label} (₹{t.overhead_rate.toFixed(0)} ovhd)</option>
+            ))}
+          </select>
+          {yarnCostForDenier === null && item.denier && (
+            <div className="flex items-center gap-1 text-xs text-amber-600 mt-1">
+              <AlertTriangle className="w-3 h-3" /> No yarn cost for {item.denier}
+            </div>
+          )}
+        </td>
+      )}
       <td className="p-2">
-        <DecimalInput step="0.01" value={item.rate} onValueChange={v => handleField('rate', v)}
-          className="input-industrial w-24 text-sm" placeholder="0.00" />
+        {isTiered ? (
+          <div className="text-sm font-medium w-24">₹{item.rate.toFixed(2)}</div>
+        ) : (
+          <DecimalInput step="0.01" value={item.rate} onValueChange={v => handleField('rate', v)}
+            className="input-industrial w-24 text-sm" placeholder="0.00" />
+        )}
       </td>
+      {hasSurcharge && (
+        <td className="p-2 text-sm text-muted-foreground">{surcharge > 0 ? `₹${surcharge.toFixed(2)}` : '—'}</td>
+      )}
       <td className="p-2 text-sm font-medium">₹{item.amount.toFixed(2)}</td>
       <td className="p-2">
         <button type="button" onClick={() => onRemove(index)} className="p-1.5 text-destructive hover:bg-destructive/10 rounded btn-transition">

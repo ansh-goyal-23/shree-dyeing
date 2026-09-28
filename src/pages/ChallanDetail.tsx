@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useChallan, useChallanItems, useUpdateChallan, useDeleteChallan, useUpdateChallanPayment } from '@/hooks/useChallan';
-import { paymentState } from '@/types/challan';
+import { paymentState, lineTotal } from '@/types/challan';
 import { useRole } from '@/context/RoleContext';
 import { useApp } from '@/context/AppContext';
 import ClientSelect from '@/components/ClientSelect';
@@ -9,7 +9,8 @@ import ChallanItemRow from '@/components/ChallanItemRow';
 import type { ItemData } from '@/components/ChallanItemRow';
 import { downloadChallanPdf, shareChallanPdf } from '@/lib/challanPdf';
 import { formatYmdLocal } from '@/lib/formatDate';
-import { useClientRates } from '@/hooks/useClientRates';
+import { useClientRates, useClientYarnCosts, useClientRateTiers } from '@/hooks/useClientRates';
+import { useClients } from '@/hooks/useClients';
 import { toast } from 'sonner';
 import { PlusCircle, Loader2, Pencil, Trash2, ArrowLeft, Download, Share2 } from 'lucide-react';
 
@@ -17,6 +18,7 @@ import { PlusCircle, Loader2, Pencil, Trash2, ArrowLeft, Download, Share2 } from
 const emptyItem = (): ItemData => ({
   lot_no: '', shade_number: '', color_name: '', denier: '', packaging_type: 'paper_tube',
   gross_weight: 0, num_of_units: 0, net_weight: 0, rate: 0, amount: 0, lot_type: 'Production', ref_no: '',
+  yarn_cost: null, overhead_rate: null, rate_tier_label: null, paper_tube_surcharge: 0,
 });
 
 const PACKAGING_LABEL: Record<string, string> = {
@@ -36,6 +38,12 @@ const ChallanDetail: React.FC = () => {
   const { lots } = useApp();
   const clientId = challan?.client_id || '';
   const { data: clientRates = [] } = useClientRates(clientId || undefined);
+  const { data: clients = [] } = useClients();
+  const selectedClient = useMemo(() => clients.find(c => c.id === clientId), [clients, clientId]);
+  const rateMode = selectedClient?.rate_mode || 'flat';
+  const { data: yarnCosts = [] } = useClientYarnCosts(clientId || undefined);
+  const { data: rateTiers = [] } = useClientRateTiers(clientId || undefined);
+  const hasSurcharge = !!(selectedClient?.paper_tube_baseline_kg_per_cone && selectedClient?.paper_tube_extra_cone_surcharge != null);
   const [payInput, setPayInput] = useState('');
 
   const [editing, setEditing] = useState(false);
@@ -75,15 +83,17 @@ const ChallanDetail: React.FC = () => {
         num_of_units: i.num_of_units, net_weight: i.net_weight, rate: i.rate, amount: i.amount,
         lot_type: (i.lot_type as 'Production' | 'Sampling') || 'Production',
         ref_no: i.ref_no || '',
+        yarn_cost: i.yarn_cost ?? null, overhead_rate: i.overhead_rate ?? null,
+        rate_tier_label: i.rate_tier_label ?? null, paper_tube_surcharge: i.paper_tube_surcharge || 0,
       })));
     }
   }, [viewItems]);
 
   const totalNetWeight = items.reduce((s, i) => s + (i.net_weight || 0), 0);
-  const totalAmount = items.reduce((s, i) => s + (i.amount || 0), 0);
+  const totalAmount = items.reduce((s, i) => s + lineTotal(i), 0);
 
   // Payment maths always use the SAVED items, never the edit draft.
-  const savedTotal = challanItems.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const savedTotal = challanItems.reduce((s, i) => s + lineTotal(i), 0);
   const received = challan?.amount_received || 0;
   const payState = paymentState(savedTotal, received);
   const balance = Math.max(savedTotal - received, 0);
@@ -293,7 +303,9 @@ const ChallanDetail: React.FC = () => {
                 <th className="p-2 font-medium">Gross Wt (kg)</th>
                 <th className="p-2 font-medium">Units</th>
                 <th className="p-2 font-medium">Net Wt (kg)</th>
+                {rateMode === 'tiered' && <th className="p-2 font-medium">Tier</th>}
                 <th className="p-2 font-medium">Rate/kg</th>
+                {hasSurcharge && <th className="p-2 font-medium">Surcharge</th>}
                 <th className="p-2 font-medium">Amount</th>
                 {editing && <th className="p-2"></th>}
               </tr>
@@ -301,11 +313,16 @@ const ChallanDetail: React.FC = () => {
             <tbody>
               {editing ? (
                 items.map((item, i) => (
-                  <ChallanItemRow key={i} index={i} item={item} lots={lots} clientId={clientId} clientRates={clientRates} onChange={updateItem} onRemove={removeItem} />
+                  <ChallanItemRow key={i} index={i} item={item} lots={lots} clientId={clientId} clientRates={clientRates}
+                    rateMode={rateMode} yarnCosts={yarnCosts} rateTiers={rateTiers}
+                    paperTubeBaselineKgPerCone={selectedClient?.paper_tube_baseline_kg_per_cone ?? null}
+                    paperTubeExtraConeSurcharge={selectedClient?.paper_tube_extra_cone_surcharge ?? null}
+                    hasSurcharge={hasSurcharge}
+                    onChange={updateItem} onRemove={removeItem} />
                 ))
               ) : (
                 (challanItems.length === 0 ? (
-                  <tr><td colSpan={12} className="p-6 text-center text-muted-foreground">No items.</td></tr>
+                  <tr><td colSpan={13} className="p-6 text-center text-muted-foreground">No items.</td></tr>
                 ) : viewItems.map(item => (
                   <tr key={item.id} className="border-b border-border">
                     <td className="p-2 font-medium">
@@ -320,17 +337,22 @@ const ChallanDetail: React.FC = () => {
                     <td className="p-2">{item.gross_weight.toFixed(3)}</td>
                     <td className="p-2">{item.num_of_units}</td>
                     <td className="p-2">{item.net_weight.toFixed(3)}</td>
+                    {rateMode === 'tiered' && <td className="p-2">{(item as any).rate_tier_label || '—'}</td>}
                     <td className="p-2">₹{item.rate.toFixed(2)}</td>
-                    <td className="p-2 font-medium">₹{item.amount.toFixed(2)}</td>
+                    {hasSurcharge && (
+                      <td className="p-2">{(item as any).paper_tube_surcharge > 0 ? `₹${Number((item as any).paper_tube_surcharge).toFixed(2)}` : '—'}</td>
+                    )}
+                    <td className="p-2 font-medium">₹{lineTotal(item).toFixed(2)}</td>
                   </tr>
                 )))
               )}
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-border font-semibold">
-                <td colSpan={9} className="p-3 text-right">Totals:</td>
+                <td colSpan={rateMode === 'tiered' ? 10 : 9} className="p-3 text-right">Totals:</td>
                 <td className="p-3">{totalNetWeight.toFixed(3)} kg</td>
                 <td className="p-3"></td>
+                {hasSurcharge && <td className="p-3"></td>}
                 <td className="p-3">₹{totalAmount.toFixed(2)}</td>
                 {editing && <td></td>}
               </tr>

@@ -7,7 +7,9 @@ import ChallanItemRow from '@/components/ChallanItemRow';
 import type { ItemData } from '@/components/ChallanItemRow';
 import { toast } from 'sonner';
 import { useChallanFooterOptions } from '@/hooks/useChallanFooterOptions';
-import { useClientRates } from '@/hooks/useClientRates';
+import { useClientRates, useClientYarnCosts, useClientRateTiers } from '@/hooks/useClientRates';
+import { useClients } from '@/hooks/useClients';
+import { lineTotal } from '@/types/challan';
 
 import FooterAutocomplete from '@/components/FooterAutocomplete';
 import { PlusCircle, Loader2 } from 'lucide-react';
@@ -18,6 +20,7 @@ const DRAFT_KEY = 'createChallan:draft';
 const emptyItem = (): ItemData => ({
   lot_no: '', shade_number: '', color_name: '', denier: '', packaging_type: 'paper_tube',
   gross_weight: 0, num_of_units: 0, net_weight: 0, rate: 0, amount: 0, lot_type: 'Production', ref_no: '',
+  yarn_cost: null, overhead_rate: null, rate_tier_label: null, paper_tube_surcharge: 0,
 });
 
 const CreateChallan: React.FC = () => {
@@ -56,7 +59,12 @@ const CreateChallan: React.FC = () => {
   });
   useEffect(() => { setDraft(DRAFT_KEY, { form, items }); }, [form, items]);
   const { data: clientRates = [] } = useClientRates(form.client_id || undefined);
-  
+  const { data: clients = [] } = useClients();
+  const selectedClient = useMemo(() => clients.find(c => c.id === form.client_id), [clients, form.client_id]);
+  const rateMode = selectedClient?.rate_mode || 'flat';
+  const { data: yarnCosts = [] } = useClientYarnCosts(form.client_id || undefined);
+  const { data: rateTiers = [] } = useClientRateTiers(form.client_id || undefined);
+  const hasSurcharge = !!(selectedClient?.paper_tube_baseline_kg_per_cone && selectedClient?.paper_tube_extra_cone_surcharge != null);
 
   const updateItem = (index: number, updated: ItemData) => {
     setItems(prev => prev.map((it, i) => i === index ? updated : it));
@@ -68,7 +76,7 @@ const CreateChallan: React.FC = () => {
   const addItem = () => setItems(prev => [...prev, emptyItem()]);
 
   const totalNetWeight = items.reduce((s, i) => s + i.net_weight, 0);
-  const totalAmount = items.reduce((s, i) => s + i.amount, 0);
+  const totalAmount = items.reduce((s, i) => s + lineTotal(i), 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,21 +162,29 @@ const CreateChallan: React.FC = () => {
                 <th className="p-2 font-medium">Gross Wt (kg)</th>
                 <th className="p-2 font-medium">Units</th>
                 <th className="p-2 font-medium">Net Wt (kg)</th>
+                {rateMode === 'tiered' && <th className="p-2 font-medium">Tier</th>}
                 <th className="p-2 font-medium">Rate/kg</th>
+                {hasSurcharge && <th className="p-2 font-medium">Surcharge</th>}
                 <th className="p-2 font-medium">Amount</th>
                 <th className="p-2"></th>
               </tr>
             </thead>
             <tbody>
               {items.map((item, i) => (
-                <ChallanItemRow key={i} index={i} item={item} lots={lots} clientId={form.client_id} clientRates={clientRates} onChange={updateItem} onRemove={removeItem} />
+                <ChallanItemRow key={i} index={i} item={item} lots={lots} clientId={form.client_id} clientRates={clientRates}
+                  rateMode={rateMode} yarnCosts={yarnCosts} rateTiers={rateTiers}
+                  paperTubeBaselineKgPerCone={selectedClient?.paper_tube_baseline_kg_per_cone ?? null}
+                  paperTubeExtraConeSurcharge={selectedClient?.paper_tube_extra_cone_surcharge ?? null}
+                  hasSurcharge={hasSurcharge}
+                  onChange={updateItem} onRemove={removeItem} />
               ))}
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-border font-semibold">
-                <td colSpan={9} className="p-3 text-right">Totals:</td>
+                <td colSpan={rateMode === 'tiered' ? 10 : 9} className="p-3 text-right">Totals:</td>
                 <td className="p-3">{totalNetWeight.toFixed(3)} kg</td>
                 <td className="p-3"></td>
+                {hasSurcharge && <td className="p-3"></td>}
                 <td className="p-3">₹{totalAmount.toFixed(2)}</td>
                 <td></td>
               </tr>

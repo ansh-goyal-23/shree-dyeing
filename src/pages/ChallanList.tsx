@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useChallans, useBulkMarkChallansPaid } from '@/hooks/useChallan';
-import { paymentState } from '@/types/challan';
+import { paymentState, lineTotal } from '@/types/challan';
 import type { PaymentState } from '@/types/challan';
 import { useRole } from '@/context/RoleContext';
 import { toast } from 'sonner';
@@ -103,7 +103,7 @@ const ChallanList: React.FC = () => {
       if (!map[i.challan_id]) map[i.challan_id] = { totalItems: 0, totalNetWeight: 0, totalAmount: 0, types: [] };
       map[i.challan_id].totalItems += 1;
       map[i.challan_id].totalNetWeight += Number(i.net_weight) || 0;
-      map[i.challan_id].totalAmount += Number(i.amount) || 0;
+      map[i.challan_id].totalAmount += lineTotal(i);
       if (i.lot_type && !map[i.challan_id].types.includes(i.lot_type)) {
         map[i.challan_id].types.push(i.lot_type);
       }
@@ -298,6 +298,7 @@ const ChallanList: React.FC = () => {
       'Net Weight (kg)': Number(item.net_weight) || 0,
       'Rate (Rs.)': Number(item.rate) || 0,
       'Amount (Rs.)': Number(item.amount) || 0,
+      'Paper Tube Surcharge (Rs.)': Number(item.paper_tube_surcharge) || 0,
     })));
 
     const totals = reportRows.reduce((acc, row) => {
