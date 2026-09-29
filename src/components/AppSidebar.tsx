@@ -19,6 +19,7 @@ import {
   Globe2,
   Wrench,
   Boxes,
+  Layers,
   ClipboardCheck,
   BookOpenCheck,
   Activity,
@@ -71,6 +72,7 @@ const expenseItems = [
 const storeItems = [
   { title: 'Dashboard', url: '/store', icon: LayoutDashboard },
   { title: 'Inventory Catalogue', url: '/store/items', icon: Package },
+  { title: 'Raw Material Stock', url: '/store/raw-materials', icon: Layers },
   { title: 'Stock Inward', url: '/store/stock-inward', icon: ArrowDownToLine },
   { title: 'Internal Issues', url: '/store/internal-issues', icon: ArrowUpFromLine },
   { title: 'Finished Goods', url: '/store/finished-goods', icon: PackageCheck },

@@ -30,6 +30,7 @@ import ExpenseCreatePage from "@/pages/CreateExpense";
 import ItemMaster from "@/pages/ItemMaster";
 import UserManagement from "@/pages/UserManagement";
 import StoreDashboard from "@/pages/store/StoreDashboard";
+import StoreRawMaterialStock from "@/pages/store/StoreRawMaterialStock";
 import StoreItemMaster from "@/pages/store/StoreItemMaster";
 import StoreComingSoon from "@/pages/store/StoreComingSoon";
 import StoreInwardList from "@/pages/store/StoreInwardList";
@@ -112,6 +113,7 @@ const App = () => (
                         <Route path="/users" element={<UserManagement />} />
                         <Route path="/store" element={<StoreDashboard />} />
                         <Route path="/store/items" element={<StoreItemMaster />} />
+                        <Route path="/store/raw-materials" element={<StoreRawMaterialStock />} />
                         <Route path="/store/stock-inward" element={<StoreInwardList />} />
                         <Route path="/store/stock-inward/create" element={<WriteRoute redirectTo="/store/stock-inward"><StoreInwardCreate /></WriteRoute>} />
                         <Route path="/store/internal-issues" element={<StoreIssueList />} />
