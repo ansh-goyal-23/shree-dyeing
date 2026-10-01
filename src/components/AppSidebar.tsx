@@ -60,6 +60,7 @@ const dispatchItems = [
   { title: 'New Challan', url: '/dispatch/create', icon: PlusCircle },
   { title: 'Return Challans', url: '/dispatch/returns', icon: RotateCcw },
   { title: 'Client Rates', url: '/dispatch/client-rates', icon: IndianRupee },
+  { title: 'Production Report', url: '/dispatch/production-report', icon: Truck },
   { title: 'Oil Consumption', url: '/dispatch/oil-consumption', icon: Droplet },
   { title: 'Dye & Chemical Usage', url: '/dispatch/consumption', icon: FlaskConical },
 ];

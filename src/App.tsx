@@ -27,6 +27,7 @@ import ReturnChallanDetail from "@/pages/ReturnChallanDetail";
 import ClientRateMaster from "@/pages/ClientRateMaster";
 import ChallanDetail from "@/pages/ChallanDetail";
 import OilConsumptionReport from "@/pages/OilConsumptionReport";
+import ProductionReport from "@/pages/ProductionReport";
 import ConsumptionReport from "@/pages/ConsumptionReport";
 import ExpenseList from "@/pages/ExpenseList";
 import ExpenseCreatePage from "@/pages/CreateExpense";
@@ -112,6 +113,7 @@ const App = () => (
                         <Route path="/dispatch/returns/:id" element={<ReturnChallanDetail />} />
                         <Route path="/dispatch/client-rates" element={<ClientRateMaster />} />
                         <Route path="/dispatch/oil-consumption" element={<OilConsumptionReport />} />
+                        <Route path="/dispatch/production-report" element={<ProductionReport />} />
                         <Route path="/dispatch/consumption" element={<ConsumptionReport />} />
                         <Route path="/orders" element={<OrderList />} />
                         <Route path="/dispatch/:id" element={<ChallanDetail />} />
