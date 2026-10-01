@@ -146,10 +146,10 @@ function renderChallan(doc: jsPDF, challan: Challan, items: ChallanItem[]): numb
       itemField('Units', String(item.num_of_units));
       itemField('Gross', `${item.gross_weight.toFixed(3)} kg`);
       itemField('Net', `${item.net_weight.toFixed(3)} kg`);
+      if (item.rate_tier_label) itemField('Rate Tier', item.rate_tier_label);
       itemField('Rate', `Rs. ${item.rate.toFixed(2)}`);
-      if (item.rate_tier_label) itemField('Tier', item.rate_tier_label);
-      itemField('Amount', `Rs. ${item.amount.toFixed(2)}`);
       if (item.paper_tube_surcharge) itemField('Surcharge', `${(item as any).extra_cones || 0} cone(s), Rs. ${item.paper_tube_surcharge.toFixed(2)}`);
+      itemField('Amount', `Rs. ${lineTotal(item).toFixed(2)}`);
     }
     y += 1;
   });
