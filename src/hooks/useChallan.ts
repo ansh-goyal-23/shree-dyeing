@@ -195,6 +195,7 @@ const mapItem = (r: any): ChallanItem => ({
   overhead_rate: r.overhead_rate != null ? Number(r.overhead_rate) : null,
   rate_tier_label: r.rate_tier_label || null,
   paper_tube_surcharge: Number(r.paper_tube_surcharge) || 0,
+  extra_cones: Number(r.extra_cones) || 0,
 });
 
 export function useChallans() {
