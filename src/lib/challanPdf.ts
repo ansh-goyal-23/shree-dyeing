@@ -149,7 +149,7 @@ function renderChallan(doc: jsPDF, challan: Challan, items: ChallanItem[]): numb
       itemField('Rate', `Rs. ${item.rate.toFixed(2)}`);
       if (item.rate_tier_label) itemField('Tier', item.rate_tier_label);
       itemField('Amount', `Rs. ${item.amount.toFixed(2)}`);
-      if (item.paper_tube_surcharge) itemField('Surcharge', `Rs. ${item.paper_tube_surcharge.toFixed(2)}`);
+      if (item.paper_tube_surcharge) itemField('Surcharge', `${(item as any).extra_cones || 0} cone(s), Rs. ${item.paper_tube_surcharge.toFixed(2)}`);
     }
     y += 1;
   });

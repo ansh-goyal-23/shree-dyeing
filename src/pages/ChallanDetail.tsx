@@ -18,7 +18,7 @@ import { PlusCircle, Loader2, Pencil, Trash2, ArrowLeft, Download, Share2 } from
 const emptyItem = (): ItemData => ({
   lot_no: '', shade_number: '', color_name: '', denier: '', packaging_type: 'paper_tube',
   gross_weight: 0, num_of_units: 0, net_weight: 0, rate: 0, amount: 0, lot_type: 'Production', ref_no: '',
-  yarn_cost: null, overhead_rate: null, rate_tier_label: null, paper_tube_surcharge: 0,
+  yarn_cost: null, overhead_rate: null, rate_tier_label: null, paper_tube_surcharge: 0, extra_cones: 0,
 });
 
 const PACKAGING_LABEL: Record<string, string> = {
@@ -85,6 +85,7 @@ const ChallanDetail: React.FC = () => {
         ref_no: i.ref_no || '',
         yarn_cost: i.yarn_cost ?? null, overhead_rate: i.overhead_rate ?? null,
         rate_tier_label: i.rate_tier_label ?? null, paper_tube_surcharge: i.paper_tube_surcharge || 0,
+        extra_cones: (i as any).extra_cones || 0,
       })));
     }
   }, [viewItems]);
@@ -305,7 +306,7 @@ const ChallanDetail: React.FC = () => {
                 <th className="p-2 font-medium">Net Wt (kg)</th>
                 {rateMode === 'tiered' && <th className="p-2 font-medium">Tier</th>}
                 <th className="p-2 font-medium">Rate/kg</th>
-                {hasSurcharge && <th className="p-2 font-medium">Surcharge</th>}
+                {hasSurcharge && <th className="p-2 font-medium">Extra Cones</th>}
                 <th className="p-2 font-medium">Amount</th>
                 {editing && <th className="p-2"></th>}
               </tr>
@@ -340,7 +341,11 @@ const ChallanDetail: React.FC = () => {
                     {rateMode === 'tiered' && <td className="p-2">{(item as any).rate_tier_label || '—'}</td>}
                     <td className="p-2">₹{item.rate.toFixed(2)}</td>
                     {hasSurcharge && (
-                      <td className="p-2">{(item as any).paper_tube_surcharge > 0 ? `₹${Number((item as any).paper_tube_surcharge).toFixed(2)}` : '—'}</td>
+                      <td className="p-2">
+                        {(item as any).extra_cones > 0
+                          ? `${(item as any).extra_cones} cone${(item as any).extra_cones === 1 ? '' : 's'} (₹${Number((item as any).paper_tube_surcharge || 0).toFixed(2)})`
+                          : '—'}
+                      </td>
                     )}
                     <td className="p-2 font-medium">₹{lineTotal(item).toFixed(2)}</td>
                   </tr>

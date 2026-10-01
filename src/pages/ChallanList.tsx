@@ -298,6 +298,7 @@ const ChallanList: React.FC = () => {
       'Net Weight (kg)': Number(item.net_weight) || 0,
       'Rate (Rs.)': Number(item.rate) || 0,
       'Amount (Rs.)': Number(item.amount) || 0,
+      'Extra Cones': Number((item as any).extra_cones) || 0,
       'Paper Tube Surcharge (Rs.)': Number(item.paper_tube_surcharge) || 0,
     })));
 

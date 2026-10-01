@@ -49,6 +49,12 @@ async function insertChallanItems(
     overhead_rate: (items[i] as any).overhead_rate ?? null,
     rate_tier_label: (items[i] as any).rate_tier_label ?? null,
     paper_tube_surcharge: (items[i] as any).paper_tube_surcharge || 0,
+    // Extra-cones snapshot (2026-10-01): the challan maker's manually
+    // entered extra-cone count that produced paper_tube_surcharge above.
+    // Added by 20261001_challan_extra_cones*.sql -- same graceful-fallback
+    // handling as the other optional columns if that migration hasn't
+    // been run yet on whichever schema this insert targets.
+    extra_cones: (items[i] as any).extra_cones || 0,
   }));
 
   // Try full insert; on missing column, drop the offending column and retry.
@@ -60,6 +66,7 @@ async function insertChallanItems(
   let hasOverheadRate = true;
   let hasRateTierLabel = true;
   let hasSurcharge = true;
+  let hasExtraCones = true;
   for (let i = 0; i < 8; i++) {
     const { error } = await supabase.from('challan_items').insert(attempt);
     if (!error) return null;
@@ -81,6 +88,8 @@ async function insertChallanItems(
       hasRateTierLabel = false;
     } else if (msg.includes('paper_tube_surcharge') && hasSurcharge) {
       hasSurcharge = false;
+    } else if (msg.includes('extra_cones') && hasExtraCones) {
+      hasExtraCones = false;
     } else {
       return error;
     }
@@ -93,6 +102,7 @@ async function insertChallanItems(
       if (!hasOverheadRate) delete copy.overhead_rate;
       if (!hasRateTierLabel) delete copy.rate_tier_label;
       if (!hasSurcharge) delete copy.paper_tube_surcharge;
+      if (!hasExtraCones) delete copy.extra_cones;
       return copy;
     });
   }

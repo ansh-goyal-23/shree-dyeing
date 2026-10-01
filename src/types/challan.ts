@@ -55,6 +55,11 @@ export interface ChallanItem {
   // amount for the line, never folded into rate/amount. 0 unless the
   // client has a cone-surcharge configured and packaging is paper_tube.
   paper_tube_surcharge?: number;
+  // Extra cones (2026-10-01): manually entered by the challan maker --
+  // replaced the original auto-calc-from-weight approach. paper_tube_surcharge
+  // = extra_cones * clients.paper_tube_extra_cone_surcharge, snapshotted at
+  // save time like the other rate fields above.
+  extra_cones?: number;
 }
 
 /** Total billed for a line, including any paper-tube cone surcharge. */

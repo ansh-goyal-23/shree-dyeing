@@ -4,6 +4,7 @@ import { Trash2, AlertTriangle } from 'lucide-react';
 import DecimalInput from '@/components/DecimalInput';
 import type { Lot } from '@/types';
 import type { PackagingType } from '@/types/challan';
+import { lineTotal } from '@/types/challan';
 import type { StoreEDYCurrentStockRow } from '@/types/store';
 import { lookupRate, lookupYarnCost, type ClientRate, type ClientYarnCost, type ClientRateTier } from '@/hooks/useClientRates';
 import type { ClientRateMode } from '@/types/client';
@@ -28,8 +29,11 @@ export interface ItemData {
   yarn_cost?: number | null;
   overhead_rate?: number | null;
   rate_tier_label?: string | null;
-  // Paper-tube cone surcharge -- auto-computed, never manually edited.
+  // Paper-tube cone surcharge -- paper_tube_surcharge = extra_cones *
+  // the client's per-cone rate. extra_cones is typed in directly by the
+  // challan maker (2026-10-01) -- no longer derived from weight/units.
   paper_tube_surcharge?: number;
+  extra_cones?: number;
 }
 
 interface ChallanItemRowProps {
@@ -211,17 +215,14 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({
     return currentRate;
   };
 
-  // Paper-tube cone surcharge: baseline_cones = net_weight / baseline_kg_per_cone;
-  // extra_cones = actual cones (num_of_units) above that baseline; surcharge =
-  // extra_cones * per-cone charge. Only applies to paper_tube packaging, and
-  // only when the client has both fields configured. Auto-computed -- never
-  // manually chosen, unlike the tiered rate above (see Clients/Client-List.md).
-  const computeSurcharge = (netWeight: number, numUnits: number, packaging: PackagingType) => {
+  // Paper-tube cone surcharge (2026-10-01): extra_cones is typed in
+  // directly by the challan maker -- surcharge = extra_cones * the
+  // client's per-cone rate. Only applies to paper_tube packaging, and
+  // only when the client has a surcharge rate configured.
+  const computeSurcharge = (extraCones: number, packaging: PackagingType) => {
     if (packaging !== 'paper_tube') return 0;
-    if (!paperTubeBaselineKgPerCone || paperTubeExtraConeSurcharge == null) return 0;
-    const baselineCones = netWeight / paperTubeBaselineKgPerCone;
-    const extraCones = Math.max(0, numUnits - baselineCones);
-    return parseFloat((extraCones * paperTubeExtraConeSurcharge).toFixed(2));
+    if (paperTubeExtraConeSurcharge == null) return 0;
+    return parseFloat((Math.max(0, extraCones || 0) * paperTubeExtraConeSurcharge).toFixed(2));
   };
 
   const yarnCostForDenier = clientId && item.denier
@@ -274,12 +275,14 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({
 
   const handlePackagingChange = (type: PackagingType) => {
     const net = calcNet(item.gross_weight, item.num_of_units, type);
+    const extraCones = type === 'paper_tube' ? (item.extra_cones || 0) : 0;
     onChange(index, {
       ...item,
       packaging_type: type,
       net_weight: net,
       amount: parseFloat((net * item.rate).toFixed(2)),
-      paper_tube_surcharge: computeSurcharge(net, item.num_of_units, type),
+      extra_cones: extraCones,
+      paper_tube_surcharge: computeSurcharge(extraCones, type),
     });
   };
 
@@ -290,12 +293,20 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({
       const units = field === 'num_of_units' ? val : item.num_of_units;
       updated.net_weight = calcNet(gw, units, item.packaging_type);
       updated.amount = parseFloat((updated.net_weight * updated.rate).toFixed(2));
-      updated.paper_tube_surcharge = computeSurcharge(updated.net_weight, units, item.packaging_type);
     }
     if (field === 'rate') {
       updated.amount = parseFloat((item.net_weight * val).toFixed(2));
     }
     onChange(index, updated);
+  };
+
+  const handleExtraCones = (val: number) => {
+    const extraCones = Math.max(0, Math.round(val || 0));
+    onChange(index, {
+      ...item,
+      extra_cones: extraCones,
+      paper_tube_surcharge: computeSurcharge(extraCones, item.packaging_type),
+    });
   };
 
   const handleTierSelect = (tierId: string) => {
@@ -374,9 +385,21 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({
         )}
       </td>
       {hasSurcharge && (
-        <td className="p-2 text-sm text-muted-foreground">{surcharge > 0 ? `₹${surcharge.toFixed(2)}` : '—'}</td>
+        <td className="p-2">
+          {item.packaging_type === 'paper_tube' ? (
+            <div>
+              <DecimalInput step="1" min={0} value={item.extra_cones || 0} onValueChange={handleExtraCones}
+                className="input-industrial w-16 text-sm" placeholder="0" />
+              {surcharge > 0 && (
+                <div className="text-xs text-muted-foreground mt-0.5">₹{surcharge.toFixed(2)}</div>
+              )}
+            </div>
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          )}
+        </td>
       )}
-      <td className="p-2 text-sm font-medium">₹{item.amount.toFixed(2)}</td>
+      <td className="p-2 text-sm font-medium">₹{lineTotal(item).toFixed(2)}</td>
       <td className="p-2">
         <button type="button" onClick={() => onRemove(index)} className="p-1.5 text-destructive hover:bg-destructive/10 rounded btn-transition">
           <Trash2 className="w-4 h-4" />

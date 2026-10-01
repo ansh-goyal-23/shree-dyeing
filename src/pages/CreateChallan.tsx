@@ -20,7 +20,7 @@ const DRAFT_KEY = 'createChallan:draft';
 const emptyItem = (): ItemData => ({
   lot_no: '', shade_number: '', color_name: '', denier: '', packaging_type: 'paper_tube',
   gross_weight: 0, num_of_units: 0, net_weight: 0, rate: 0, amount: 0, lot_type: 'Production', ref_no: '',
-  yarn_cost: null, overhead_rate: null, rate_tier_label: null, paper_tube_surcharge: 0,
+  yarn_cost: null, overhead_rate: null, rate_tier_label: null, paper_tube_surcharge: 0, extra_cones: 0,
 });
 
 const CreateChallan: React.FC = () => {
@@ -164,7 +164,7 @@ const CreateChallan: React.FC = () => {
                 <th className="p-2 font-medium">Net Wt (kg)</th>
                 {rateMode === 'tiered' && <th className="p-2 font-medium">Tier</th>}
                 <th className="p-2 font-medium">Rate/kg</th>
-                {hasSurcharge && <th className="p-2 font-medium">Surcharge</th>}
+                {hasSurcharge && <th className="p-2 font-medium">Extra Cones</th>}
                 <th className="p-2 font-medium">Amount</th>
                 <th className="p-2"></th>
               </tr>
