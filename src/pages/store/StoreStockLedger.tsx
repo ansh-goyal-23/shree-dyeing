@@ -38,6 +38,7 @@ const TXN_LABEL: Record<StoreTransactionType, string> = {
   finished_lot_receipt: 'Finished Lot Receipt',
   external_dyed_yarn_receipt: 'External Dyed Yarn Receipt',
   challan_dispatch: 'Challan Dispatch',
+  challan_return: 'Challan Return',
   stock_adjustment: 'Stock Adjustment',
   asset_issue: 'Asset Issue',
   asset_return: 'Asset Return',
@@ -52,6 +53,7 @@ const TXN_CLASS: Record<StoreTransactionType, string> = {
   asset_issue: 'bg-blue-100 text-blue-800 border-blue-300',
   stock_adjustment: 'bg-orange-100 text-orange-800 border-orange-300',
   challan_dispatch: 'bg-red-100 text-red-800 border-red-300',
+  challan_return: 'bg-emerald-50 text-emerald-700 border-emerald-200',
 };
 
 const TXN_TYPE_OPTIONS: { value: StoreTransactionType; label: string }[] = (

@@ -95,6 +95,13 @@ const EVENT_META: Record<StoreTransactionType, EventMeta> = {
     badgeClass: 'bg-red-100 text-red-800 border-red-300',
     Icon: Truck,
   },
+  challan_return: {
+    label: 'Return (Challan)', group: 'in',
+    dotClass: 'bg-emerald-500 ring-emerald-200',
+    bandClass: 'border-l-emerald-500',
+    badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    Icon: RotateCcw,
+  },
 };
 
 function refRoute(row: StockLedgerRow): { label: string; route: string } | null {
@@ -108,6 +115,7 @@ function refRoute(row: StockLedgerRow): { label: string; route: string } | null 
   if (ref === 'fg' || ref === 'finished_good' || ref === 'finished_goods') return { label: 'Open FG Receipt', route: '/store/finished-goods' };
   if (ref === 'edy' || ref === 'external_dyed_yarn') return { label: 'Open EDY Receipt', route: '/store/external-dyed-yarn' };
   if (ref === 'asset') return { label: 'Open Asset Record', route: '/store/assets' };
+  if (ref === 'challan_return') return { label: 'Open Return', route: '/dispatch/returns' };
   if (ref === 'verification') return { label: 'Open Verification', route: '/store/stock-verification' };
   return null;
 }
