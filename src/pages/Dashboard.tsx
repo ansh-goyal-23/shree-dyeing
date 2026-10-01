@@ -1,7 +1,8 @@
 import React from 'react';
 import { useApp } from '@/context/AppContext';
 import { Link } from 'react-router-dom';
-import { PlusCircle, CheckCircle2, Clock, Database, ArrowRight } from 'lucide-react';
+import { PlusCircle, CheckCircle2, Clock, Database, ArrowRight, Truck, FlaskConical } from 'lucide-react';
+import { useProductionReport } from '@/hooks/useProductionReport';
 
 const Dashboard: React.FC = () => {
   const { lots, masterItems } = useApp();
@@ -9,6 +10,7 @@ const Dashboard: React.FC = () => {
   const productionCount = lots.filter(l => l.status === 'Production').length;
   const inApprovalCount = lots.filter(l => l.status === 'In Approval').length;
   const recentLots = [...lots].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8);
+  const { today, thisWeek } = useProductionReport();
 
   const stats = [
     { label: 'Total Lots', value: lots.length, icon: Database, color: 'text-foreground' },
@@ -42,6 +44,45 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="card-industrial p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Production Report</h2>
+          <Link to="/dispatch/production-report" className="text-sm text-muted-foreground hover:text-foreground btn-transition flex items-center gap-1">
+            Full report <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="flex items-center gap-3">
+            <Truck className="w-5 h-5 text-primary" />
+            <div>
+              <p className="text-sm text-muted-foreground">Qty Sent — Today</p>
+              <p className="text-2xl font-semibold font-data">{today.productionQty.toFixed(2)} kg</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Truck className="w-5 h-5 text-primary" />
+            <div>
+              <p className="text-sm text-muted-foreground">Qty Sent — This Week</p>
+              <p className="text-2xl font-semibold font-data">{thisWeek.productionQty.toFixed(2)} kg</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <FlaskConical className="w-5 h-5 text-correction" />
+            <div>
+              <p className="text-sm text-muted-foreground">Samples Sent — Today</p>
+              <p className="text-2xl font-semibold font-data">{today.sampleLots}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <FlaskConical className="w-5 h-5 text-correction" />
+            <div>
+              <p className="text-sm text-muted-foreground">Samples Sent — This Week</p>
+              <p className="text-2xl font-semibold font-data">{thisWeek.sampleLots}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="card-industrial">
