@@ -17,7 +17,6 @@ function entityToPath(et: string | null | undefined, eid: string | null | undefi
   if (t === 'lot' && eid) return `/shade-management/lots/${eid}`;
   if ((t === 'challan' || t === 'dispatch') && eid) return `/dispatch/${eid}`;
   if (t === 'expense') return `/expenses`;
-  if (t === 'inward') return `/store/stock-inward`;
   return null;
 }
 

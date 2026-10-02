@@ -33,8 +33,6 @@ import UserManagement from "@/pages/UserManagement";
 import StoreDashboard from "@/pages/store/StoreDashboard";
 import StoreRawMaterialStock from "@/pages/store/StoreRawMaterialStock";
 import StoreComingSoon from "@/pages/store/StoreComingSoon";
-import StoreInwardList from "@/pages/store/StoreInwardList";
-import StoreInwardCreate from "@/pages/store/StoreInwardCreate";
 import StoreFinishedGoodsList from "@/pages/store/StoreFinishedGoodsList";
 import StoreFinishedGoodsReceive from "@/pages/store/StoreFinishedGoodsReceive";
 import StoreExternalDyedYarnList from "@/pages/store/StoreExternalDyedYarnList";
@@ -106,8 +104,6 @@ const App = () => (
                         <Route path="/users" element={<UserManagement />} />
                         <Route path="/store" element={<StoreDashboard />} />
                         <Route path="/store/raw-materials" element={<StoreRawMaterialStock />} />
-                        <Route path="/store/stock-inward" element={<StoreInwardList />} />
-                        <Route path="/store/stock-inward/create" element={<WriteRoute redirectTo="/store/stock-inward"><StoreInwardCreate /></WriteRoute>} />
                         <Route path="/store/finished-goods" element={<StoreFinishedGoodsList />} />
                         <Route path="/store/finished-goods/receive" element={<WriteRoute redirectTo="/store/finished-goods"><StoreFinishedGoodsReceive /></WriteRoute>} />
                         <Route path="/store/external-dyed-yarn" element={<StoreExternalDyedYarnList />} />
