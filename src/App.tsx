@@ -35,22 +35,13 @@ import ItemMaster from "@/pages/ItemMaster";
 import UserManagement from "@/pages/UserManagement";
 import StoreDashboard from "@/pages/store/StoreDashboard";
 import StoreRawMaterialStock from "@/pages/store/StoreRawMaterialStock";
-import StoreItemMaster from "@/pages/store/StoreItemMaster";
 import StoreComingSoon from "@/pages/store/StoreComingSoon";
 import StoreInwardList from "@/pages/store/StoreInwardList";
 import StoreInwardCreate from "@/pages/store/StoreInwardCreate";
-import StoreIssueList from "@/pages/store/StoreIssueList";
-import StoreIssueForm from "@/pages/store/StoreIssueForm";
 import StoreFinishedGoodsList from "@/pages/store/StoreFinishedGoodsList";
 import StoreFinishedGoodsReceive from "@/pages/store/StoreFinishedGoodsReceive";
 import StoreExternalDyedYarnList from "@/pages/store/StoreExternalDyedYarnList";
 import StoreExternalDyedYarnReceive from "@/pages/store/StoreExternalDyedYarnReceive";
-import StoreAssetManagement from "@/pages/store/StoreAssetManagement";
-import StoreCurrentStock from "@/pages/store/StoreCurrentStock";
-import StoreVerificationList from "@/pages/store/StoreVerificationList";
-import StoreVerificationDetail from "@/pages/store/StoreVerificationDetail";
-import StoreStockLedger from "@/pages/store/StoreStockLedger";
-import StoreInventoryTimeline from "@/pages/store/StoreInventoryTimeline";
 import ActivityCenter from "@/pages/ActivityCenter";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
@@ -120,24 +111,13 @@ const App = () => (
                         <Route path="/item-master" element={<ItemMaster />} />
                         <Route path="/users" element={<UserManagement />} />
                         <Route path="/store" element={<StoreDashboard />} />
-                        <Route path="/store/items" element={<StoreItemMaster />} />
                         <Route path="/store/raw-materials" element={<StoreRawMaterialStock />} />
                         <Route path="/store/stock-inward" element={<StoreInwardList />} />
                         <Route path="/store/stock-inward/create" element={<WriteRoute redirectTo="/store/stock-inward"><StoreInwardCreate /></WriteRoute>} />
-                        <Route path="/store/internal-issues" element={<StoreIssueList />} />
-                        <Route path="/store/internal-issues/create" element={<WriteRoute redirectTo="/store/internal-issues"><StoreIssueForm mode="create" /></WriteRoute>} />
-                        <Route path="/store/internal-issues/:id/edit" element={<WriteRoute redirectTo="/store/internal-issues"><StoreIssueForm mode="edit" /></WriteRoute>} />
                         <Route path="/store/finished-goods" element={<StoreFinishedGoodsList />} />
                         <Route path="/store/finished-goods/receive" element={<WriteRoute redirectTo="/store/finished-goods"><StoreFinishedGoodsReceive /></WriteRoute>} />
                         <Route path="/store/external-dyed-yarn" element={<StoreExternalDyedYarnList />} />
                         <Route path="/store/external-dyed-yarn/receive" element={<WriteRoute redirectTo="/store/external-dyed-yarn"><StoreExternalDyedYarnReceive /></WriteRoute>} />
-                        <Route path="/store/assets" element={<StoreAssetManagement />} />
-                        <Route path="/store/current-stock" element={<StoreCurrentStock />} />
-                        <Route path="/store/stock-verification" element={<StoreVerificationList />} />
-                        <Route path="/store/stock-verification/:id" element={<StoreVerificationDetail />} />
-                        <Route path="/store/stock-ledger" element={<StoreStockLedger />} />
-                        <Route path="/store/timeline" element={<StoreInventoryTimeline />} />
-                        <Route path="/store/timeline/:itemId" element={<StoreInventoryTimeline />} />
                         <Route path="/activity" element={<AdminRoute><ActivityCenter /></AdminRoute>} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>

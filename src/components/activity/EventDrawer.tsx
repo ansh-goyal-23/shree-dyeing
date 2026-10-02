@@ -17,12 +17,7 @@ function entityToPath(et: string | null | undefined, eid: string | null | undefi
   if (t === 'lot' && eid) return `/shade-management/lots/${eid}`;
   if ((t === 'challan' || t === 'dispatch') && eid) return `/dispatch/${eid}`;
   if (t === 'expense') return `/expenses`;
-  if (t === 'issue' && eid) return `/store/internal-issues/${eid}/edit`;
   if (t === 'inward') return `/store/stock-inward`;
-  if (t === 'asset') return `/store/assets`;
-  if (t === 'item' && eid) return `/store/timeline/${eid}`;
-  if (t === 'finished_goods' && ref) return `/store/timeline?code=${encodeURIComponent('FG-' + ref)}`;
-  if (t === 'external_dyed_yarn' && ref) return `/store/timeline?code=${encodeURIComponent('EDY-' + ref)}`;
   return null;
 }
 

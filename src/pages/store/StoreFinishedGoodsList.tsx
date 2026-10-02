@@ -16,7 +16,7 @@ import {
 import EditYarnReceiptDialog from '@/components/store/EditYarnReceiptDialog';
 import type { StoreFinishedGoodsReceipt } from '@/types/store';
 import { toast } from 'sonner';
-import { PackageCheck, Plus, Search, Activity, Pencil, Trash2 } from 'lucide-react';
+import { PackageCheck, Plus, Search, Pencil, Trash2 } from 'lucide-react';
 
 const FinishedGoodsList: React.FC = () => {
   const { data: receipts = [], isLoading } = useFGReceiptList();
@@ -113,7 +113,6 @@ const FinishedGoodsList: React.FC = () => {
                     <TableHead>Rack No.</TableHead>
                     <TableHead className="text-right">Current Balance</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Timeline</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -134,13 +133,6 @@ const FinishedGoodsList: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         {s.lot_status ? <Badge variant="secondary">{s.lot_status}</Badge> : '—'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button asChild variant="ghost" size="icon" title="View Timeline">
-                          <Link to={`/store/timeline?code=${encodeURIComponent('FG-' + s.lot_no)}`}>
-                            <Activity className="h-4 w-4" />
-                          </Link>
-                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

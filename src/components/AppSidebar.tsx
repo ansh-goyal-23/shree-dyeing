@@ -12,16 +12,10 @@ import {
   Droplet,
   Users,
   Warehouse,
-  Package,
   ArrowDownToLine,
-  ArrowUpFromLine,
   PackageCheck,
   Globe2,
-  Wrench,
-  Boxes,
   Layers,
-  ClipboardCheck,
-  BookOpenCheck,
   Activity,
   FlaskConical,
   ClipboardList,
@@ -74,17 +68,10 @@ const expenseItems = [
 
 const storeItems = [
   { title: 'Dashboard', url: '/store', icon: LayoutDashboard },
-  { title: 'Inventory Catalogue', url: '/store/items', icon: Package },
   { title: 'Raw Material Stock', url: '/store/raw-materials', icon: Layers },
   { title: 'Stock Inward', url: '/store/stock-inward', icon: ArrowDownToLine },
-  { title: 'Internal Issues', url: '/store/internal-issues', icon: ArrowUpFromLine },
   { title: 'Finished Goods', url: '/store/finished-goods', icon: PackageCheck },
   { title: 'External Dyed Yarn', url: '/store/external-dyed-yarn', icon: Globe2 },
-  { title: 'Assets', url: '/store/assets', icon: Wrench },
-  { title: 'Current Stock', url: '/store/current-stock', icon: Boxes },
-  { title: 'Stock Verification', url: '/store/stock-verification', icon: ClipboardCheck },
-  { title: 'Stock Ledger', url: '/store/stock-ledger', icon: BookOpenCheck },
-  { title: 'Inventory Timeline', url: '/store/timeline', icon: Activity },
 ];
 
 const modules = [
