@@ -57,22 +57,22 @@ const StoreDashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Link to="/store/items" className="block">
+        <Link to="/store/raw-materials" className="block">
           <Card className="hover:bg-muted/40 transition">
-            <CardHeader><CardTitle className="text-base">Item Master</CardTitle></CardHeader>
-            <CardContent className="text-sm text-muted-foreground">Manage items, categories, racks.</CardContent>
-          </Card>
-        </Link>
-        <Link to="/store/current-stock" className="block">
-          <Card className="hover:bg-muted/40 transition">
-            <CardHeader><CardTitle className="text-base">Current Stock</CardTitle></CardHeader>
-            <CardContent className="text-sm text-muted-foreground">Live stock derived from transactions.</CardContent>
+            <CardHeader><CardTitle className="text-base">Raw Material Stock</CardTitle></CardHeader>
+            <CardContent className="text-sm text-muted-foreground">Grey yarn, chemical, color, packing, oil.</CardContent>
           </Card>
         </Link>
         <Link to="/store/stock-inward" className="block">
           <Card className="hover:bg-muted/40 transition">
             <CardHeader><CardTitle className="text-base">Stock Inward</CardTitle></CardHeader>
             <CardContent className="text-sm text-muted-foreground">Record incoming stock.</CardContent>
+          </Card>
+        </Link>
+        <Link to="/store/finished-goods" className="block">
+          <Card className="hover:bg-muted/40 transition">
+            <CardHeader><CardTitle className="text-base">Finished Goods</CardTitle></CardHeader>
+            <CardContent className="text-sm text-muted-foreground">Dyed yarn receipts from challans.</CardContent>
           </Card>
         </Link>
       </div>

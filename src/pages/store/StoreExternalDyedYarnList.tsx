@@ -23,7 +23,7 @@ import {
 import EditYarnReceiptDialog from '@/components/store/EditYarnReceiptDialog';
 import type { StoreExternalDyedYarnReceipt } from '@/types/store';
 import { toast } from 'sonner';
-import { Globe2, Plus, Search, Activity, Pencil, Trash2, Filter, X } from 'lucide-react';
+import { Globe2, Plus, Search, Pencil, Trash2, Filter, X } from 'lucide-react';
 
 interface StockFilters {
   q: string;
@@ -268,7 +268,6 @@ const ExternalDyedYarnList: React.FC = () => {
                     <TableHead className="text-right"># of Cones</TableHead>
                     <TableHead>Rack No.</TableHead>
                     <TableHead className="text-right">Current Balance</TableHead>
-                    <TableHead className="text-right">Timeline</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -288,13 +287,6 @@ const ExternalDyedYarnList: React.FC = () => {
                       <TableCell>{s.rack_code ? `${s.rack_code} — ${s.rack_name}` : '—'}</TableCell>
                       <TableCell className="text-right font-medium">
                         {Number(s.current_balance).toFixed(3)} {s.unit || 'kg'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button asChild variant="ghost" size="icon" title="View Timeline">
-                          <Link to={`/store/timeline?code=${encodeURIComponent('EDY-' + s.receipt_number)}`}>
-                            <Activity className="h-4 w-4" />
-                          </Link>
-                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
