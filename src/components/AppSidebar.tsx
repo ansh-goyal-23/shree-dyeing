@@ -12,7 +12,6 @@ import {
   Droplet,
   Users,
   Warehouse,
-  ArrowDownToLine,
   PackageCheck,
   Globe2,
   Layers,
@@ -69,7 +68,6 @@ const expenseItems = [
 const storeItems = [
   { title: 'Dashboard', url: '/store', icon: LayoutDashboard },
   { title: 'Raw Material Stock', url: '/store/raw-materials', icon: Layers },
-  { title: 'Stock Inward', url: '/store/stock-inward', icon: ArrowDownToLine },
   { title: 'Finished Goods', url: '/store/finished-goods', icon: PackageCheck },
   { title: 'External Dyed Yarn', url: '/store/external-dyed-yarn', icon: Globe2 },
 ];
