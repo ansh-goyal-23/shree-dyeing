@@ -318,7 +318,7 @@ const ChallanList: React.FC = () => {
       Notes: c.notes,
     }));
 
-    const detailRows: any[] = reportRows.flatMap(({ challan: c, items, isEDY }) => items.map((item: any, index: number) => ({
+    const detailRows: any[] = reportRows.flatMap(({ challan: c, items, isEDY, payment }) => items.map((item: any, index: number) => ({
       'Challan #': c.challan_number,
       'Challan Type': isEDY ? 'EDY' : 'Normal',
       Date: c.date,
@@ -336,6 +336,7 @@ const ChallanList: React.FC = () => {
       'Net Weight (kg)': Number(item.net_weight) || 0,
       'Rate (Rs.)': Number(item.rate) || 0,
       'Amount (Rs.)': Number(item.amount) || 0,
+      'Payment Status': payment,
       'Extra Cones': Number((item as any).extra_cones) || 0,
       'Paper Tube Surcharge (Rs.)': Number(item.paper_tube_surcharge) || 0,
     })));
@@ -361,6 +362,7 @@ const ChallanList: React.FC = () => {
       'Net Weight (kg)': -(Number(item.returned_net_weight) || 0),
       'Rate (Rs.)': Number(item.rate) || 0,
       'Amount (Rs.)': -(Number(item.amount) || 0),
+      'Payment Status': '—',
       'Extra Cones': -(Number(item.returned_extra_cones) || 0),
       'Paper Tube Surcharge (Rs.)': -(Number(item.paper_tube_surcharge) || 0),
     }));
@@ -434,7 +436,7 @@ const ChallanList: React.FC = () => {
     detailSheet['!cols'] = [
       { wch: 16 }, { wch: 14 }, { wch: 13 }, { wch: 24 }, { wch: 9 }, { wch: 16 },
       { wch: 16 }, { wch: 14 }, { wch: 22 }, { wch: 12 }, { wch: 12 }, { wch: 16 },
-      { wch: 20 }, { wch: 14 }, { wch: 18 }, { wch: 15 }, { wch: 16 },
+      { wch: 20 }, { wch: 14 }, { wch: 18 }, { wch: 15 }, { wch: 16 }, { wch: 15 },
     ];
     criteriaSheet['!cols'] = [{ wch: 28 }, { wch: 24 }];
     summarySheet['!autofilter'] = { ref: summarySheet['!ref'] || 'A1:L1' };
