@@ -167,3 +167,93 @@ export function useIssueRawMaterial() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['raw_materials_with_stock'] }),
   });
 }
+
+export interface UpdateRawMaterialInput {
+  material: RawMaterial;
+  brand?: string;
+  supplier?: string;
+  spec_name?: string;
+  denier_count?: string;
+  unit: string;
+  remarks?: string;
+  /** Corrected total quantity. If it differs from live stock, the difference
+   *  is logged as a ledger transaction (stock is never overwritten). */
+  new_quantity: number;
+}
+
+// Edit a material's identifying details/unit/remarks, and optionally correct
+// its quantity. The quantity stays ledger-derived: a correction is recorded
+// as a normal 'add' (positive difference) or 'issue' (negative difference)
+// transaction marked "Stock correction", so history is never rewritten.
+export function useUpdateRawMaterial() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: UpdateRawMaterialInput) => {
+      const m = input.material;
+      if (input.new_quantity < 0) throw new Error('Quantity cannot be negative.');
+
+      // Block edits that would collide with another existing material.
+      const { data: others, error: findErr } = await sb
+        .from('raw_materials')
+        .select('*')
+        .eq('category', m.category)
+        .eq('is_active', true)
+        .neq('id', m.id);
+      if (findErr) throw findErr;
+      const dup = (others || []).find((o: any) =>
+        norm(o.brand) === norm(input.brand) &&
+        norm(o.supplier) === norm(input.supplier) &&
+        norm(o.spec_name) === norm(input.spec_name) &&
+        norm(o.denier_count) === norm(input.denier_count)
+      );
+      if (dup) throw new Error('Another entry with the same details already exists.');
+
+      const { error: updErr } = await sb
+        .from('raw_materials')
+        .update({
+          brand: input.brand || null,
+          supplier: input.supplier || null,
+          spec_name: input.spec_name || null,
+          denier_count: input.denier_count || null,
+          unit: input.unit,
+          remarks: input.remarks || null,
+        })
+        .eq('id', m.id);
+      if (updErr) throw updErr;
+
+      const { data: fresh, error: freshErr } = await sb
+        .from('raw_materials_with_stock')
+        .select('current_quantity')
+        .eq('id', m.id)
+        .single();
+      if (freshErr) throw freshErr;
+      const current = Number(fresh?.current_quantity) || 0;
+      const delta = Math.round((input.new_quantity - current) * 1000) / 1000;
+
+      if (Math.abs(delta) > 0.0005) {
+        const { error: txnErr } = await sb.from('raw_material_transactions').insert({
+          material_id: m.id,
+          transaction_type: delta > 0 ? 'add' : 'issue',
+          quantity: delta,
+          issued_to: delta < 0 ? 'Stock correction' : null,
+          remarks: `Stock correction: ${current} → ${input.new_quantity} ${input.unit}`,
+        });
+        if (txnErr) throw txnErr;
+      }
+
+      const label = [input.brand, input.supplier, input.spec_name, input.denier_count].filter(Boolean).join(' / ') || m.category;
+      logActivity({
+        action: 'Raw Material Edit', referenceType: 'raw_material', referenceId: m.id,
+        section: 'Raw Material Stock', itemLabel: label,
+        prev: current, next: input.new_quantity, unit: input.unit,
+      });
+      logBusinessEvent({
+        module: 'store', eventType: 'raw_material.edit', severity: 'info',
+        entityType: 'raw_material', entityId: m.id,
+        summary: `Edited ${label}` + (Math.abs(delta) > 0.0005 ? ` (stock ${current} → ${input.new_quantity} ${input.unit})` : ''),
+        details: { category: m.category, previous_quantity: current, new_quantity: input.new_quantity },
+      });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['raw_materials_with_stock'] }),
+  });
+}
