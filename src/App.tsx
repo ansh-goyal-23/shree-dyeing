@@ -41,6 +41,7 @@ import StoreFinishedGoodsReceive from "@/pages/store/StoreFinishedGoodsReceive";
 import StoreExternalDyedYarnList from "@/pages/store/StoreExternalDyedYarnList";
 import StoreExternalDyedYarnReceive from "@/pages/store/StoreExternalDyedYarnReceive";
 import ActivityCenter from "@/pages/ActivityCenter";
+import AdminDashboard from "@/pages/AdminDashboard";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -114,6 +115,7 @@ const App = () => (
                         <Route path="/store/finished-goods/receive" element={<WriteRoute redirectTo="/store/finished-goods"><StoreFinishedGoodsReceive /></WriteRoute>} />
                         <Route path="/store/external-dyed-yarn" element={<StoreExternalDyedYarnList />} />
                         <Route path="/store/external-dyed-yarn/receive" element={<WriteRoute redirectTo="/store/external-dyed-yarn"><StoreExternalDyedYarnReceive /></WriteRoute>} />
+                        <Route path="/admin-dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
                         <Route path="/activity" element={<AdminRoute><ActivityCenter /></AdminRoute>} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
