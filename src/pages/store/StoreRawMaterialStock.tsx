@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useRawMaterials, useAddRawMaterial, useIssueRawMaterial } from '@/hooks/useRawMaterials';
+import { useRawMaterials, useAddRawMaterial, useIssueRawMaterial, useUpdateRawMaterial } from '@/hooks/useRawMaterials';
 import { RAW_MATERIAL_CATEGORIES, RAW_MATERIAL_FIELDS, type RawMaterial, type RawMaterialCategory } from '@/types/rawMaterial';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PlusCircle, PackageMinus, Layers } from 'lucide-react';
+import { PlusCircle, PackageMinus, Layers, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 
 const emptyAddForm = { brand: '', supplier: '', spec_name: '', denier_count: '', unit: '', quantity: '', remarks: '' };
@@ -22,6 +22,10 @@ const StoreRawMaterialStock: React.FC = () => {
   const { data: materials = [], isLoading } = useRawMaterials(tab);
   const addMaterial = useAddRawMaterial();
   const issueMaterial = useIssueRawMaterial();
+  const updateMaterial = useUpdateRawMaterial();
+
+  const [editTarget, setEditTarget] = useState<RawMaterial | null>(null);
+  const [editForm, setEditForm] = useState({ brand: '', supplier: '', spec_name: '', denier_count: '', unit: '', quantity: '', remarks: '' });
 
   const [addOpen, setAddOpen] = useState(false);
   const [addForm, setAddForm] = useState(emptyAddForm);
@@ -87,6 +91,42 @@ const StoreRawMaterialStock: React.FC = () => {
     }
   };
 
+  const openEdit = (m: RawMaterial) => {
+    setEditForm({
+      brand: m.brand || '', supplier: m.supplier || '', spec_name: m.spec_name || '', denier_count: m.denier_count || '',
+      unit: m.unit, quantity: String(m.current_quantity), remarks: m.remarks || '',
+    });
+    setEditTarget(m);
+  };
+
+  const submitEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTarget) return;
+    const f = RAW_MATERIAL_FIELDS[editTarget.category];
+    const qty = parseFloat(editForm.quantity);
+    if (isNaN(qty) || qty < 0) { toast.error('Enter a valid quantity (0 or more).'); return; }
+    if (!editForm.unit.trim()) { toast.error('Unit is required.'); return; }
+    if (f.brand && !editForm.brand.trim()) { toast.error(`${f.brand} is required.`); return; }
+    if (f.supplier && !editForm.supplier.trim()) { toast.error(`${f.supplier} is required.`); return; }
+    if (f.spec_name && !editForm.spec_name.trim()) { toast.error(`${f.spec_name} is required.`); return; }
+    try {
+      await updateMaterial.mutateAsync({
+        material: editTarget,
+        brand: f.brand ? editForm.brand.trim() : undefined,
+        supplier: f.supplier ? editForm.supplier.trim() : undefined,
+        spec_name: f.spec_name ? editForm.spec_name.trim() : undefined,
+        denier_count: f.denier_count ? editForm.denier_count.trim() : undefined,
+        unit: editForm.unit.trim(),
+        remarks: editForm.remarks.trim() || undefined,
+        new_quantity: qty,
+      });
+      toast.success('Raw material updated.');
+      setEditTarget(null);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update raw material.');
+    }
+  };
+
   const label = (m: RawMaterial, key: 'brand' | 'supplier' | 'spec_name' | 'denier_count') =>
     (m as any)[key] || '—';
 
@@ -127,7 +167,7 @@ const StoreRawMaterialStock: React.FC = () => {
                     {fields.spec_name && <TableHead>{fields.spec_name}</TableHead>}
                     {fields.denier_count && <TableHead>{fields.denier_count}</TableHead>}
                     <TableHead className="text-right">Quantity</TableHead>
-                    <TableHead className="text-right">Issue</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -152,7 +192,10 @@ const StoreRawMaterialStock: React.FC = () => {
                         <TableCell className={'text-right font-semibold ' + (qty <= 0 ? 'text-muted-foreground' : '')}>
                           {fmtQty(m)} <span className="text-xs text-muted-foreground">{m.unit}</span>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right space-x-2 whitespace-nowrap">
+                          <Button variant="outline" size="sm" onClick={() => openEdit(m)}>
+                            <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+                          </Button>
                           <Button variant="outline" size="sm" disabled={qty <= 0} onClick={() => openIssue(m)}>
                             <PackageMinus className="h-3.5 w-3.5 mr-1" /> Issue
                           </Button>
@@ -223,6 +266,68 @@ const StoreRawMaterialStock: React.FC = () => {
               <Button type="submit" disabled={addMaterial.isPending}>Add</Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit dialog */}
+      <Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit {editTarget ? RAW_MATERIAL_CATEGORIES.find(c => c.value === editTarget.category)?.label : ''}</DialogTitle>
+          </DialogHeader>
+          {editTarget && (() => {
+            const f = RAW_MATERIAL_FIELDS[editTarget.category];
+            return (
+              <form onSubmit={submitEdit} className="space-y-3">
+                {f.brand && (
+                  <div>
+                    <Label>{f.brand} *</Label>
+                    <Input value={editForm.brand} onChange={e => setEditForm(v => ({ ...v, brand: e.target.value }))} />
+                  </div>
+                )}
+                {f.supplier && (
+                  <div>
+                    <Label>{f.supplier} *</Label>
+                    <Input value={editForm.supplier} onChange={e => setEditForm(v => ({ ...v, supplier: e.target.value }))} />
+                  </div>
+                )}
+                {f.spec_name && (
+                  <div>
+                    <Label>{f.spec_name} *</Label>
+                    <Input value={editForm.spec_name} onChange={e => setEditForm(v => ({ ...v, spec_name: e.target.value }))} />
+                  </div>
+                )}
+                {f.denier_count && (
+                  <div>
+                    <Label>{f.denier_count}</Label>
+                    <Input value={editForm.denier_count} onChange={e => setEditForm(v => ({ ...v, denier_count: e.target.value }))} />
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Current Quantity *</Label>
+                    <Input type="number" step="0.001" min="0" value={editForm.quantity}
+                      onChange={e => setEditForm(v => ({ ...v, quantity: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label>Unit *</Label>
+                    <Input value={editForm.unit} onChange={e => setEditForm(v => ({ ...v, unit: e.target.value }))} />
+                  </div>
+                </div>
+                <div>
+                  <Label>Remarks</Label>
+                  <Textarea value={editForm.remarks} onChange={e => setEditForm(v => ({ ...v, remarks: e.target.value }))} rows={2} />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Changing the quantity doesn't overwrite history — the difference is logged as a "Stock correction" entry.
+                </p>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+                  <Button type="submit" disabled={updateMaterial.isPending}>Save</Button>
+                </DialogFooter>
+              </form>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
