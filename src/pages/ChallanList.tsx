@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useChallans, useBulkMarkChallansPaid } from '@/hooks/useChallan';
+import { useChallanReturns, useAllChallanReturnItems } from '@/hooks/useChallanReturn';
+import { returnLineTotal } from '@/types/challanReturn';
 import { paymentState, lineTotal } from '@/types/challan';
 import type { PaymentState } from '@/types/challan';
 import { useRole } from '@/context/RoleContext';
@@ -66,6 +68,7 @@ const ChallanList: React.FC = () => {
   // the two features never interfere. Any role can build a sample bill.
   const [billSelected, setBillSelected] = useState<Set<string>>(new Set());
   const [billOpen, setBillOpen] = useState(false);
+  const [includeReturns, setIncludeReturns] = useState(true);
 
   const { isAdmin } = useRole();
   const bulkPay = useBulkMarkChallansPaid();
@@ -78,6 +81,13 @@ const ChallanList: React.FC = () => {
       return data || [];
     },
   });
+
+  const { data: allReturns = [] } = useChallanReturns();
+  const { data: allReturnItems = [] } = useAllChallanReturnItems();
+  const returnMetaById = useMemo(
+    () => new Map(allReturns.map(r => [r.id, r])),
+    [allReturns],
+  );
 
   const uniqueClients = useMemo(() => {
     return [...new Set(challans.map(c => c.client_name))].filter(Boolean).sort();
@@ -259,10 +269,18 @@ const ChallanList: React.FC = () => {
     () => challans.filter(c => billSelected.has(c.id)).sort((a, b) => a.challan_number.localeCompare(b.challan_number, undefined, { numeric: true })),
     [challans, billSelected],
   );
+  const billReturnItems = useMemo(
+    () => (allReturnItems as any[]).filter(it => billSelected.has(it.original_challan_id)),
+    [allReturnItems, billSelected],
+  );
   const bill = useMemo(() => {
     const numById = new Map(challans.map(c => [c.id, c.challan_number]));
-    return buildBill(allItems.filter((i: any) => billSelected.has(i.challan_id)), [], numById);
-  }, [allItems, billSelected, challans]);
+    return buildBill(
+      allItems.filter((i: any) => billSelected.has(i.challan_id)),
+      includeReturns ? billReturnItems : [],
+      numById,
+    );
+  }, [allItems, billSelected, billReturnItems, includeReturns, challans]);
 
   const handleBulkPaid = async () => {
     const rows = filtered
@@ -285,9 +303,38 @@ const ChallanList: React.FC = () => {
     }
   };
 
+  // Return challans in the same client/date scope as the dispatch challans
+  // being exported -- included as negative-qty rows so the accountant's
+  // rate-wise totals in the Detail sheet net out automatically. Decided
+  // with Ansh (1 Oct 2026): billing stays Excel-only, no change to
+  // amount_received on the original challan.
+  const filteredReturnRows = useMemo(() => {
+    const toLocalDay = (s: string): Date => {
+      const datePart = s.includes('T') ? s.split('T')[0] : s;
+      const m = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+      const d = new Date(s);
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    };
+    return (allReturnItems as any[]).filter(it => {
+      const ret = returnMetaById.get(it.return_id);
+      if (!ret) return false;
+      if (clientFilter && ret.client_name !== clientFilter) return false;
+      if (dateFrom) {
+        const from = new Date(dateFrom.getFullYear(), dateFrom.getMonth(), dateFrom.getDate());
+        if (toLocalDay(ret.date) < from) return false;
+      }
+      if (dateTo) {
+        const to = new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate(), 23, 59, 59, 999);
+        if (toLocalDay(ret.date) > to) return false;
+      }
+      return true;
+    }).map(it => ({ item: it, ret: returnMetaById.get(it.return_id)! }));
+  }, [allReturnItems, returnMetaById, clientFilter, dateFrom, dateTo]);
+
   const handleExportExcel = () => {
-    if (!filtered.length) {
-      toast.error('No challans match the selected filters.');
+    if (!filtered.length && !filteredReturnRows.length) {
+      toast.error('No challans or returns match the selected filters.');
       return;
     }
 
@@ -307,7 +354,7 @@ const ChallanList: React.FC = () => {
       };
     });
 
-    const summaryRows = reportRows.map(({ challan: c, summary, grossWeight, isEDY, payment }) => ({
+    const summaryRows: any[] = reportRows.map(({ challan: c, summary, grossWeight, isEDY, payment }) => ({
       'Challan #': c.challan_number,
       'Challan Type': isEDY ? 'EDY' : 'Normal',
       Date: c.date,
@@ -324,7 +371,7 @@ const ChallanList: React.FC = () => {
       Notes: c.notes,
     }));
 
-    const detailRows = reportRows.flatMap(({ challan: c, items, isEDY, payment }) => items.map((item: any, index: number) => ({
+    const detailRows: any[] = reportRows.flatMap(({ challan: c, items, isEDY, payment }) => items.map((item: any, index: number) => ({
       'Challan #': c.challan_number,
       'Challan Type': isEDY ? 'EDY' : 'Normal',
       Date: c.date,
@@ -347,6 +394,60 @@ const ChallanList: React.FC = () => {
       'Paper Tube Surcharge (Rs.)': Number(item.paper_tube_surcharge) || 0,
     })));
 
+    // Return challans: negative-qty rows in the SAME detail sheet so a
+    // rate-wise total (Lot # / Rate grouping) nets dispatch and returns
+    // automatically, per Ansh's instruction (1 Oct 2026).
+    const returnDetailRows = filteredReturnRows.map(({ item, ret }, index) => ({
+      'Challan #': ret.return_number,
+      'Challan Type': 'Return',
+      Date: ret.date,
+      Client: ret.client_name,
+      'Item #': index + 1,
+      'Lot #': item.lot_no || '',
+      'Reference No.': item.challans?.challan_number ? `Return of ${item.challans.challan_number}` : '',
+      'Shade #': item.shade_number || '',
+      'Colour': item.color_name || '',
+      Denier: item.denier || '',
+      'Lot Type': item.lot_type || '',
+      'Packaging': item.packaging_type || '',
+      'Gross Weight (kg)': -(Number(item.returned_gross_weight) || 0),
+      'No. of Cones': -(Number(item.returned_num_of_units) || 0),
+      'Net Weight (kg)': -(Number(item.returned_net_weight) || 0),
+      'Rate (Rs.)': Number(item.rate) || 0,
+      'Amount (Rs.)': -(Number(item.amount) || 0),
+      'Payment Status': '—',
+      'Extra Cones': -(Number(item.returned_extra_cones) || 0),
+      'Paper Tube Surcharge (Rs.)': -(Number(item.paper_tube_surcharge) || 0),
+    }));
+    detailRows.push(...returnDetailRows);
+
+    const returnsByReturnId = new Map<string, typeof filteredReturnRows>();
+    for (const row of filteredReturnRows) {
+      const arr = returnsByReturnId.get(row.ret.id) || [];
+      arr.push(row);
+      returnsByReturnId.set(row.ret.id, arr);
+    }
+    const returnSummaryRows = [...returnsByReturnId.entries()].map(([retId, rows]) => {
+      const ret = rows[0].ret;
+      const netWeight = rows.reduce((s, r) => s + (Number(r.item.returned_net_weight) || 0), 0);
+      const grossWeight = rows.reduce((s, r) => s + (Number(r.item.returned_gross_weight) || 0), 0);
+      const amount = rows.reduce((s, r) => s + returnLineTotal({ amount: r.item.amount, paper_tube_surcharge: r.item.paper_tube_surcharge }), 0);
+      return {
+        'Challan #': ret.return_number,
+        'Challan Type': 'Return',
+        Date: ret.date,
+        Client: ret.client_name,
+        'Item Types': 'Return',
+        'No. of Items': rows.length,
+        'Net Weight (kg)': -Number(netWeight.toFixed(3)),
+        'Gross Weight (kg)': -Number(grossWeight.toFixed(3)),
+        'Total Amount (Rs.)': -Number(amount.toFixed(2)),
+        'Amount Received (Rs.)': '',
+        'Payment Status': '—',
+        Notes: ret.notes,
+      };
+    });
+
     const totals = reportRows.reduce((acc, row) => {
       acc.items += row.summary.totalItems;
       acc.netWeight += row.isEDY ? 0 : row.summary.totalNetWeight;
@@ -356,11 +457,19 @@ const ChallanList: React.FC = () => {
       return acc;
     }, { items: 0, netWeight: 0, grossWeight: 0, amount: 0, received: 0 });
 
+    for (const row of returnSummaryRows) {
+      totals.netWeight += Number(row['Net Weight (kg)']) || 0;
+      totals.amount += Number(row['Total Amount (Rs.)']) || 0;
+    }
+
+    summaryRows.push(...returnSummaryRows);
+
     const criteriaRows = [
       { 'Report Detail': 'Client', Value: clientFilter || 'All Clients' },
       { 'Report Detail': 'Date From', Value: dateFrom ? format(dateFrom, 'yyyy-MM-dd') : 'All dates' },
       { 'Report Detail': 'Date To', Value: dateTo ? format(dateTo, 'yyyy-MM-dd') : 'All dates' },
       { 'Report Detail': 'Challans Included', Value: reportRows.length },
+      { 'Report Detail': 'Returns Included', Value: returnsByReturnId.size },
       { 'Report Detail': 'Items Included', Value: totals.items },
       { 'Report Detail': 'Total Net Weight (kg)', Value: Number(totals.netWeight.toFixed(3)) },
       { 'Report Detail': 'Total Gross Weight (kg)', Value: Number(totals.grossWeight.toFixed(3)) },
@@ -395,7 +504,7 @@ const ChallanList: React.FC = () => {
     const clientPart = clientFilter ? clientFilter.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') : 'all-clients';
     const datePart = dateFrom || dateTo ? `${dateFrom ? format(dateFrom, 'yyyyMMdd') : 'start'}-to-${dateTo ? format(dateTo, 'yyyyMMdd') : 'end'}` : 'all-dates';
     XLSX.writeFile(workbook, `challan-report-${clientPart}-${datePart}.xlsx`);
-    toast.success(`Excel report generated with ${reportRows.length} challan(s).`);
+    toast.success(`Excel report generated with ${reportRows.length} challan(s) and ${returnsByReturnId.size} return(s).`);
   };
 
 
@@ -404,7 +513,7 @@ const ChallanList: React.FC = () => {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Dispatch — Challans</h1>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExportExcel} disabled={isLoading || filtered.length === 0}>
+          <Button variant="outline" onClick={handleExportExcel} disabled={isLoading || (filtered.length === 0 && filteredReturnRows.length === 0)}>
             <FileSpreadsheet className="w-4 h-4" /> Export Excel
           </Button>
           <Link to="/dispatch/create"
@@ -414,6 +523,10 @@ const ChallanList: React.FC = () => {
           <Link to="/dispatch/create-edy"
             className="inline-flex items-center gap-2 px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring">
             <PlusCircle className="w-4 h-4" /> New EDY Challan
+          </Link>
+          <Link to="/dispatch/returns"
+            className="inline-flex items-center gap-2 px-4 h-11 border border-input rounded-md text-sm font-medium btn-transition hover:bg-secondary focus-ring">
+            <FileText className="w-4 h-4" /> Returns
           </Link>
         </div>
       </div>
@@ -483,7 +596,7 @@ const ChallanList: React.FC = () => {
               <X className="w-3 h-3 mr-1" /> Clear all
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={isLoading || filtered.length === 0}>
+          <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={isLoading || (filtered.length === 0 && filteredReturnRows.length === 0)}>
             <FileSpreadsheet className="w-4 h-4 mr-1" /> Generate Excel Report
           </Button>
         </div>
@@ -510,10 +623,10 @@ const ChallanList: React.FC = () => {
         clientName={billClient}
         challanNumbers={selectedBillChallans.map(c => c.challan_number)}
         bill={bill}
-        hasReturns={false}
-        includeReturns={false}
-        returnsNetted={0}
-        onIncludeReturnsChange={() => {}}
+        hasReturns={billReturnItems.length > 0}
+        includeReturns={includeReturns}
+        returnsNetted={includeReturns ? billReturnItems.length : 0}
+        onIncludeReturnsChange={setIncludeReturns}
       />
 
       {/* Bulk payment bar */}

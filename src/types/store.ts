@@ -22,6 +22,7 @@ export type StoreTransactionType =
   | 'finished_lot_receipt'
   | 'external_dyed_yarn_receipt'
   | 'challan_dispatch'
+  | 'challan_return'
   | 'stock_adjustment'
   | 'asset_issue'
   | 'asset_return';
@@ -144,6 +145,7 @@ export const STORE_TXN_SIGN: Record<StoreTransactionType, 1 | -1> = {
   asset_return: 1,
   internal_issue: -1,
   challan_dispatch: -1,
+  challan_return: 1,
   asset_issue: -1,
   stock_adjustment: 1, // caller decides sign for adjustments
 };
