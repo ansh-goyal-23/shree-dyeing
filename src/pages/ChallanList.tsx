@@ -7,7 +7,7 @@ import { paymentState, lineTotal } from '@/types/challan';
 import type { PaymentState } from '@/types/challan';
 import { useRole } from '@/context/RoleContext';
 import { toast } from 'sonner';
-import { PlusCircle, FileText, Loader2, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, X, IndianRupee, FileSpreadsheet } from 'lucide-react';
+import { PlusCircle, FileText, Loader2, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown, CalendarIcon, X, IndianRupee, FileSpreadsheet, Receipt } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,8 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { formatYmdLocal } from '@/lib/formatDate';
 import * as XLSX from 'xlsx';
+import CreateBillDialog from '@/components/CreateBillDialog';
+import { buildBill } from '@/lib/billSummary';
 
 const PAY_BADGE: Record<PaymentState, string> = {
   Paid: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
@@ -62,6 +64,11 @@ const ChallanList: React.FC = () => {
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [paymentFilter, setPaymentFilter] = useState<'' | PaymentState>('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // "Create Bill" selection -- separate from the bulk-pay selection above so
+  // the two features never interfere. Any role can build a sample bill.
+  const [billSelected, setBillSelected] = useState<Set<string>>(new Set());
+  const [billOpen, setBillOpen] = useState(false);
+  const [includeReturns, setIncludeReturns] = useState(true);
 
   const { isAdmin } = useRole();
   const bulkPay = useBulkMarkChallansPaid();
@@ -228,6 +235,52 @@ const ChallanList: React.FC = () => {
 
   const allSelected = selectableIds.length > 0 && selectableIds.every(id => selected.has(id));
   const toggleAll = () => setSelected(allSelected ? new Set() : new Set(selectableIds));
+
+  // ---- Create Bill (sample, tabular bill for the accountant) ----
+  // Billable = normal (non-EDY) challans that actually have priced lines.
+  // A bill is always for ONE client, so once a challan is ticked, other
+  // clients' challans are disabled.
+  const billableIds = useMemo(
+    () => new Set(filtered.filter(c => c.challan_kind !== 'edy' && (itemSummaryMap[c.id]?.totalItems || 0) > 0).map(c => c.id)),
+    [filtered, itemSummaryMap],
+  );
+  const billClient = useMemo(() => {
+    const first = challans.find(c => billSelected.has(c.id));
+    return first ? first.client_name : '';
+  }, [challans, billSelected]);
+  const billSelectableIds = useMemo(
+    () => filtered.filter(c => billableIds.has(c.id) && (!billClient || c.client_name === billClient)).map(c => c.id),
+    [filtered, billableIds, billClient],
+  );
+  // Header "select all" only makes sense when the visible list is one client.
+  const visibleBillClients = useMemo(
+    () => new Set(filtered.filter(c => billableIds.has(c.id)).map(c => c.client_name)),
+    [filtered, billableIds],
+  );
+  const allBillSelected = billSelectableIds.length > 0 && billSelectableIds.every(id => billSelected.has(id));
+  const toggleBillOne = (id: string) => setBillSelected(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+  const toggleBillAll = () => setBillSelected(allBillSelected ? new Set() : new Set(billSelectableIds));
+
+  const selectedBillChallans = useMemo(
+    () => challans.filter(c => billSelected.has(c.id)).sort((a, b) => a.challan_number.localeCompare(b.challan_number, undefined, { numeric: true })),
+    [challans, billSelected],
+  );
+  const billReturnItems = useMemo(
+    () => (allReturnItems as any[]).filter(it => billSelected.has(it.original_challan_id)),
+    [allReturnItems, billSelected],
+  );
+  const bill = useMemo(() => {
+    const numById = new Map(challans.map(c => [c.id, c.challan_number]));
+    return buildBill(
+      allItems.filter((i: any) => billSelected.has(i.challan_id)),
+      includeReturns ? billReturnItems : [],
+      numById,
+    );
+  }, [allItems, billSelected, billReturnItems, includeReturns, challans]);
 
   const handleBulkPaid = async () => {
     const rows = filtered
@@ -554,6 +607,28 @@ const ChallanList: React.FC = () => {
         <p className="text-sm text-muted-foreground">{filtered.length} challan{filtered.length !== 1 ? 's' : ''} found</p>
       )}
 
+      {/* Create Bill bar */}
+      {billSelected.size > 0 && (
+        <div className="sticky top-2 z-20 card-industrial p-3 flex flex-wrap items-center gap-3 border-primary/60">
+          <span className="text-sm font-medium">{billSelected.size} challan(s) selected for bill — {billClient}</span>
+          <Button size="sm" onClick={() => setBillOpen(true)}>
+            <Receipt className="w-4 h-4 mr-1" /> Create Bill
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setBillSelected(new Set())}>Clear selection</Button>
+        </div>
+      )}
+      <CreateBillDialog
+        open={billOpen}
+        onOpenChange={setBillOpen}
+        clientName={billClient}
+        challanNumbers={selectedBillChallans.map(c => c.challan_number)}
+        bill={bill}
+        hasReturns={billReturnItems.length > 0}
+        includeReturns={includeReturns}
+        returnsNetted={includeReturns ? billReturnItems.length : 0}
+        onIncludeReturnsChange={setIncludeReturns}
+      />
+
       {/* Bulk payment bar */}
       {isAdmin && selected.size > 0 && (
         <div className="sticky top-2 z-20 card-industrial p-3 flex flex-wrap items-center gap-3 border-primary/60">
@@ -578,6 +653,11 @@ const ChallanList: React.FC = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-muted-foreground">
+                <th className="p-3 w-8" title="Select challans of one client to create a bill">
+                  <input type="checkbox" checked={allBillSelected} onChange={toggleBillAll}
+                    disabled={billSelectableIds.length === 0 || (!billClient && visibleBillClients.size > 1)}
+                    className="accent-primary w-4 h-4" aria-label="Select challans for bill" />
+                </th>
                 {isAdmin && (
                   <th className="p-3 w-8">
                     <input type="checkbox" checked={allSelected} onChange={toggleAll}
@@ -606,6 +686,12 @@ const ChallanList: React.FC = () => {
                 const balance = Math.max(s.totalAmount - c.amount_received, 0);
                 return (
                   <tr key={c.id} className="border-b border-border hover:bg-secondary/30 btn-transition">
+                    <td className="p-3">
+                      <input type="checkbox" checked={billSelected.has(c.id)} onChange={() => toggleBillOne(c.id)}
+                        disabled={!billableIds.has(c.id) || (!!billClient && c.client_name !== billClient)}
+                        title={isEDY ? 'EDY challans are not billed' : (!!billClient && c.client_name !== billClient) ? `Bill is for ${billClient} only` : 'Add to bill'}
+                        className="accent-primary w-4 h-4" aria-label={`Add challan ${c.challan_number} to bill`} />
+                    </td>
                     {isAdmin && (
                       <td className="p-3">
                         <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleOne(c.id)}
@@ -652,7 +738,7 @@ const ChallanList: React.FC = () => {
                 );
               })}
               <tr className="bg-muted/50 font-semibold">
-                <td className="p-3" colSpan={isAdmin ? 6 : 5}>Total ({filtered.length} challans)</td>
+                <td className="p-3" colSpan={isAdmin ? 7 : 6}>Total ({filtered.length} challans)</td>
                 <td className="p-3 text-right">{totals.totalNetWeight.toFixed(3)} kg</td>
                 <td className="p-3 text-right">₹{totals.totalAmount.toFixed(2)}</td>
                 <td className="p-3 text-xs">
