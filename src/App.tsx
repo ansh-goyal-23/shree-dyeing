@@ -42,6 +42,7 @@ import StoreExternalDyedYarnList from "@/pages/store/StoreExternalDyedYarnList";
 import StoreExternalDyedYarnReceive from "@/pages/store/StoreExternalDyedYarnReceive";
 import ActivityCenter from "@/pages/ActivityCenter";
 import AdminDashboard from "@/pages/AdminDashboard";
+import SalaryGeneration from "@/pages/SalaryGeneration";
 import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -116,6 +117,7 @@ const App = () => (
                         <Route path="/store/external-dyed-yarn" element={<StoreExternalDyedYarnList />} />
                         <Route path="/store/external-dyed-yarn/receive" element={<WriteRoute redirectTo="/store/external-dyed-yarn"><StoreExternalDyedYarnReceive /></WriteRoute>} />
                         <Route path="/admin-dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                        <Route path="/salary" element={<AdminRoute><SalaryGeneration /></AdminRoute>} />
                         <Route path="/activity" element={<AdminRoute><ActivityCenter /></AdminRoute>} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>

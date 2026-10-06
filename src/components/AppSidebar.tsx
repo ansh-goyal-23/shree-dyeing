@@ -19,6 +19,7 @@ import {
   FlaskConical,
   ClipboardList,
   RotateCcw,
+  Wallet,
 } from 'lucide-react';
 
 import { useRole } from '@/context/RoleContext';
@@ -265,6 +266,14 @@ export function AppSidebar() {
                     <NavLink to="/admin-dashboard" className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
                       <LayoutDashboard className="mr-2 h-4 w-4" />
                       {!collapsed && <span>Admin Dashboard</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink to="/salary" className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+                      <Wallet className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>Salary Generation</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
