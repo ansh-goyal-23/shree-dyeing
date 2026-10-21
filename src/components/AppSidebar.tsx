@@ -20,6 +20,7 @@ import {
   ClipboardList,
   RotateCcw,
   Wallet,
+  BookOpen,
 } from 'lucide-react';
 
 import { useRole } from '@/context/RoleContext';
@@ -274,6 +275,14 @@ export function AppSidebar() {
                     <NavLink to="/salary" className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
                       <Wallet className="mr-2 h-4 w-4" />
                       {!collapsed && <span>Salary Generation</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink to="/party-ledger" className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>Party Ledger</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
