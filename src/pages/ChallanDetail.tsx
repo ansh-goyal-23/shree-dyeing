@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useChallan, useChallanItems, useUpdateChallan, useDeleteChallan, useUpdateChallanPayment } from '@/hooks/useChallan';
+import { useChallan, useChallanItems, useUpdateChallan, useDeleteChallan, useUpdateChallanPayment, ChallanHasReturnsError } from '@/hooks/useChallan';
 import { paymentState, lineTotal } from '@/types/challan';
 import { useRole } from '@/context/RoleContext';
 import { useApp } from '@/context/AppContext';
@@ -130,7 +130,9 @@ const ChallanDetail: React.FC = () => {
       toast.success('Challan updated.');
       setEditing(false);
     } catch (err: any) {
-      if (err?.message?.includes('duplicate') || err?.code === '23505') {
+      if (err instanceof ChallanHasReturnsError) {
+        toast.error(err.message, { duration: 8000 });
+      } else if (err?.message?.includes('duplicate') || err?.code === '23505') {
         toast.error('Challan number already exists.');
       } else {
         toast.error('Failed to update.');
@@ -143,8 +145,8 @@ const ChallanDetail: React.FC = () => {
     try {
       await deleteChallan.mutateAsync(id!);
       navigate('/dispatch');
-    } catch {
-      toast.error('Failed to delete.');
+    } catch (err: any) {
+      toast.error(err instanceof ChallanHasReturnsError ? err.message : 'Failed to delete.', { duration: 8000 });
     }
   };
 
