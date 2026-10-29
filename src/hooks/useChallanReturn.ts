@@ -4,48 +4,22 @@ import type { ChallanReturn, ChallanReturnItem, ReturnReason } from '@/types/cha
 import { logBusinessEvent } from '@/lib/activityCenter';
 
 // -------------------------------------------------------------------
-// Store integration: a return restocks Finished Goods / EDY stock via a
-// `challan_return` transaction -- the exact mirror of how dispatch
-// deducts it (see useChallan.ts's applyChallanStockDelta). Same
-// FG-<lot_no> / EDY-<lot_no> lookup; if no matching store item exists
-// the line is silently skipped, same as dispatch.
+// Creating a return is ONE database call (`create_challan_return`): the
+// header, the lines and the Store restock (`challan_return` transactions,
+// mirroring how dispatch deducts stock) all happen in a single transaction,
+// so a return and its restock can never drift apart. The database also
+// assigns the RET-n number and rejects over-returns -- see
+// sql_migrations/20261029_return_challan_hardening.sql.
 // -------------------------------------------------------------------
 
 const sb = supabase as any;
 
-async function applyChallanReturnStock(
-  return_number: string,
-  return_date: string,
-  items: { lot_no: string; returned_net_weight: number }[],
-) {
-  const withQty = items.filter(i => i.lot_no && Number(i.returned_net_weight) > 0.00001);
-  if (withQty.length === 0) return;
-
-  const codes = withQty.flatMap(i => [`FG-${i.lot_no}`, `EDY-${i.lot_no}`]);
-  const { data: storeItems, error } = await sb
-    .from('store_items')
-    .select('id, item_code, unit')
-    .in('item_code', codes);
-  if (error) return; // store module may not have a matching item; do not block the return
-  const byCode = new Map((storeItems ?? []).map((i: any) => [i.item_code, i]));
-
-  for (const it of withQty) {
-    const item: any = byCode.get(`FG-${it.lot_no}`) ?? byCode.get(`EDY-${it.lot_no}`);
-    if (!item) continue; // not tracked in store -- skip, same as dispatch
-    const { data: txnNum, error: nErr } = await sb.rpc('next_store_txn_number');
-    if (nErr) continue;
-    await sb.from('store_stock_transactions').insert({
-      transaction_number: txnNum,
-      transaction_date: return_date,
-      transaction_type: 'challan_return',
-      item_id: item.id,
-      quantity: Number(it.returned_net_weight), // positive: return restocks
-      unit: item.unit,
-      reference_type: 'challan_return',
-      reference_number: return_number,
-      remarks: `Return ${return_number}`,
-    });
-  }
+export interface CreateChallanReturnResult {
+  id: string;
+  return_number: string;
+  restocked_lots: number;
+  /** Lots with no matching Store item: returned, but NOT restocked. */
+  skipped_lots: string[];
 }
 
 const mapReturn = (r: any): ChallanReturn => ({
@@ -154,7 +128,8 @@ export function useCreateChallanReturn() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: {
-      return_number: string;
+      /** Leave out to let the database assign the next RET-n. */
+      return_number?: string;
       date: string;
       client_id: string;
       notes: string;
@@ -182,38 +157,14 @@ export function useCreateChallanReturn() {
         reason: ReturnReason;
         reason_note?: string | null;
       }>;
-    }) => {
-      const { data: ret, error: rErr } = await supabase
-        .from('challan_returns')
-        .insert({
-          return_number: payload.return_number,
-          date: payload.date,
-          client_id: payload.client_id,
-          notes: payload.notes,
-          prepared_by_name: payload.prepared_by_name,
-          received_by_name: payload.received_by_name,
-          received_by_contact_number: payload.received_by_contact_number,
-        } as any)
-        .select()
-        .single();
-      if (rErr) throw rErr;
-
-      if (payload.items.length > 0) {
-        const rows = payload.items.map(i => ({ ...i, return_id: ret.id }));
-        const { error: iErr } = await sb.from('challan_return_items').insert(rows);
-        if (iErr) {
-          await supabase.from('challan_returns').delete().eq('id', ret.id);
-          throw iErr;
-        }
-      }
-
-      await applyChallanReturnStock(
-        payload.return_number,
-        payload.date,
-        payload.items.map(i => ({ lot_no: i.lot_no, returned_net_weight: i.returned_net_weight })),
-      );
-
-      return ret;
+    }): Promise<CreateChallanReturnResult> => {
+      const { items, ...header } = payload;
+      const { data, error } = await sb.rpc('create_challan_return', {
+        p_header: header,
+        p_items: items,
+      });
+      if (error) throw error;
+      return data as CreateChallanReturnResult;
     },
     onSuccess: (ret, vars) => {
       qc.invalidateQueries({ queryKey: ['challan_returns'] });
@@ -221,12 +172,16 @@ export function useCreateChallanReturn() {
       qc.invalidateQueries({ queryKey: ['store_current_stock'] });
       qc.invalidateQueries({ queryKey: ['store_current_stock_by_item'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
+      qc.invalidateQueries({ queryKey: ['orders'] });
       const totalKg = vars.items.reduce((s, i) => s + (Number(i.returned_net_weight) || 0), 0);
       logBusinessEvent({
-        module: 'dispatch', eventType: 'challan_return.created', severity: 'success',
-        entityType: 'challan_return', entityId: ret.id, referenceNumber: vars.return_number,
-        summary: `Created Return ${vars.return_number} — ${vars.items.length} line(s), ${totalKg.toFixed(2)} kg`,
-        details: { items: vars.items.length, total_kg: totalKg, date: vars.date },
+        module: 'dispatch', eventType: 'challan_return.created', severity: ret.skipped_lots?.length ? 'warning' : 'success',
+        entityType: 'challan_return', entityId: ret.id, referenceNumber: ret.return_number,
+        summary: `Created Return ${ret.return_number} — ${vars.items.length} line(s), ${totalKg.toFixed(2)} kg`,
+        details: {
+          items: vars.items.length, total_kg: totalKg, date: vars.date,
+          restocked_lots: ret.restocked_lots, not_restocked_lots: ret.skipped_lots ?? [],
+        },
       });
     },
   });

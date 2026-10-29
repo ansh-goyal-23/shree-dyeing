@@ -111,6 +111,34 @@ async function insertChallanItems(
 
 type AggLine = { lot_no: string; net_weight: number };
 
+/**
+ * A challan that has Return Challans against it must not be rewritten: editing
+ * deletes and re-inserts every line, but returns point at those exact lines
+ * (original_challan_item_id), so the delete is refused by the database and the
+ * edit would otherwise leave duplicated lines behind. Checked up front, before
+ * anything is changed.
+ */
+export class ChallanHasReturnsError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ChallanHasReturnsError';
+  }
+}
+
+async function assertNoReturnsAgainstChallan(challanId: string, action: 'edited' | 'deleted') {
+  const { data, error } = await sb
+    .from('challan_return_items')
+    .select('challan_returns(return_number)')
+    .eq('original_challan_id', challanId);
+  if (error) throw error;
+  if (data && data.length > 0) {
+    const numbers = [...new Set(data.map((r: any) => r.challan_returns?.return_number).filter(Boolean))].join(', ');
+    throw new ChallanHasReturnsError(
+      `This challan can't be ${action} because it has returns against it (${numbers || 'see Dispatch → Returns'}).`,
+    );
+  }
+}
+
 async function applyChallanStockDelta(
   challan_number: string,
   challan_date: string,
@@ -322,6 +350,8 @@ export function useUpdateChallan() {
       receiver_contact_number: string;
       items: Omit<ChallanItem, 'id' | 'challan_id'>[];
     }) => {
+      await assertNoReturnsAgainstChallan(payload.id, 'edited');
+
       // Snapshot previous items + previous challan_number/date so we can
       // post the correct reversal even if the user just edited the header.
       const { data: prevChallan } = await sb
@@ -351,7 +381,8 @@ export function useUpdateChallan() {
         .eq('id', payload.id);
       if (cErr) throw cErr;
 
-      await supabase.from('challan_items').delete().eq('challan_id', payload.id);
+      const { error: delErr } = await supabase.from('challan_items').delete().eq('challan_id', payload.id);
+      if (delErr) throw delErr; // never insert the new lines on top of old ones
       if (payload.items.length > 0) {
         const iErr = await insertChallanItems(payload.id, payload.items);
         if (iErr) throw iErr;
@@ -384,6 +415,8 @@ export function useDeleteChallan() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      await assertNoReturnsAgainstChallan(id, 'deleted');
+
       // Snapshot challan + items, post reversal transactions, then delete.
       const { data: prevChallan } = await sb
         .from('challans').select('challan_number, date').eq('id', id).single();

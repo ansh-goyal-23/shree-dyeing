@@ -7,7 +7,7 @@ import FooterAutocomplete from '@/components/FooterAutocomplete';
 import DecimalInput from '@/components/DecimalInput';
 import { useChallanFooterOptions } from '@/hooks/useChallanFooterOptions';
 import { useChallans, useChallanItems } from '@/hooks/useChallan';
-import { useCreateChallanReturn, useChallanReturns, useAllChallanReturnItems } from '@/hooks/useChallanReturn';
+import { useCreateChallanReturn, useAllChallanReturnItems } from '@/hooks/useChallanReturn';
 import { RETURN_REASONS, type ReturnReason } from '@/types/challanReturn';
 
 interface Draft {
@@ -27,6 +27,10 @@ interface Draft {
   orig_net_weight: number;
   orig_num_of_units: number;
   orig_extra_cones: number;
+  // what is still returnable on this line (original minus earlier returns)
+  rem_net_weight: number;
+  rem_num_of_units: number;
+  rem_extra_cones: number;
   per_cone_rate: number;
   rate: number;
   rate_tier_label: string | null;
@@ -39,28 +43,20 @@ interface Draft {
   reason_note: string;
 }
 
-const nextReturnNumber = (existing: { return_number: string }[]) => {
-  let max = 0;
-  for (const r of existing) {
-    const m = /^RET-(\d+)$/i.exec(r.return_number || '');
-    if (m) max = Math.max(max, parseInt(m[1], 10));
-  }
-  return `RET-${max + 1}`;
-};
+// Tolerance for 3-decimal weights, matching the database check.
+const EPS = 0.0005;
 
 const CreateReturnChallan: React.FC = () => {
   const navigate = useNavigate();
   const createReturn = useCreateChallanReturn();
   const { data: footerOptions } = useChallanFooterOptions();
   const { data: allChallans = [] } = useChallans();
-  const { data: existingReturns = [] } = useChallanReturns();
   const { data: allReturnItems = [] } = useAllChallanReturnItems();
 
   const preparedByOptions = footerOptions?.preparedByOptions || [];
   const receiverOptions = footerOptions?.receiverOptions || [];
   const receiverNames = useMemo(() => receiverOptions.map(r => r.name), [receiverOptions]);
 
-  const [returnNumber, setReturnNumber] = useState(() => nextReturnNumber(existingReturns));
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [clientId, setClientId] = useState('');
   const [notes, setNotes] = useState('');
@@ -111,6 +107,10 @@ const CreateReturnChallan: React.FC = () => {
     const toAdd = pickerItems.filter(it => checkedItemIds.has(it.id) && !drafts.some(d => d.original_challan_item_id === it.id));
     if (toAdd.length === 0) { toast.error('Select at least one line to add.'); return; }
     const newDrafts: Draft[] = toAdd.map(it => {
+      const already = alreadyReturnedByItemId.get(it.id);
+      const remNet = Math.max(it.net_weight - (already?.netWeight ?? 0), 0);
+      const remUnits = Math.max(it.num_of_units - (already?.units ?? 0), 0);
+      const remCones = Math.max(((it as any).extra_cones || 0) - (already?.cones ?? 0), 0);
       const perConeRate = (it as any).extra_cones > 0 ? (Number(it.paper_tube_surcharge) || 0) / (it as any).extra_cones : 0;
       return {
         key: it.id,
@@ -128,13 +128,16 @@ const CreateReturnChallan: React.FC = () => {
         orig_net_weight: it.net_weight,
         orig_num_of_units: it.num_of_units,
         orig_extra_cones: (it as any).extra_cones || 0,
+        rem_net_weight: remNet,
+        rem_num_of_units: remUnits,
+        rem_extra_cones: remCones,
         per_cone_rate: perConeRate,
         rate: it.rate,
         rate_tier_label: it.rate_tier_label || null,
-        returned_gross_weight: it.gross_weight,
-        returned_net_weight: it.net_weight,
-        returned_num_of_units: it.num_of_units,
-        returned_extra_cones: (it as any).extra_cones || 0,
+        returned_gross_weight: it.num_of_units > 0 ? (it.gross_weight * remUnits) / it.num_of_units : it.gross_weight,
+        returned_net_weight: remNet,
+        returned_num_of_units: remUnits,
+        returned_extra_cones: remCones,
         reason: 'Quality Reject',
         reason_note: '',
       };
@@ -155,13 +158,25 @@ const CreateReturnChallan: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!returnNumber.trim()) { toast.error('Return number is required.'); return; }
     if (!clientId) { toast.error('Please select a client.'); return; }
     if (drafts.length === 0) { toast.error('Add at least one line to return.'); return; }
 
+    for (const d of drafts) {
+      const label = `Lot ${d.lot_no} (${d.original_challan_number})`;
+      if (!(Number(d.returned_net_weight) > EPS)) { toast.error(`${label}: returned weight must be greater than 0.`); return; }
+      if (Number(d.returned_net_weight) > d.rem_net_weight + EPS) {
+        toast.error(`${label}: only ${d.rem_net_weight.toFixed(3)} kg can still be returned.`); return;
+      }
+      if (Number(d.returned_num_of_units) > d.rem_num_of_units) {
+        toast.error(`${label}: only ${d.rem_num_of_units} unit(s) can still be returned.`); return;
+      }
+      if (Number(d.returned_extra_cones) > d.rem_extra_cones) {
+        toast.error(`${label}: only ${d.rem_extra_cones} extra cone(s) can still be returned.`); return;
+      }
+    }
+
     try {
-      await createReturn.mutateAsync({
-        return_number: returnNumber.trim(),
+      const result = await createReturn.mutateAsync({
         date,
         client_id: clientId,
         notes: notes.trim(),
@@ -190,10 +205,16 @@ const CreateReturnChallan: React.FC = () => {
           reason_note: d.reason_note.trim() || null,
         })),
       });
-      toast.success('Return Challan created successfully.');
+      toast.success(`Return Challan ${result.return_number} created.`);
+      if (result.skipped_lots?.length) {
+        toast.warning(
+          `Not restocked (no matching Store item): lot ${result.skipped_lots.join(', ')}. Add the stock manually if needed.`,
+          { duration: 10000 },
+        );
+      }
       navigate('/dispatch/returns');
     } catch (err: any) {
-      toast.error('Failed to create return challan.');
+      toast.error(err?.message || 'Failed to create return challan.');
     }
   };
 
@@ -206,9 +227,10 @@ const CreateReturnChallan: React.FC = () => {
         <div className="card-industrial p-5 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="text-sm font-medium text-foreground">Return Number *</label>
-              <input type="text" value={returnNumber} onChange={e => setReturnNumber(e.target.value)}
-                className="input-industrial w-full mt-1" placeholder="e.g. RET-1" />
+              <label className="text-sm font-medium text-foreground">Return Number</label>
+              <div className="input-industrial w-full mt-1 flex items-center text-muted-foreground">
+                Assigned automatically on save
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium text-foreground">Date *</label>
@@ -269,13 +291,14 @@ const CreateReturnChallan: React.FC = () => {
                     {pickerItems.map(it => {
                       const already = alreadyReturnedByItemId.get(it.id);
                       const alreadyInCart = drafts.some(d => d.original_challan_item_id === it.id);
+                      const fullyReturned = !!already && (it.net_weight - already.netWeight) <= EPS;
                       return (
                         <tr key={it.id} className="border-b border-border/60 last:border-0">
                           <td className="p-2">
-                            <input type="checkbox" disabled={alreadyInCart}
+                            <input type="checkbox" disabled={alreadyInCart || fullyReturned}
                               checked={checkedItemIds.has(it.id)} onChange={() => toggleChecked(it.id)} />
                           </td>
-                          <td className="p-2">{it.lot_no}{alreadyInCart && <span className="ml-2 text-xs text-muted-foreground">(in cart)</span>}</td>
+                          <td className="p-2">{it.lot_no}{alreadyInCart && <span className="ml-2 text-xs text-muted-foreground">(in cart)</span>}{fullyReturned && <span className="ml-2 text-xs text-muted-foreground">(fully returned)</span>}</td>
                           <td className="p-2">{it.shade_number}</td>
                           <td className="p-2">{it.packaging_type}</td>
                           <td className="p-2">{it.net_weight.toFixed(3)}</td>
@@ -324,18 +347,18 @@ const CreateReturnChallan: React.FC = () => {
                   <td className="p-2">{d.lot_no}</td>
                   <td className="p-2">{d.packaging_type}</td>
                   <td className="p-2">
-                    <DecimalInput step="0.001" min={0} max={d.orig_net_weight} value={d.returned_net_weight}
+                    <DecimalInput step="0.001" min={0} max={d.rem_net_weight} value={d.returned_net_weight}
                       onValueChange={v => updateDraft(d.key, { returned_net_weight: v })}
                       className="input-industrial w-24 text-sm" />
-                    <div className="text-xs text-muted-foreground">of {d.orig_net_weight.toFixed(3)}</div>
+                    <div className="text-xs text-muted-foreground">{d.rem_net_weight.toFixed(3)} left of {d.orig_net_weight.toFixed(3)}</div>
                   </td>
                   <td className="p-2">
-                    <DecimalInput step="1" min={0} max={d.orig_num_of_units} value={d.returned_num_of_units}
+                    <DecimalInput step="1" min={0} max={d.rem_num_of_units} value={d.returned_num_of_units}
                       onValueChange={v => updateDraft(d.key, { returned_num_of_units: v })}
                       className="input-industrial w-20 text-sm" />
                   </td>
                   <td className="p-2">
-                    <DecimalInput step="1" min={0} value={d.returned_extra_cones}
+                    <DecimalInput step="1" min={0} max={d.rem_extra_cones} value={d.returned_extra_cones}
                       onValueChange={v => updateDraft(d.key, { returned_extra_cones: v })}
                       className="input-industrial w-20 text-sm" />
                   </td>
