@@ -4,6 +4,7 @@ import { Trash2, AlertTriangle } from 'lucide-react';
 import DecimalInput from '@/components/DecimalInput';
 import type { Lot } from '@/types';
 import type { PackagingType } from '@/types/challan';
+import { calculateChallanNet } from '@/lib/calculations';
 import { lineTotal } from '@/types/challan';
 import type { StoreEDYCurrentStockRow } from '@/types/store';
 import { lookupRate, lookupYarnCost, type ClientRate, type ClientYarnCost, type ClientRateTier } from '@/hooks/useClientRates';
@@ -192,13 +193,7 @@ const LotSearchDropdown: React.FC<{
 };
 
 
-const DEDUCTION: Record<PackagingType, number> = {
-  paper_tube: 0.12,
-  chesse: 0.18,
-};
-
-const calcNet = (gross: number, units: number, type: PackagingType) =>
-  parseFloat((gross - DEDUCTION[type] * units).toFixed(3));
+const calcNet = calculateChallanNet;
 
 const ChallanItemRow: React.FC<ChallanItemRowProps> = ({
   index, item, lots, clientId, clientRates, onChange, onRemove,

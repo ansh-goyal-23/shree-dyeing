@@ -9,6 +9,8 @@ import { useChallanFooterOptions } from '@/hooks/useChallanFooterOptions';
 import { useChallans, useChallanItems } from '@/hooks/useChallan';
 import { useCreateChallanReturn, useAllChallanReturnItems } from '@/hooks/useChallanReturn';
 import { RETURN_REASONS, type ReturnReason } from '@/types/challanReturn';
+import type { PackagingType } from '@/types/challan';
+import { PACKAGING_DEDUCTION_KG } from '@/lib/calculations';
 
 interface Draft {
   key: string;
@@ -32,6 +34,8 @@ interface Draft {
   rem_num_of_units: number;
   rem_extra_cones: number;
   per_cone_rate: number;
+  // packaging weight per unit; net = gross - deduction_per_unit * units (same rule as a dispatch challan)
+  deduction_per_unit: number;
   rate: number;
   rate_tier_label: string | null;
   // editable
@@ -45,6 +49,9 @@ interface Draft {
 
 // Tolerance for 3-decimal weights, matching the database check.
 const EPS = 0.0005;
+
+const netOf = (gross: number, units: number, deductionPerUnit: number) =>
+  parseFloat((Number(gross || 0) - deductionPerUnit * Number(units || 0)).toFixed(3));
 
 const CreateReturnChallan: React.FC = () => {
   const navigate = useNavigate();
@@ -111,6 +118,10 @@ const CreateReturnChallan: React.FC = () => {
       const remNet = Math.max(it.net_weight - (already?.netWeight ?? 0), 0);
       const remUnits = Math.max(it.num_of_units - (already?.units ?? 0), 0);
       const remCones = Math.max(((it as any).extra_cones || 0) - (already?.cones ?? 0), 0);
+      // Same rule as a dispatch challan (0.12 kg per tube, 0.18 kg per chesse). If a line has
+      // an unrecognised packaging type, fall back to what the original line itself implies.
+      const knownDeduction = PACKAGING_DEDUCTION_KG[it.packaging_type as PackagingType];
+      const deduction = knownDeduction ?? (it.num_of_units > 0 ? Math.max((it.gross_weight - it.net_weight) / it.num_of_units, 0) : 0);
       const perConeRate = (it as any).extra_cones > 0 ? (Number(it.paper_tube_surcharge) || 0) / (it as any).extra_cones : 0;
       return {
         key: it.id,
@@ -132,9 +143,10 @@ const CreateReturnChallan: React.FC = () => {
         rem_num_of_units: remUnits,
         rem_extra_cones: remCones,
         per_cone_rate: perConeRate,
+        deduction_per_unit: deduction,
         rate: it.rate,
         rate_tier_label: it.rate_tier_label || null,
-        returned_gross_weight: it.num_of_units > 0 ? (it.gross_weight * remUnits) / it.num_of_units : it.gross_weight,
+        returned_gross_weight: parseFloat((remNet + deduction * remUnits).toFixed(3)),
         returned_net_weight: remNet,
         returned_num_of_units: remUnits,
         returned_extra_cones: remCones,
@@ -149,6 +161,11 @@ const CreateReturnChallan: React.FC = () => {
   const updateDraft = (key: string, patch: Partial<Draft>) => {
     setDrafts(prev => prev.map(d => d.key === key ? { ...d, ...patch } : d));
   };
+  // Staff enter the GROSS weight; net is calculated from it (gross minus packaging).
+  const setGross = (key: string, gross: number) => setDrafts(prev => prev.map(d => d.key === key
+    ? { ...d, returned_gross_weight: gross, returned_net_weight: netOf(gross, d.returned_num_of_units, d.deduction_per_unit) } : d));
+  const setUnits = (key: string, units: number) => setDrafts(prev => prev.map(d => d.key === key
+    ? { ...d, returned_num_of_units: units, returned_net_weight: netOf(d.returned_gross_weight, units, d.deduction_per_unit) } : d));
   const removeDraft = (key: string) => setDrafts(prev => prev.filter(d => d.key !== key));
 
   const lineAmount = (d: Draft) => Number(d.rate || 0) * Number(d.returned_net_weight || 0);
@@ -163,7 +180,10 @@ const CreateReturnChallan: React.FC = () => {
 
     for (const d of drafts) {
       const label = `Lot ${d.lot_no} (${d.original_challan_number})`;
-      if (!(Number(d.returned_net_weight) > EPS)) { toast.error(`${label}: returned weight must be greater than 0.`); return; }
+      if (!(Number(d.returned_gross_weight) > EPS)) { toast.error(`${label}: enter the returned gross weight.`); return; }
+      if (!(Number(d.returned_net_weight) > EPS)) {
+        toast.error(`${label}: gross weight must be more than the packaging weight (${(d.deduction_per_unit * Number(d.returned_num_of_units || 0)).toFixed(3)} kg for ${d.returned_num_of_units || 0} unit(s)).`); return;
+      }
       if (Number(d.returned_net_weight) > d.rem_net_weight + EPS) {
         toast.error(`${label}: only ${d.rem_net_weight.toFixed(3)} kg can still be returned.`); return;
       }
@@ -331,8 +351,9 @@ const CreateReturnChallan: React.FC = () => {
                 <th className="p-2 font-medium">Orig. Challan</th>
                 <th className="p-2 font-medium">Lot No</th>
                 <th className="p-2 font-medium">Packaging</th>
-                <th className="p-2 font-medium">Returned Net Wt (kg)</th>
+                <th className="p-2 font-medium">Returned Gross Wt (kg)</th>
                 <th className="p-2 font-medium">Returned Units</th>
+                <th className="p-2 font-medium">Net Wt (kg)</th>
                 <th className="p-2 font-medium">Returned Extra Cones</th>
                 <th className="p-2 font-medium">Reason</th>
                 <th className="p-2 font-medium">Note</th>
@@ -347,15 +368,22 @@ const CreateReturnChallan: React.FC = () => {
                   <td className="p-2">{d.lot_no}</td>
                   <td className="p-2">{d.packaging_type}</td>
                   <td className="p-2">
-                    <DecimalInput step="0.001" min={0} max={d.rem_net_weight} value={d.returned_net_weight}
-                      onValueChange={v => updateDraft(d.key, { returned_net_weight: v })}
+                    <DecimalInput step="0.001" min={0} value={d.returned_gross_weight}
+                      onValueChange={v => setGross(d.key, v)}
                       className="input-industrial w-24 text-sm" />
-                    <div className="text-xs text-muted-foreground">{d.rem_net_weight.toFixed(3)} left of {d.orig_net_weight.toFixed(3)}</div>
+                    <div className="text-xs text-muted-foreground">
+                      max {(d.rem_net_weight + d.deduction_per_unit * Number(d.returned_num_of_units || 0)).toFixed(3)}
+                    </div>
                   </td>
                   <td className="p-2">
                     <DecimalInput step="1" min={0} max={d.rem_num_of_units} value={d.returned_num_of_units}
-                      onValueChange={v => updateDraft(d.key, { returned_num_of_units: v })}
+                      onValueChange={v => setUnits(d.key, v)}
                       className="input-industrial w-20 text-sm" />
+                    <div className="text-xs text-muted-foreground">{d.rem_num_of_units} left</div>
+                  </td>
+                  <td className="p-2 text-sm font-medium">
+                    {Number(d.returned_net_weight).toFixed(3)}
+                    <div className="text-xs font-normal text-muted-foreground">{d.rem_net_weight.toFixed(3)} left of {d.orig_net_weight.toFixed(3)}</div>
                   </td>
                   <td className="p-2">
                     <DecimalInput step="1" min={0} max={d.rem_extra_cones} value={d.returned_extra_cones}
@@ -381,15 +409,15 @@ const CreateReturnChallan: React.FC = () => {
                 </tr>
               ))}
               {drafts.length === 0 && (
-                <tr><td colSpan={10} className="p-4 text-center text-muted-foreground">No lines added yet — pick a client and a challan above.</td></tr>
+                <tr><td colSpan={11} className="p-4 text-center text-muted-foreground">No lines added yet — pick a client and a challan above.</td></tr>
               )}
             </tbody>
             {drafts.length > 0 && (
               <tfoot>
                 <tr className="border-t-2 border-border font-semibold">
-                  <td colSpan={3} className="p-3 text-right">Totals:</td>
+                  <td colSpan={5} className="p-3 text-right">Totals:</td>
                   <td className="p-3">{totalNetWeight.toFixed(3)} kg</td>
-                  <td colSpan={4}></td>
+                  <td colSpan={3}></td>
                   <td className="p-3">₹{totalAmount.toFixed(2)}</td>
                   <td></td>
                 </tr>
