@@ -85,7 +85,9 @@ const CreateReturnChallan: React.FC = () => {
     [allChallans, clientId],
   );
 
-  const { data: pickerItems = [] } = useChallanItems(pickerChallanId);
+  const { data: pickerItemsAll = [] } = useChallanItems(pickerChallanId);
+  // "Other item" lines (tools, raw material...) are not yarn and never come back as a return.
+  const pickerItems = useMemo(() => pickerItemsAll.filter(it => !it.is_custom), [pickerItemsAll]);
 
   const alreadyReturnedByItemId = useMemo(() => {
     const map = new Map<string, { netWeight: number; units: number; cones: number }>();

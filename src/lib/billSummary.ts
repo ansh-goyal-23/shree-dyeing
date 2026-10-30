@@ -32,6 +32,9 @@ export interface BillSummary {
 
 interface SrcItem {
   challan_id: string;
+  /** "Other item" line (tools, raw material...): billed as its own line, never rolled into a yarn line. */
+  is_custom?: boolean | null;
+  description?: string | null;
   denier?: string | null;
   net_weight?: number | string | null;
   rate?: number | string | null;
@@ -59,6 +62,7 @@ export function buildBill(
 ): BillSummary {
   const groups = new Map<string, { denier: string; rate: number; qty: number; amount: number; challans: Set<string> }>();
   let surcharge = 0;
+  const otherLines: BillLine[] = [];
 
   const add = (denier: string, rate: number, qty: number, amount: number, challanId: string | null) => {
     const key = `${denier}|${rate}`;
@@ -73,6 +77,19 @@ export function buildBill(
   };
 
   for (const i of items) {
+    if (i.is_custom) {
+      const num = challanNumberById.get(i.challan_id);
+      otherLines.push({
+        line: 0,
+        item: (i.description || '').trim() || 'Other item',
+        denier: '',
+        qty: null,
+        rate: null,
+        amount: r2(n(i.amount)),
+        challans: num ? [num] : [],
+      });
+      continue;
+    }
     add((i.denier || '').trim(), n(i.rate), n(i.net_weight), n(i.amount), i.challan_id);
     surcharge += n(i.paper_tube_surcharge);
   }
@@ -96,6 +113,10 @@ export function buildBill(
     amount: r2(g.amount),
     challans: [...g.challans].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
   }));
+
+  // Other items follow the yarn lines, in challan-number order, one line each.
+  otherLines.sort((a, b) => (a.challans[0] || '').localeCompare(b.challans[0] || '', undefined, { numeric: true }));
+  for (const o of otherLines) lines.push({ ...o, line: lines.length + 1 });
 
   if (Math.abs(surcharge) > 0.005) {
     lines.push({

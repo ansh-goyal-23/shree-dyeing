@@ -127,9 +127,16 @@ function renderChallan(doc: jsPDF, challan: Challan, items: ChallanItem[]): numb
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0);
-    doc.text(`#${idx + 1}  ${item.lot_no}`, MARGIN + 0.6, y);
+    doc.text(`#${idx + 1}  ${item.is_custom ? 'OTHER ITEM' : item.lot_no}`, MARGIN + 0.6, y);
     y += smallH + 0.6;
 
+    // "Other item" (tools, raw material, ...): just what it is and its amount.
+    if (item.is_custom && !isEdy) {
+      itemField('Item', item.description || '');
+      itemField('Amount', `Rs. ${lineTotal(item).toFixed(2)}`);
+      y += 1;
+      return;
+    }
 
     if (isEdy) {
       if (item.color_name) itemField('Dyer', item.color_name);
@@ -164,13 +171,16 @@ function renderChallan(doc: jsPDF, challan: Challan, items: ChallanItem[]): numb
 
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
-  doc.text('TOTAL CONES', MARGIN, y);
-  doc.text(String(totalCones), PAGE_W - MARGIN, y, { align: 'right' });
-  y += lineH;
+  // A challan made only of "other items" has no cones or kg to total.
+  if (items.some(i => !i.is_custom)) {
+    doc.text('TOTAL CONES', MARGIN, y);
+    doc.text(String(totalCones), PAGE_W - MARGIN, y, { align: 'right' });
+    y += lineH;
 
-  doc.text(isEdy ? 'TOTAL GROSS' : 'TOTAL NET', MARGIN, y);
-  doc.text(`${totalNet.toFixed(3)} kg`, PAGE_W - MARGIN, y, { align: 'right' });
-  y += lineH;
+    doc.text(isEdy ? 'TOTAL GROSS' : 'TOTAL NET', MARGIN, y);
+    doc.text(`${totalNet.toFixed(3)} kg`, PAGE_W - MARGIN, y, { align: 'right' });
+    y += lineH;
+  }
 
   if (!isEdy && totalAmount > 0) {
     doc.setFontSize(9.5);
