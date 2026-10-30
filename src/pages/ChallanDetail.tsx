@@ -5,8 +5,9 @@ import { paymentState, lineTotal } from '@/types/challan';
 import { useRole } from '@/context/RoleContext';
 import { useApp } from '@/context/AppContext';
 import ClientSelect from '@/components/ClientSelect';
-import ChallanItemRow from '@/components/ChallanItemRow';
+import ChallanItemRow, { emptyCustomItem } from '@/components/ChallanItemRow';
 import type { ItemData } from '@/components/ChallanItemRow';
+import { prepareLines } from '@/lib/challanLines';
 import { downloadChallanPdf, shareChallanPdf } from '@/lib/challanPdf';
 import { formatYmdLocal } from '@/lib/formatDate';
 import { useClientRates, useClientYarnCosts, useClientRateTiers } from '@/hooks/useClientRates';
@@ -86,6 +87,7 @@ const ChallanDetail: React.FC = () => {
         yarn_cost: i.yarn_cost ?? null, overhead_rate: i.overhead_rate ?? null,
         rate_tier_label: i.rate_tier_label ?? null, paper_tube_surcharge: i.paper_tube_surcharge || 0,
         extra_cones: (i as any).extra_cones || 0,
+        is_custom: !!i.is_custom, description: i.description || '',
       })));
     }
   }, [viewItems]);
@@ -119,11 +121,13 @@ const ChallanDetail: React.FC = () => {
   const updateItem = (index: number, updated: ItemData) => setItems(prev => prev.map((it, i) => i === index ? updated : it));
   const removeItem = (index: number) => { if (items.length > 1) setItems(prev => prev.filter((_, i) => i !== index)); };
   const addItem = () => setItems(prev => [...prev, emptyItem()]);
+  const addOtherItem = () => setItems(prev => [...prev, emptyCustomItem()]);
 
 
   const handleSave = async () => {
     if (!form.challan_number.trim()) { toast.error('Challan number required.'); return; }
-    const validItems = items.filter(i => i.lot_no);
+    const { lines: validItems, error: lineError } = prepareLines(items);
+    if (lineError) { toast.error(lineError); return; }
     if (validItems.length === 0) { toast.error('Add at least one item.'); return; }
     try {
       await updateChallan.mutateAsync({ id: id!, ...form, items: validItems });
@@ -254,10 +258,17 @@ const ChallanDetail: React.FC = () => {
             Items {challan.challan_kind === 'edy' && <span className="ml-2 text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200">External Dyed Yarn</span>}
           </h2>
           {editing && challan.challan_kind !== 'edy' && (
-            <button type="button" onClick={addItem}
-              className="inline-flex items-center gap-1.5 px-3 h-8 text-xs font-medium border border-input rounded-md hover:bg-secondary btn-transition">
-              <PlusCircle className="w-3.5 h-3.5" /> Add Row
-            </button>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={addOtherItem}
+                title="Add something that isn't dyed yarn (tools, raw material, ...) with a typed amount"
+                className="inline-flex items-center gap-1.5 px-3 h-8 text-xs font-medium border border-input rounded-md hover:bg-secondary btn-transition">
+                <PlusCircle className="w-3.5 h-3.5" /> Add Other Item
+              </button>
+              <button type="button" onClick={addItem}
+                className="inline-flex items-center gap-1.5 px-3 h-8 text-xs font-medium border border-input rounded-md hover:bg-secondary btn-transition">
+                <PlusCircle className="w-3.5 h-3.5" /> Add Row
+              </button>
+            </div>
           )}
         </div>
         {challan.challan_kind === 'edy' ? (
@@ -326,7 +337,15 @@ const ChallanDetail: React.FC = () => {
               ) : (
                 (challanItems.length === 0 ? (
                   <tr><td colSpan={13} className="p-6 text-center text-muted-foreground">No items.</td></tr>
-                ) : viewItems.map(item => (
+                ) : viewItems.map(item => item.is_custom ? (
+                  <tr key={item.id} className="border-b border-border bg-amber-50/40 dark:bg-amber-950/10">
+                    <td colSpan={10 + (rateMode === 'tiered' ? 1 : 0) + 1 + (hasSurcharge ? 1 : 0)} className="p-2">
+                      <span className="mr-2 text-[11px] font-medium px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200">Other item</span>
+                      {item.description}
+                    </td>
+                    <td className="p-2 font-medium">₹{lineTotal(item).toFixed(2)}</td>
+                  </tr>
+                ) : (
                   <tr key={item.id} className="border-b border-border">
                     <td className="p-2 font-medium">
                       <Link to={`/shade-management/lots/${item.lot_no}`} className="text-primary hover:underline">{item.lot_no}</Link>

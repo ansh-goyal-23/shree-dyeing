@@ -60,6 +60,12 @@ export interface ChallanItem {
   // = extra_cones * clients.paper_tube_extra_cone_surcharge, snapshotted at
   // save time like the other rate fields above.
   extra_cones?: number;
+  // "Other item" line (2026-10-30): free-text description + a directly typed
+  // amount, for things sent that aren't dyed yarn (tools, raw material...).
+  // lot_no is '' and every weight/unit/rate is 0 on these lines, so they only
+  // ever affect money totals. See src/lib/challanLines.ts.
+  is_custom?: boolean;
+  description?: string | null;
 }
 
 /** Total billed for a line, including any paper-tube cone surcharge. */

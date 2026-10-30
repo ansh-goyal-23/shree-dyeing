@@ -120,8 +120,11 @@ const ChallanList: React.FC = () => {
       map[i.challan_id].totalItems += 1;
       map[i.challan_id].totalNetWeight += Number(i.net_weight) || 0;
       map[i.challan_id].totalAmount += lineTotal(i);
-      if (i.lot_type && !map[i.challan_id].types.includes(i.lot_type)) {
-        map[i.challan_id].types.push(i.lot_type);
+      // "Other item" lines carry the DB default lot_type, which would be
+      // misleading in the Item Types column -- label them 'Other' instead.
+      const typeLabel = i.is_custom ? 'Other' : i.lot_type;
+      if (typeLabel && !map[i.challan_id].types.includes(typeLabel)) {
+        map[i.challan_id].types.push(typeLabel);
       }
     });
     return map;
@@ -137,7 +140,8 @@ const ChallanList: React.FC = () => {
           .filter((i: any) =>
             i.lot_no?.toLowerCase().includes(q) ||
             i.shade_number?.toLowerCase().includes(q) ||
-            i.color_name?.toLowerCase().includes(q)
+            i.color_name?.toLowerCase().includes(q) ||
+            i.description?.toLowerCase().includes(q)
           )
           .map((i: any) => i.challan_id)
       );
@@ -382,8 +386,8 @@ const ChallanList: React.FC = () => {
       'Shade #': item.shade_number || '',
       'Colour': item.color_name || '',
       Denier: item.denier || '',
-      'Lot Type': item.lot_type || '',
-      'Packaging': item.packaging_type || '',
+      'Lot Type': item.is_custom ? 'Other' : (item.lot_type || ''),
+      'Packaging': item.is_custom ? '' : (item.packaging_type || ''),
       'Gross Weight (kg)': Number(item.gross_weight) || 0,
       'No. of Cones': Number(item.num_of_units) || 0,
       'Net Weight (kg)': Number(item.net_weight) || 0,
@@ -392,6 +396,8 @@ const ChallanList: React.FC = () => {
       'Payment Status': payment,
       'Extra Cones': Number((item as any).extra_cones) || 0,
       'Paper Tube Surcharge (Rs.)': Number(item.paper_tube_surcharge) || 0,
+      // "Other item" lines (tools, raw material...): what was sent.
+      'Item Description': item.is_custom ? (item.description || '') : '',
     })));
 
     // Return challans: negative-qty rows in the SAME detail sheet so a
@@ -418,6 +424,7 @@ const ChallanList: React.FC = () => {
       'Payment Status': '—',
       'Extra Cones': -(Number(item.returned_extra_cones) || 0),
       'Paper Tube Surcharge (Rs.)': -(Number(item.paper_tube_surcharge) || 0),
+      'Item Description': '',
     }));
     detailRows.push(...returnDetailRows);
 

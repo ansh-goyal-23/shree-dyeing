@@ -5,6 +5,7 @@ import DecimalInput from '@/components/DecimalInput';
 import type { Lot } from '@/types';
 import type { PackagingType } from '@/types/challan';
 import { calculateChallanNet } from '@/lib/calculations';
+import { CUSTOM_DESCRIPTION_MAX } from '@/lib/challanLines';
 import { lineTotal } from '@/types/challan';
 import type { StoreEDYCurrentStockRow } from '@/types/store';
 import { lookupRate, lookupYarnCost, type ClientRate, type ClientYarnCost, type ClientRateTier } from '@/hooks/useClientRates';
@@ -35,7 +36,18 @@ export interface ItemData {
   // challan maker (2026-10-01) -- no longer derived from weight/units.
   paper_tube_surcharge?: number;
   extra_cones?: number;
+  // "Other item" row: description + amount only (see src/lib/challanLines.ts).
+  is_custom?: boolean;
+  description?: string;
 }
+
+/** A blank "Other item" row (tools, raw material, anything that isn't dyed yarn). */
+export const emptyCustomItem = (): ItemData => ({
+  lot_no: '', shade_number: '', color_name: '', denier: '', packaging_type: 'paper_tube',
+  gross_weight: 0, num_of_units: 0, net_weight: 0, rate: 0, amount: 0, lot_type: 'Production', ref_no: '',
+  yarn_cost: null, overhead_rate: null, rate_tier_label: null, paper_tube_surcharge: 0, extra_cones: 0,
+  is_custom: true, description: '',
+});
 
 interface ChallanItemRowProps {
   index: number;
@@ -325,6 +337,37 @@ const ChallanItemRow: React.FC<ChallanItemRowProps> = ({
   const unitLabel = item.packaging_type === 'chesse' ? 'Chesses' : 'Tubes';
   const surcharge = item.paper_tube_surcharge || 0;
   const selectedTier = rateTiers.find(t => t.label === item.rate_tier_label);
+
+  // "Other item": one wide description cell (spans every product column up to
+  // Amount) + a typed amount. No lot, weight, rate or stock effect.
+  if (item.is_custom) {
+    const spanBeforeAmount = 11 + (isTiered ? 1 : 0) + (hasSurcharge ? 1 : 0);
+    return (
+      <tr className="border-b border-border bg-amber-50/40 dark:bg-amber-950/10 hover:bg-secondary/30">
+        <td colSpan={spanBeforeAmount} className="p-2">
+          <div className="flex items-center gap-2">
+            <span className="shrink-0 text-[11px] font-medium px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+              Other item
+            </span>
+            <input type="text" value={item.description || ''} maxLength={CUSTOM_DESCRIPTION_MAX}
+              onChange={e => onChange(index, { ...item, description: e.target.value })}
+              className="input-industrial w-full text-sm"
+              placeholder="What is being sent? e.g. Spare gears x2, Raw material (nylon 70D) 5 kg" />
+          </div>
+        </td>
+        <td className="p-2">
+          <DecimalInput step="0.01" min={0} value={item.amount}
+            onValueChange={v => onChange(index, { ...item, amount: v })}
+            className="input-industrial w-28 text-sm" placeholder="Amount ₹" />
+        </td>
+        <td className="p-2">
+          <button type="button" onClick={() => onRemove(index)} className="p-1.5 text-destructive hover:bg-destructive/10 rounded btn-transition">
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </td>
+      </tr>
+    );
+  }
 
   return (
     <tr className="border-b border-border hover:bg-secondary/30">
