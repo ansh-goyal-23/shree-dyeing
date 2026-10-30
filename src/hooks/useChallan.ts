@@ -57,6 +57,20 @@ async function insertChallanItems(
     extra_cones: (items[i] as any).extra_cones || 0,
   }));
 
+  // "Other item" lines (2026-10-30): is_custom / description are sent only
+  // when at least one line needs them, and then on EVERY row (a bulk insert
+  // with differing keys would null the missing ones). They are deliberately
+  // NOT part of the missing-column fallback below: silently dropping them
+  // would save an other-item line as an empty ghost row, so a DB without the
+  // 20261030 migration returns a clear error instead. Ordinary challans keep
+  // working on an un-migrated DB.
+  if (items.some(it => it.is_custom)) {
+    full.forEach((row: any, i) => {
+      row.is_custom = !!items[i].is_custom;
+      row.description = items[i].is_custom ? (items[i].description || '').trim() : null;
+    });
+  }
+
   // Try full insert; on missing column, drop the offending column and retry.
   let attempt: any = full;
   let hasRef = true;
@@ -224,6 +238,8 @@ const mapItem = (r: any): ChallanItem => ({
   rate_tier_label: r.rate_tier_label || null,
   paper_tube_surcharge: Number(r.paper_tube_surcharge) || 0,
   extra_cones: Number(r.extra_cones) || 0,
+  is_custom: !!r.is_custom,
+  description: r.description || null,
 });
 
 export function useChallans() {
@@ -326,11 +342,12 @@ export function useCreateChallan() {
       qc.invalidateQueries({ queryKey: ['store_current_stock_by_item'] });
       qc.invalidateQueries({ queryKey: ['store_transactions'] });
       const totalKg = vars.items.reduce((s, i) => s + (Number(i.net_weight) || 0), 0);
+      const otherItems = vars.items.filter(i => i.is_custom).length;
       logBusinessEvent({
         module: 'dispatch', eventType: 'challan.created', severity: 'success',
         entityType: 'challan', entityId: challan.id, referenceNumber: vars.challan_number,
-        summary: `Created Challan ${vars.challan_number} — ${vars.items.length} lot(s), ${totalKg.toFixed(2)} kg`,
-        details: { items: vars.items.length, total_kg: totalKg, date: vars.date },
+        summary: `Created Challan ${vars.challan_number} — ${vars.items.length - otherItems} lot(s)${otherItems ? ` + ${otherItems} other item(s)` : ''}, ${totalKg.toFixed(2)} kg`,
+        details: { items: vars.items.length, other_items: otherItems, total_kg: totalKg, date: vars.date },
       });
     },
   });

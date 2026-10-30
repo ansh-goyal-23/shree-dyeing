@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useCreateChallan } from '@/hooks/useChallan';
 import { useApp } from '@/context/AppContext';
 import ClientSelect from '@/components/ClientSelect';
-import ChallanItemRow from '@/components/ChallanItemRow';
+import ChallanItemRow, { emptyCustomItem } from '@/components/ChallanItemRow';
 import type { ItemData } from '@/components/ChallanItemRow';
+import { prepareLines } from '@/lib/challanLines';
 import { toast } from 'sonner';
 import { useChallanFooterOptions } from '@/hooks/useChallanFooterOptions';
 import { useClientRates, useClientYarnCosts, useClientRateTiers } from '@/hooks/useClientRates';
@@ -74,6 +75,7 @@ const CreateChallan: React.FC = () => {
     setItems(prev => prev.filter((_, i) => i !== index));
   };
   const addItem = () => setItems(prev => [...prev, emptyItem()]);
+  const addOtherItem = () => setItems(prev => [...prev, emptyCustomItem()]);
 
   const totalNetWeight = items.reduce((s, i) => s + i.net_weight, 0);
   const totalAmount = items.reduce((s, i) => s + lineTotal(i), 0);
@@ -82,7 +84,8 @@ const CreateChallan: React.FC = () => {
     e.preventDefault();
     if (!form.challan_number.trim()) { toast.error('Challan number is required.'); return; }
     if (!form.client_id) { toast.error('Please select a client.'); return; }
-    const validItems = items.filter(i => i.lot_no);
+    const { lines: validItems, error: lineError } = prepareLines(items);
+    if (lineError) { toast.error(lineError); return; }
     if (validItems.length === 0) { toast.error('Add at least one item.'); return; }
 
     try {
@@ -102,6 +105,8 @@ const CreateChallan: React.FC = () => {
     } catch (err: any) {
       if (err?.message?.includes('duplicate') || err?.code === '23505') {
         toast.error('Challan number already exists.');
+      } else if (/is_custom|description/.test(err?.message || '')) {
+        toast.error('The database is missing the latest update for "Other item" rows. Ask for the 20261030 challan migration to be applied.', { duration: 8000 });
       } else {
         toast.error('Failed to create challan.');
       }
@@ -144,10 +149,17 @@ const CreateChallan: React.FC = () => {
         <div className="card-industrial overflow-x-auto">
           <div className="p-4 border-b border-border flex items-center justify-between">
             <h2 className="text-sm font-semibold">Items</h2>
-            <button type="button" onClick={addItem}
-              className="inline-flex items-center gap-1.5 px-3 h-8 text-xs font-medium border border-input rounded-md hover:bg-secondary btn-transition">
-              <PlusCircle className="w-3.5 h-3.5" /> Add Row
-            </button>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={addOtherItem}
+                title="Add something that isn't dyed yarn (tools, raw material, ...) with a typed amount"
+                className="inline-flex items-center gap-1.5 px-3 h-8 text-xs font-medium border border-input rounded-md hover:bg-secondary btn-transition">
+                <PlusCircle className="w-3.5 h-3.5" /> Add Other Item
+              </button>
+              <button type="button" onClick={addItem}
+                className="inline-flex items-center gap-1.5 px-3 h-8 text-xs font-medium border border-input rounded-md hover:bg-secondary btn-transition">
+                <PlusCircle className="w-3.5 h-3.5" /> Add Row
+              </button>
+            </div>
           </div>
           <table className="w-full text-sm">
             <thead>
